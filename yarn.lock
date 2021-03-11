@@ -382,10 +382,10 @@
     "@typescript-eslint/types" "4.17.0"
     eslint-visitor-keys "^2.0.0"
 
-"@xobotyi/eslint-config@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@xobotyi/eslint-config/-/eslint-config-2.0.0.tgz#98952c511b067c716a55b3895e5b9118852b8ab0"
-  integrity sha512-etrd9tjgZ4Zk+8vBzFIApJXUoDRGJP5dWpj86yZehyT7NoG1LgZlA639LHa9xfbexRBzLSZSOnOhUFDaUol4cw==
+"@xobotyi/eslint-config@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@xobotyi/eslint-config/-/eslint-config-2.1.0.tgz#5c4be5fed09b2a304c98973b0c4cc43a597e7f02"
+  integrity sha512-8zTyV7Sk/IWXocAtxwCe3/zTx4Bt/pDwa/3bSOvqzZfp8rCeqHIRrRDi2O1z2kH+GGLKjC0koD+s3cgczQ6jKA==
   dependencies:
     "@typescript-eslint/eslint-plugin" "^4.17.0"
     "@typescript-eslint/parser" "^4.17.0"
