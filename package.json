@@ -1,0 +1,44 @@
+{
+  "name": "node-beanstalk",
+  "version": "0.0.0-development",
+  "dependencies": {},
+  "devDependencies": {
+    "@xobotyi/eslint-config": "^2.0.0",
+    "@semantic-release/changelog": "^5.0.1",
+    "@semantic-release/git": "^9.0.0",
+    "@semantic-release/github": "^7.2.0",
+    "@semantic-release/npm": "^7.0.10",
+    "eslint": "^7.21.0",
+    "semantic-release": "^17.4.1",
+    "typescript": "^4.2.3"
+  },
+  "scripts": {
+    "lint": "eslint . --ext ts,js,tsx,jsx",
+    "lint:fix": "yarn lint --fix",
+    "semantic-release": "semantic-release"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xobotyi/eslint-config.git"
+  },
+  "release": {
+    "branches": [
+      "master",
+      {
+        "name": "next",
+        "prerelease": "rc"
+      }
+    ],
+    "verifyConditions": [
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/git",
+      "@semantic-release/github"
+    ],
+    "prepare": [
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/git"
+    ]
+  }
+}
