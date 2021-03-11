@@ -25,7 +25,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/xobotyi/eslint-config.git"
+    "url": "https://github.com/xobotyi/node-beanstalk.git"
   },
   "release": {
     "branches": [
