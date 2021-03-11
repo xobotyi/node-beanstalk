@@ -3,19 +3,25 @@
   "version": "0.0.0-development",
   "dependencies": {},
   "devDependencies": {
-    "@xobotyi/eslint-config": "^2.0.0",
     "@semantic-release/changelog": "^5.0.1",
     "@semantic-release/git": "^9.0.0",
     "@semantic-release/github": "^7.2.0",
     "@semantic-release/npm": "^7.0.10",
+    "@xobotyi/eslint-config": "^2.0.0",
     "eslint": "^7.21.0",
+    "rimraf": "^3.0.2",
     "semantic-release": "^17.4.1",
     "typescript": "^4.2.3"
   },
   "scripts": {
     "lint": "eslint . --ext ts,js,tsx,jsx",
     "lint:fix": "yarn lint --fix",
-    "semantic-release": "semantic-release"
+    "lint:types": "tsc --noEmit",
+    "build": "yarn build:clean && yarn build:compile",
+    "build:clean": "rimraf dist",
+    "build:compile": "tsc -p ./tsconfig.build.json",
+    "semantic-release": "semantic-release",
+    "prepublishOnly": "yarn build"
   },
   "repository": {
     "type": "git",
