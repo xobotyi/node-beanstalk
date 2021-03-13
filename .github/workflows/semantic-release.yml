@@ -10,10 +10,11 @@ jobs:
   release:
     name: "semantic-release"
     runs-on: ubuntu-latest
-    if: >
-      ${{ github.event.workflow_run.conclusion == 'success' &&
-      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch') }}
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      ( github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch' )
     steps:
+      - run: echo "${{ github.event.workflow_run.conclusion }}"
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
