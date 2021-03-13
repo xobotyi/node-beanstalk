@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/xobotyi/node-beanstalk/compare/v1.0.0...v1.1.0) (2021-03-13)
+
+
+### Features
+
+* readme notification about WIP status. ([79dd72a](https://github.com/xobotyi/node-beanstalk/commit/79dd72a183c5bc361739a6c987f8c6d376bdd0c7))
+
 # 1.0.0 (2021-03-13)
 
 
