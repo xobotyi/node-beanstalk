@@ -1,9 +1,9 @@
-import { Beanstalk } from './Beanstalk';
+import { BeanstalkClient } from './BeanstalkClient';
 
 (async () => {
-  const client = new Beanstalk({ debug: true });
+  const client = new BeanstalkClient({ debug: true });
 
   await client.connect();
-  await client.stats();
+  console.log(await client.listTubesWatched());
   await client.disconnect();
 })();

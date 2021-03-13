@@ -1,1 +1,3 @@
-export class ConnectionError extends Error {}
+export class ConnectionError extends Error {
+  name = 'ConnectionError';
+}
