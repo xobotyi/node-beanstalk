@@ -1,0 +1,38 @@
+name: "Deploy GH-Pages"
+
+on:
+  workflow_run:
+    workflows: [ "semantic-release" ]
+    branches: [ "master" ]
+    types: [ "completed" ]
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: "semantic-release"
+    runs-on: ubuntu-latest
+    if: |
+      github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 15
+
+      - name: "Install dependencies"
+        uses: bahmutov/npm-install@v1
+        with:
+          useRollingCache: true
+
+      - name: "Build docs"
+        run: yarn docs:buid
+
+      - name: "Deploy"
+        run: |
+          git config --local user.name xobotyi && git config --local user.email xog3@yandex.ru
+          git checkout --orphan gh-pages
+          git --work-tree docs add --all
+          git --work-tree docs commit -m 'gh-pages'
+          git push origin HEAD:gh-pages --force
+
+
