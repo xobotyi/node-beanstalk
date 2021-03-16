@@ -1,3 +1,11 @@
+## [1.2.1](https://github.com/xobotyi/node-beanstalk/compare/v1.2.0...v1.2.1) (2021-03-16)
+
+
+### Bug Fixes
+
+* add .npmignore along with main file ([11f2045](https://github.com/xobotyi/node-beanstalk/commit/11f2045c2d05df5ef6acdc372d710a2c627a7566))
+* proper check rules for CI ([8fd9b6d](https://github.com/xobotyi/node-beanstalk/commit/8fd9b6d5f28eb9b324b880cd318dadea4876ff8a))
+
 # [1.2.0](https://github.com/xobotyi/node-beanstalk/compare/v1.1.0...v1.2.0) (2021-03-16)
 
 
