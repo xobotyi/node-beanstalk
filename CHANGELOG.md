@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/xobotyi/node-beanstalk/compare/v1.1.0...v1.2.0) (2021-03-16)
+
+
+### Features
+
+* implementing the client. ([36f3b24](https://github.com/xobotyi/node-beanstalk/commit/36f3b24d9b8d26d90a800d23a0b56e892c2740db))
+
 # [1.1.0](https://github.com/xobotyi/node-beanstalk/compare/v1.0.0...v1.1.0) (2021-03-13)
 
 
