@@ -27,3 +27,12 @@ jobs:
         run: yarn lint
       - name: "Build"
         run: yarn build
+
+  dependabot-merge:
+    name: "Dependabot automerge"
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: fastify/github-action-merge-dependabot@v2
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
