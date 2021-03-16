@@ -1,9 +1,15 @@
-import { Beanstalk } from './Beanstalk';
+import { Client } from './Client';
 
-(async () => {
-  const client = new Beanstalk({ debug: true });
+export { Client } from './Client';
+export { Pool } from './Pool';
 
-  await client.connect();
-  await client.stats();
-  await client.disconnect();
-})();
+export type {
+  Serializer,
+  BeanstalkJobState,
+  IClientCtorOptions,
+  IPoolCtorOptions,
+  IClientRawReservedJob,
+  IBeanstalkStats,
+  IBeanstalkJobStats,
+  IBeanstalkTubeStats,
+} from './types';

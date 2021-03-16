@@ -2,11 +2,11 @@
 import { Serializer } from '../types';
 
 export class JsonSerializer extends Serializer {
-  public serialize(data: any): string {
-    return JSON.stringify(data);
+  public serialize(data: any): Buffer {
+    return Buffer.from(JSON.stringify(data), 'utf-8');
   }
 
-  public deserialize(text: string): any {
-    return JSON.parse(text);
+  public deserialize(buffer: Buffer): any {
+    return JSON.parse(buffer.toString('utf-8'));
   }
 }
