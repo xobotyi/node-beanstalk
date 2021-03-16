@@ -32,7 +32,8 @@ jobs:
     name: "Dependabot automerge"
     needs: test
     runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
     steps:
-      - uses: fastify/github-action-merge-dependabot@v2
+      - uses: fastify/github-action-merge-dependabot@v2.0.0
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
