@@ -69,6 +69,8 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: "master"
       - uses: actions/setup-node@v2
         with:
           node-version: 15
