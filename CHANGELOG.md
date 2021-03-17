@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/xobotyi/node-beanstalk/compare/v1.2.4...v1.2.5) (2021-03-17)
+
+
+### Bug Fixes
+
+* remove debug console.log ([12138e6](https://github.com/xobotyi/node-beanstalk/commit/12138e6f6d2f8dc091949ebd3f4fb0c42a06fc6f))
+
 ## [1.2.4](https://github.com/xobotyi/node-beanstalk/compare/v1.2.3...v1.2.4) (2021-03-17)
 
 
