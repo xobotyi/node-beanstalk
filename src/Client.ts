@@ -143,18 +143,15 @@ export class Client extends EventEmitter {
   private payloadToBuffer(payload: any): Buffer | undefined {
     if (payload === undefined) return undefined;
 
-    let payloadBuffer: Buffer;
     const { serializer, maxPayloadSize } = this._opt;
 
-    if (typeof payload === 'string' || typeof payload === 'number') {
-      payloadBuffer = Buffer.from(String(payload));
-    } else if (!serializer) {
+    if (!serializer) {
       throw new CommandError(
         `Serializer not defined, payload has to be string or number, got ${typeof payload}. Configure serializer or serialize payload manually.`
       );
-    } else {
-      payloadBuffer = serializer.serialize(payload);
     }
+
+    const payloadBuffer = serializer.serialize(payload);
 
     if (payloadBuffer.length > maxPayloadSize) {
       throw new CommandError(

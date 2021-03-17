@@ -13,3 +13,9 @@ export type {
   IBeanstalkJobStats,
   IBeanstalkTubeStats,
 } from './types';
+
+const client = new Client();
+
+client.connect().then(() => {
+  client.put('{}');
+});
