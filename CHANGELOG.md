@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/xobotyi/node-beanstalk/compare/v1.2.3...v1.2.4) (2021-03-17)
+
+
+### Bug Fixes
+
+* proper config for commands responses ([5b53526](https://github.com/xobotyi/node-beanstalk/commit/5b5352645531e309a89f24de19a8558aa9d25cbf))
+
 ## [1.2.3](https://github.com/xobotyi/node-beanstalk/compare/v1.2.2...v1.2.3) (2021-03-17)
 
 
