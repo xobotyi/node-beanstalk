@@ -79,7 +79,6 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
     } as any;
 
     if (response.data) {
-      console.log(this.opt);
       res.data = response.data.slice(0, response.data.length - CRLF_BUFF.length);
 
       if (this.opt.payloadBody) {
