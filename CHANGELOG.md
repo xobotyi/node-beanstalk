@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/xobotyi/node-beanstalk/compare/v1.2.2...v1.2.3) (2021-03-17)
+
+
+### Bug Fixes
+
+* strings and numbers should be serialized as any other data. ([64f108f](https://github.com/xobotyi/node-beanstalk/commit/64f108fa36ab98b82eb36712273eaeadb629663d))
+
 ## [1.2.2](https://github.com/xobotyi/node-beanstalk/compare/v1.2.1...v1.2.2) (2021-03-17)
 
 
