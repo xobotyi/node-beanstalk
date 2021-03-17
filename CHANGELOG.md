@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/xobotyi/node-beanstalk/compare/v1.2.1...v1.2.2) (2021-03-17)
+
+
+### Bug Fixes
+
+* job payload deserialization ([9efb33b](https://github.com/xobotyi/node-beanstalk/commit/9efb33bdc597f41b5f09a5e29b550f430f771504))
+
 ## [1.2.1](https://github.com/xobotyi/node-beanstalk/compare/v1.2.0...v1.2.1) (2021-03-16)
 
 
