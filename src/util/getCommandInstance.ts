@@ -34,6 +34,7 @@ const commandConfig = {
   },
   [BeanstalkCommand['reserve-job']]: {
     expectedStatus: [BeanstalkResponseStatus.NOT_FOUND, BeanstalkResponseStatus.RESERVED],
+    payloadBody: true,
   },
   [BeanstalkCommand.delete]: {
     expectedStatus: [BeanstalkResponseStatus.NOT_FOUND, BeanstalkResponseStatus.DELETED],
@@ -61,15 +62,19 @@ const commandConfig = {
 
   [BeanstalkCommand.peek]: {
     expectedStatus: [BeanstalkResponseStatus.FOUND, BeanstalkResponseStatus.NOT_FOUND],
+    payloadBody: true,
   },
   [BeanstalkCommand['peek-ready']]: {
     expectedStatus: [BeanstalkResponseStatus.FOUND, BeanstalkResponseStatus.NOT_FOUND],
+    payloadBody: true,
   },
   [BeanstalkCommand['peek-buried']]: {
     expectedStatus: [BeanstalkResponseStatus.FOUND, BeanstalkResponseStatus.NOT_FOUND],
+    payloadBody: true,
   },
   [BeanstalkCommand['peek-delayed']]: {
     expectedStatus: [BeanstalkResponseStatus.FOUND, BeanstalkResponseStatus.NOT_FOUND],
+    payloadBody: true,
   },
 
   [BeanstalkCommand.kick]: {
@@ -80,21 +85,21 @@ const commandConfig = {
   },
 
   [BeanstalkCommand.stats]: {
-    yamlBody: true,
     expectedStatus: [BeanstalkResponseStatus.OK],
+    yamlBody: true,
   },
   [BeanstalkCommand['stats-job']]: {
-    yamlBody: true,
     expectedStatus: [BeanstalkResponseStatus.OK, BeanstalkResponseStatus.NOT_FOUND],
+    yamlBody: true,
   },
   [BeanstalkCommand['stats-tube']]: {
-    yamlBody: true,
     expectedStatus: [BeanstalkResponseStatus.OK, BeanstalkResponseStatus.NOT_FOUND],
+    yamlBody: true,
   },
 
   [BeanstalkCommand['list-tubes']]: {
-    yamlBody: true,
     expectedStatus: [BeanstalkResponseStatus.OK],
+    yamlBody: true,
   },
   [BeanstalkCommand['list-tube-used']]: {
     expectedStatus: [BeanstalkResponseStatus.USING],
