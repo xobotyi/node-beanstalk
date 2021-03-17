@@ -288,7 +288,7 @@ export class Client extends EventEmitter {
     // resolve current waiting promise
     resolveCurrentWaiting();
 
-    return cmd.handleResponse(response);
+    return cmd.handleResponse(response, this._opt.serializer);
   }
 
   // COMMANDS
