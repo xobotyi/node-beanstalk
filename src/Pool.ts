@@ -20,7 +20,7 @@ export class Pool {
 
   private _ended = false;
 
-  constructor(options: IPoolCtorOptions) {
+  constructor(options: IPoolCtorOptions = {}) {
     this._opt = {
       ...DEFAULT_POOL_OPTIONS,
       ...options,

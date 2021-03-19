@@ -72,7 +72,7 @@ export class Connection extends EventEmitter {
         .setNoDelay(true)
         .setKeepAlive(true)
         .on('close', () => this.emit('end'))
-        .on('error', reject)
+        .on('error', (err) => reject(err))
         .on('data', (data) => this.emit('data', data))
         .connect(port, host, () => {
           socket.off('error', reject).on('error', (err: any) => {
