@@ -1,3 +1,10 @@
+## [1.2.6](https://github.com/xobotyi/node-beanstalk/compare/v1.2.5...v1.2.6) (2021-03-19)
+
+
+### Bug Fixes
+
+* make proper throw on connection error. ([0be7f87](https://github.com/xobotyi/node-beanstalk/commit/0be7f8788d5d0f3195e9a25f6a7c4b2c3429d490))
+
 ## [1.2.5](https://github.com/xobotyi/node-beanstalk/compare/v1.2.4...v1.2.5) (2021-03-17)
 
 
