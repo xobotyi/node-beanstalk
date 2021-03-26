@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "dependencies": {
     "@types/js-yaml": "^4.0.0",
-    "@types/node": "^14.14.35",
+    "@types/node": "^14.14.36",
     "js-yaml": "^4.0.0"
   },
   "devDependencies": {
