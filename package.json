@@ -13,7 +13,7 @@
     "@semantic-release/github": "^7.2.0",
     "@semantic-release/npm": "^7.0.10",
     "@xobotyi/eslint-config": "^2.2.0",
-    "eslint": "^7.22.0",
+    "eslint": "^7.23.0",
     "rimraf": "^3.0.2",
     "semantic-release": "^17.4.2",
     "ts-node": "^9.1.1",
