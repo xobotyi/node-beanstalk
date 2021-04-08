@@ -18,7 +18,7 @@
     "semantic-release": "^17.4.2",
     "ts-node": "^9.1.1",
     "typedoc": "^0.20.35",
-    "typescript": "^4.2.3"
+    "typescript": "^4.2.4"
   },
   "scripts": {
     "docs:buid": "yarn typedoc",
