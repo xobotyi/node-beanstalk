@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/xobotyi/node-beanstalk/compare/v1.2.6...v1.3.0) (2021-04-10)
+
+
+### Features
+
+* refactor Connection ([d316c12](https://github.com/xobotyi/node-beanstalk/commit/d316c1263e00c7c6215db3e5369212b060725bd9))
+
 ## [1.2.6](https://github.com/xobotyi/node-beanstalk/compare/v1.2.5...v1.2.6) (2021-03-19)
 
 
