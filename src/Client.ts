@@ -94,7 +94,7 @@ export class Client extends EventEmitter {
     return conn
       .on('connect', this.emit.bind(this, 'connect'))
       .on('error', this.emit.bind(this, 'error'))
-      .on('end', this.emit.bind(this, 'end'));
+      .on('close', this.emit.bind(this, 'end'));
   }
 
   /**
@@ -103,7 +103,7 @@ export class Client extends EventEmitter {
    * @category Client
    */
   public async connect(): Promise<this> {
-    await this._conn.connect(this._opt.port, this._opt.host);
+    await this._conn.open(this._opt.port, this._opt.host);
 
     return this;
   }
@@ -117,7 +117,7 @@ export class Client extends EventEmitter {
    */
   public async end(force = false): Promise<void> {
     if (force) {
-      return this._conn.end();
+      return this._conn.close();
     }
 
     const { prevWaiting, resolveCurrentWaiting } = this.createNewWaitingPromise();
@@ -126,7 +126,7 @@ export class Client extends EventEmitter {
       await prevWaiting;
     }
 
-    await this._conn.end();
+    await this._conn.close();
 
     return resolveCurrentWaiting();
   }
@@ -269,7 +269,7 @@ export class Client extends EventEmitter {
 
     const { _conn: conn } = this;
 
-    if (!conn.isConnected) {
+    if (conn.state !== 'open') {
       throw new ClientError('Connection is not established yet, call `Client.connect` fist.');
     }
 
