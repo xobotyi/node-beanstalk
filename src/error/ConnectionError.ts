@@ -1,17 +1,12 @@
-export type ConnectionErrorCode =
-  | 'ErrChangingState'
-  | 'ErrAlreadyOpened'
-  | 'ErrAlreadyClosed'
-  | 'ErrNotOpened';
+import { ErrorWithCode } from './ErrorWithCode';
 
-export class ConnectionError extends Error {
-  name = 'ConnectionError';
+export enum ConnectionErrorCode {
+  ErrChangingState = 'ErrChangingState',
+  ErrAlreadyOpened = 'ErrAlreadyOpened',
+  ErrAlreadyClosed = 'ErrAlreadyClosed',
+  ErrNotOpened = 'ErrNotOpened',
+}
 
-  readonly code: ConnectionErrorCode;
-
-  constructor(code: ConnectionErrorCode, message: string) {
-    super(message);
-
-    this.code = code;
-  }
+export class ConnectionError extends ErrorWithCode<ConnectionErrorCode> {
+  readonly name = 'ConnectionError';
 }

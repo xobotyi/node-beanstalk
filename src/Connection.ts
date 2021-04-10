@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { Socket } from 'net';
-import { ConnectionError } from './error/ConnectionError';
+import { ConnectionError, ConnectionErrorCode } from './error/ConnectionError';
 
 export interface Connection {
   emit: ((event: string, listener: (...args: any[]) => void) => boolean) &
@@ -52,14 +52,14 @@ export class Connection extends EventEmitter {
   async open(port: number, host = 'localhost'): Promise<void> {
     if (this.isChangingState) {
       throw new ConnectionError(
-        'ErrChangingState',
+        ConnectionErrorCode.ErrChangingState,
         `Unable to open connection that is already changing it's state`
       );
     }
 
     if (this._state === 'open') {
       throw new ConnectionError(
-        'ErrAlreadyOpened',
+        ConnectionErrorCode.ErrAlreadyOpened,
         `Unable to open connection that is already opened`
       );
     }
@@ -98,14 +98,14 @@ export class Connection extends EventEmitter {
   async close(): Promise<void> {
     if (this.isChangingState) {
       throw new ConnectionError(
-        'ErrChangingState',
+        ConnectionErrorCode.ErrChangingState,
         `Unable to close connection that is already changing it's state`
       );
     }
 
     if (this._state === 'closed') {
       throw new ConnectionError(
-        'ErrAlreadyClosed',
+        ConnectionErrorCode.ErrAlreadyClosed,
         `Unable to close connection that is already closed`
       );
     }
@@ -128,7 +128,7 @@ export class Connection extends EventEmitter {
     const sock = this._socket;
     if (this._state !== 'open' || !sock) {
       throw new ConnectionError(
-        'ErrNotOpened',
+        ConnectionErrorCode.ErrNotOpened,
         'Unable to write to connection that is not opened yet'
       );
     }
