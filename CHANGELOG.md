@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/xobotyi/node-beanstalk/compare/v1.3.0...v1.4.0) (2021-04-10)
+
+
+### Features
+
+* make ConnectionError extend ErrorWithCode ([6df59ab](https://github.com/xobotyi/node-beanstalk/commit/6df59ab87f689389d11afd8ea9e3d6306e6a0543))
+
 # [1.3.0](https://github.com/xobotyi/node-beanstalk/compare/v1.2.6...v1.3.0) (2021-04-10)
 
 
