@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/xobotyi/node-beanstalk/compare/v1.4.0...v1.5.0) (2021-04-11)
+
+
+### Features
+
+* JsonSerializer now throws errors. ([008a770](https://github.com/xobotyi/node-beanstalk/commit/008a770e62408699ae46ace74e9f735b64d03b4c))
+
 # [1.4.0](https://github.com/xobotyi/node-beanstalk/compare/v1.3.0...v1.4.0) (2021-04-10)
 
 
