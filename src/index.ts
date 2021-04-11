@@ -1,6 +1,9 @@
 export { Client } from './Client';
 export { Pool } from './Pool';
 
+export { SerializerError } from './error/SerializerError';
+export { ConnectionError } from './error/ConnectionError';
+
 export type {
   Serializer,
   BeanstalkJobState,
