@@ -124,7 +124,6 @@ describe('Connection', () => {
 
       serverSocket.on('data', async (data) => {
         expect(data).toStrictEqual(sendBuffer);
-        await conn.close();
         done();
       });
 
