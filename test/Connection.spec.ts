@@ -60,19 +60,29 @@ describe('Connection', () => {
       await conn.open(address.port, address.address);
       expect(conn.state).toBe('open');
 
-      await conn.open(address.port, address.address).catch((err: ConnectionError) => {
-        expect(err).toBeInstanceOf(ConnectionError);
-        expect(err.code).toBe('ErrAlreadyOpened');
-      });
+      await conn
+        .open(address.port, address.address)
+        .then(() => {
+          throw new Error('not thrown!');
+        })
+        .catch((err: ConnectionError) => {
+          expect(err).toBeInstanceOf(ConnectionError);
+          expect(err.code).toBe('ErrAlreadyOpened');
+        });
     });
 
     it('should throw on attempt to connect while opening or closing connection', async () => {
       const conn = getNewConnection();
       conn.open(address.port, address.address);
-      await conn.open(address.port, address.address).catch((err: ConnectionError) => {
-        expect(err).toBeInstanceOf(ConnectionError);
-        expect(err.code).toBe('ErrChangingState');
-      });
+      await conn
+        .open(address.port, address.address)
+        .then(() => {
+          throw new Error('not thrown!');
+        })
+        .catch((err: ConnectionError) => {
+          expect(err).toBeInstanceOf(ConnectionError);
+          expect(err.code).toBe('ErrChangingState');
+        });
     });
   });
 
@@ -90,19 +100,29 @@ describe('Connection', () => {
       await conn.close();
       expect(conn.state).toBe('closed');
 
-      await conn.close().catch((err: ConnectionError) => {
-        expect(err).toBeInstanceOf(ConnectionError);
-        expect(err.code).toBe('ErrAlreadyClosed');
-      });
+      await conn
+        .close()
+        .then(() => {
+          throw new Error('not thrown!');
+        })
+        .catch((err: ConnectionError) => {
+          expect(err).toBeInstanceOf(ConnectionError);
+          expect(err.code).toBe('ErrAlreadyClosed');
+        });
     });
 
     it('should throw on attempt to connect while opening or closing connection', async () => {
       const conn = getNewConnection();
       conn.open(address.port, address.address);
-      await conn.close().catch((err: ConnectionError) => {
-        expect(err).toBeInstanceOf(ConnectionError);
-        expect(err.code).toBe('ErrChangingState');
-      });
+      await conn
+        .close()
+        .then(() => {
+          throw new Error('not thrown!');
+        })
+        .catch((err: ConnectionError) => {
+          expect(err).toBeInstanceOf(ConnectionError);
+          expect(err.code).toBe('ErrChangingState');
+        });
     });
   });
 
@@ -110,10 +130,15 @@ describe('Connection', () => {
     it('should throw in case of calling on unopened connection', async () => {
       const conn = getNewConnection();
 
-      await conn.write(Buffer.from('hey!')).catch((err: ConnectionError) => {
-        expect(err).toBeInstanceOf(ConnectionError);
-        expect(err.code).toBe('ErrNotOpened');
-      });
+      await conn
+        .write(Buffer.from('hey!'))
+        .then(() => {
+          throw new Error('not thrown!');
+        })
+        .catch((err: ConnectionError) => {
+          expect(err).toBeInstanceOf(ConnectionError);
+          expect(err.code).toBe('ErrNotOpened');
+        });
     });
 
     it('should write given buffer to underlying socket', async (done) => {

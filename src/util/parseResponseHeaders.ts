@@ -4,6 +4,7 @@ import {
   ICommandResponseHeaders,
 } from '../types';
 import { CRLF_BUFF } from '../const';
+import { ResponseError, ResponseErrorCode } from '../error/ResponseError';
 
 export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | null {
   const firstCrlf = buff.indexOf(CRLF_BUFF);
@@ -14,12 +15,21 @@ export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | nu
     BeanstalkResponseStatus,
     ...string[]
   ];
+
   const hasData = status in BeanstalkDataResponseStatus;
   let dataLength = 0;
   const headers = restHeaders;
 
   if (hasData) {
-    dataLength = parseInt(headers.pop() as string, 10) ?? 0;
+    const lengthHeader = headers.pop();
+    dataLength = parseInt(lengthHeader as string, 10);
+
+    if (Number.isNaN(dataLength)) {
+      throw new ResponseError(
+        ResponseErrorCode.ErrInvalidBodyLength,
+        `Received invalid data length for ${status} response, expected number, got ${lengthHeader}`
+      );
+    }
   }
 
   return {
@@ -27,6 +37,6 @@ export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | nu
     status,
     headers,
     hasData,
-    dataLength: dataLength && dataLength + CRLF_BUFF.length,
+    dataLength: dataLength && (dataLength as number) + CRLF_BUFF.length,
   };
 }

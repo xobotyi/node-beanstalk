@@ -5,4 +5,6 @@ export enum SerializerErrorCode {
   ErrDeserializeError = 'ErrDeserializeError',
 }
 
-export class SerializerError extends ErrorWithCode<SerializerErrorCode> {}
+export class SerializerError extends ErrorWithCode<SerializerErrorCode> {
+  name = 'SerializerError';
+}
