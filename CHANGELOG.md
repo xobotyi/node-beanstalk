@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/xobotyi/node-beanstalk/compare/v1.5.0...v1.5.1) (2021-04-12)
+
+
+### Bug Fixes
+
+* validators do type validation now. ([eff13ac](https://github.com/xobotyi/node-beanstalk/commit/eff13ace982482791c5e25c04abf48fb63e7e243))
+
 # [1.5.0](https://github.com/xobotyi/node-beanstalk/compare/v1.4.0...v1.5.0) (2021-04-11)
 
 
