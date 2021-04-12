@@ -1,4 +1,6 @@
 import { JsonSerializer } from '../../src/serializer/JsonSerializer';
+import { SerializerError } from '../../src';
+import { SerializerErrorCode } from '../../src/error/SerializerError';
 
 describe('JsonSerializer', () => {
   it('should be defined', () => {
@@ -43,6 +45,19 @@ describe('JsonSerializer', () => {
         expect(s.serialize(test.in)).toStrictEqual(test.out);
       });
     }
+
+    const obj: any = {};
+    obj.a = obj;
+
+    it('should throw on encode error', () => {
+      try {
+        s.serialize(obj);
+        throw new Error('not thrown!');
+      } catch (e) {
+        expect(e).toBeInstanceOf(SerializerError);
+        expect(e.code).toBe(SerializerErrorCode.ErrSerializeError);
+      }
+    });
   });
 
   describe('JsonSerializer.deserialize', () => {
@@ -73,5 +88,15 @@ describe('JsonSerializer', () => {
         expect(s.deserialize(test.in)).toStrictEqual(test.out);
       });
     }
+
+    it('should throw on decode error', () => {
+      try {
+        s.deserialize(Buffer.from('{"invalid json'));
+        throw new Error('not thrown!');
+      } catch (e) {
+        expect(e).toBeInstanceOf(SerializerError);
+        expect(e.code).toBe(SerializerErrorCode.ErrDeserializeError);
+      }
+    });
   });
 });
