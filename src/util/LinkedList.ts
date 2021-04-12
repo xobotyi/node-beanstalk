@@ -7,20 +7,6 @@ export interface ILinkedListNode<V = any> {
   prev: ILinkedListNode | null;
 }
 
-function createLinkedListNode<V = any>(
-  value: V,
-  list: LinkedList | null = null,
-  next: ILinkedListNode | null = null,
-  prev: ILinkedListNode | null = null
-): ILinkedListNode<V> {
-  return {
-    list,
-    value,
-    next,
-    prev,
-  };
-}
-
 export class LinkedList<V = any> {
   head: ILinkedListNode<V> | null;
 
@@ -36,11 +22,7 @@ export class LinkedList<V = any> {
   /**
    * Remove node from chain and nullish it.
    */
-  removeNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> | null {
-    if (node.list !== this) {
-      throw new Error('Unable to remove the node of foreign list');
-    }
-
+  private removeNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> | null {
     const { next, prev } = node;
 
     if (prev) prev.next = next;
@@ -61,13 +43,7 @@ export class LinkedList<V = any> {
   /**
    * Push existing list node to list's endings
    */
-  pushNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> {
-    if (node.list !== this) {
-      throw new Error('Unable to push the node of foreign list');
-    }
-
-    if (node === this.tail) return node;
-
+  private pushNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> {
     node.list = this;
     node.prev = this.tail;
 
@@ -89,7 +65,12 @@ export class LinkedList<V = any> {
    * Add {value} to the tail of the list.
    */
   push<T extends V>(value: T): ILinkedListNode<T> {
-    return this.pushNode(createLinkedListNode(value, this));
+    return this.pushNode({
+      list: this,
+      value,
+      next: null,
+      prev: null,
+    });
   }
 
   /**
@@ -97,32 +78,13 @@ export class LinkedList<V = any> {
    *
    * @return Array containing removed values.
    */
-  shrinkHead(count: number): V[] {
+  shrinkHead(count = 1): V[] {
     if (!this.head) return [];
 
     const removed: V[] = [];
     while (count && this.head) {
       removed.push(this.head.value);
       this.removeNode(this.head);
-
-      count--;
-    }
-
-    return removed;
-  }
-
-  /**
-   * Remove {count} elements from the tail of the list.
-   *
-   * @return Array containing removed values.
-   */
-  shrinkTail(count: number): V[] {
-    if (!this.tail) return [];
-
-    const removed: V[] = [];
-    while (count && this.tail) {
-      removed.push(this.tail.value);
-      this.removeNode(this.tail);
 
       count--;
     }
