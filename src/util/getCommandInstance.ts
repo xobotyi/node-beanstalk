@@ -133,7 +133,10 @@ export function getCommandInstance<Cmd extends BeanstalkCommand>(
     ICommandConfig[Cmd]['expectedStatus'][number]
   >;
   if (!cfg) {
-    throw new CommandError(CommandErrorCode.ErrCommandUnknown, `Unknown command '${cmd}'`);
+    throw new CommandError(
+      CommandErrorCode.ErrCommandUnknown,
+      `Unknown beanstalk command '${cmd}'`
+    );
   }
 
   command = new Command(cmd, cfg);

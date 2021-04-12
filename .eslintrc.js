@@ -5,6 +5,7 @@ module.exports = {
   },
   rules: {
     'no-empty': 'off',
+    'no-param-reassign': 'off',
 
     '@typescript-eslint/adjacent-overload-signatures': ['warn'],
     '@typescript-eslint/method-signature-style': ['warn', 'property'],

@@ -1,5 +1,5 @@
 import yaml from 'js-yaml';
-import { CommandError } from './error/CommandError';
+import { CommandError, CommandErrorCode } from './error/CommandError';
 import { CRLF_BUFF } from './const';
 import {
   BeanstalkCommand,
@@ -24,7 +24,10 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 
   constructor(commandName: BeanstalkCommand, opt: ICommandCtorOptions<R> = {}) {
     if (!BeanstalkCommand[commandName]) {
-      throw new CommandError(`Unknown beanstalk command '${commandName}'`);
+      throw new CommandError(
+        CommandErrorCode.ErrCommandUnknown,
+        `Unknown beanstalk command '${commandName}'`
+      );
     }
 
     this.opt = {
@@ -32,7 +35,10 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
       yamlBody: opt.yamlBody ?? false,
       expectedStatus: (opt.expectedStatus ?? []).map((status) => {
         if (!BeanstalkResponseStatus[status])
-          throw new CommandError(`Unknown beanstalk response status expected '${commandName}'`);
+          throw new CommandError(
+            CommandErrorCode.ErrResponseStatusUnknown,
+            `Unknown beanstalk response status expected '${commandName}'`
+          );
 
         return status;
       }),
@@ -63,12 +69,14 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
   ): ICommandHandledResponse<R> {
     if (BeanstalkErrorResponseStatus[response.status as IBeanstalkErrorResponseStatus]) {
       throw new CommandError(
+        CommandErrorCode.ErrErrorResponseStatus,
         `Error status '${response.status}' received in response to '${this.commandName}' command`
       );
     }
 
     if (!this.opt.expectedStatus?.includes(response.status as R)) {
       throw new CommandError(
+        CommandErrorCode.ErrUnexpectedResponseStatus,
         `Unexpected status '${response.status}' received in response to '${this.commandName}' command`
       );
     }
@@ -82,7 +90,9 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
       res.data = response.data.slice(0, response.data.length - CRLF_BUFF.length);
 
       if (this.opt.payloadBody) {
-        res.data = serializer ? serializer.deserialize(res.data) : res.data;
+        if (serializer) {
+          res.data = serializer.deserialize(res.data);
+        }
       } else if (this.opt.yamlBody) {
         res.data = yaml.load(res.data.toString());
       }
