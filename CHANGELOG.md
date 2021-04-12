@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/xobotyi/node-beanstalk/compare/v1.5.1...v1.5.2) (2021-04-12)
+
+
+### Bug Fixes
+
+* simplify LinkedList and add tests. ([2b3b5ac](https://github.com/xobotyi/node-beanstalk/commit/2b3b5acd3a59b91d8bcb8cfd41465fb1791648d8))
+
 ## [1.5.1](https://github.com/xobotyi/node-beanstalk/compare/v1.5.0...v1.5.1) (2021-04-12)
 
 

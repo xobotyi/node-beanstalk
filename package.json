@@ -1,6 +1,6 @@
 {
   "name": "node-beanstalk",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "main": "dist/index.js",
   "dependencies": {
     "@types/js-yaml": "^4.0.0",
