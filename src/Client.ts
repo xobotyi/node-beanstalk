@@ -12,9 +12,8 @@ import {
   ICommandResponse,
   ICommandResponseHeaders,
 } from './types';
-import { CommandError } from './error/CommandError';
 import { Command } from './Command';
-import { ClientError } from './error/ClitenError';
+import { ClientError, ClientErrorCode } from './error/ClitenError';
 import { getCommandInstance } from './util/getCommandInstance';
 import { DEFAULT_CLIENT_OPTIONS } from './const';
 import { parseResponseHeaders } from './util/parseResponseHeaders';
@@ -28,40 +27,40 @@ import {
   validateTubeName,
 } from './util/validator';
 import { Connection } from './Connection';
+import { ILinkedListNode, LinkedList } from './util/LinkedList';
 
 export class Client extends EventEmitter {
   private _conn: Connection;
 
   private readonly _opt: Required<IClientCtorOptions>;
 
-  private _waitingPromise: Promise<void> | undefined;
-
-  private _usedTube = 'default';
-
-  private _watchedTubes: string[] = [];
+  private readonly _queue: LinkedList<{
+    resolve: () => void;
+    reject: (err?: Error) => void;
+  }> = new LinkedList();
 
   /**
    * Indicates whether client is waiting for server response.
    */
-  get isWaiting(): boolean {
-    return !!this._waitingPromise;
+  get isWorking(): boolean {
+    return !!this._queue.size;
   }
 
   /**
-   * Name of the tube that is currently used
+   * Indicates whether client is waiting for server response.
    */
-  get using(): string {
-    return this._usedTube;
+  get queueSize(): number {
+    return this._queue.size;
   }
 
   /**
-   * List of tubes tahat are currently watched
+   * Indicates whether client is connected to the server.
    */
-  get watching(): string[] {
-    return [...this._watchedTubes];
+  get isConnected(): boolean {
+    return this._conn.getState() === 'open';
   }
 
-  constructor(options: IClientCtorOptions = {}) {
+  constructor(options: IClientCtorOptions = {}, connection = new Connection()) {
     super();
 
     this._opt = {
@@ -69,7 +68,7 @@ export class Client extends EventEmitter {
       ...options,
     };
 
-    this._conn = this.attachConnectionListeners(new Connection());
+    this._conn = this.attachConnectionListeners(connection);
   }
 
   /**
@@ -91,10 +90,39 @@ export class Client extends EventEmitter {
    * @category Client
    */
   private attachConnectionListeners(conn: Connection): Connection {
-    return conn
-      .on('connect', this.emit.bind(this, 'connect'))
-      .on('error', this.emit.bind(this, 'error'))
-      .on('close', this.emit.bind(this, 'end'));
+    conn.on('connect', this.emit.bind(this, 'connect'));
+    conn.on('error', this.emit.bind(this, 'error'));
+    conn.on('close', this.emit.bind(this, 'end'));
+
+    return conn;
+  }
+
+  /**
+   * @category Client
+   */
+  private waitQueue(): [waitPromise: Promise<void>, moveQueue: () => void] {
+    let listNode: ILinkedListNode<{
+      resolve: () => void;
+      reject: (err?: Error) => void;
+    }>;
+    const promise = new Promise<void>((resolve, reject) => {
+      listNode = this._queue.push({ resolve, reject });
+
+      if (this._queue.head === listNode) {
+        resolve();
+      }
+    });
+
+    return [
+      promise,
+      () => {
+        // remove current node from list
+        this._queue.removeNode(listNode);
+
+        // resolve first promise waiting in queue if it exists
+        this._queue.head?.value.resolve();
+      },
+    ];
   }
 
   /**
@@ -102,33 +130,63 @@ export class Client extends EventEmitter {
    *
    * @category Client
    */
-  public async connect(): Promise<this> {
-    await this._conn.open(this._opt.port, this._opt.host);
+  public async connect(): Promise<void> {
+    if (this._conn.getState() !== 'closed') {
+      throw new ClientError(
+        ClientErrorCode.ErrConnectionNotClosed,
+        `Unable to open non-closed connection, current state: ${this._conn.getState()}`
+      );
+    }
 
-    return this;
+    const [waitPromise, moveQueue] = await this.waitQueue();
+
+    try {
+      await waitPromise;
+
+      await this._conn.open(this._opt.port, this._opt.host);
+    } finally {
+      moveQueue();
+    }
   }
 
   /**
    * Disconnect the client from server after all pending requests performed.
    *
-   * If {force} set to truthy value - pending requests will not be awaited.
+   * If {force} set to truthy value - only currently running request will be awaited.
    *
    * @category Client
    */
-  public async end(force = false): Promise<void> {
+  public async disconnect(force = false): Promise<void> {
+    if (this._conn.getState() !== 'open') {
+      throw new ClientError(
+        ClientErrorCode.ErrConnectionNotOpened,
+        `Unable to close non-opened connection, current state: ${this._conn.getState()}`
+      );
+    }
+
     if (force) {
-      return this._conn.close();
+      // The thing is to empty whole queue and return head node to the list.
+      // As head node representing currently running request we want to await it
+      // even if force disconnecting.
+      const { head } = this._queue;
+
+      this._queue.truncate().forEach((i) => {
+        if (i.reject === head?.value.reject) return;
+        i.reject(new ClientError(ClientErrorCode.ErrDisconnecting, 'Client is disconnecting'));
+      });
+
+      if (head) this._queue.pushNode(head);
     }
 
-    const { prevWaiting, resolveCurrentWaiting } = this.createNewWaitingPromise();
+    const [waitPromise, moveQueue] = await this.waitQueue();
 
-    if (prevWaiting) {
-      await prevWaiting;
+    try {
+      await waitPromise;
+
+      await this._conn.close();
+    } finally {
+      moveQueue();
     }
-
-    await this._conn.close();
-
-    return resolveCurrentWaiting();
   }
 
   /**
@@ -137,7 +195,7 @@ export class Client extends EventEmitter {
    * In case provided payload is not a [[string | number]] it
    * will be serialized via [[IClientCtorOptions.serializer]]
    *
-   * @throws {CommandError}
+   * @throws {ClientError}
    * @category Client
    */
   private payloadToBuffer(payload: any): Buffer | undefined {
@@ -145,47 +203,30 @@ export class Client extends EventEmitter {
 
     const { serializer, maxPayloadSize } = this._opt;
 
-    if (!serializer) {
-      throw new CommandError(
-        `Serializer not defined, payload has to be string or number, got ${typeof payload}. Configure serializer or serialize payload manually.`
+    if (typeof payload !== 'string' && !serializer) {
+      throw new ClientError(
+        ClientErrorCode.ErrInvalidPayload,
+        `Serializer not defined, payload has to be string, got ${typeof payload}. Configure serializer or serialize payload manually.`
       );
     }
 
-    const payloadBuffer = serializer.serialize(payload);
+    let payloadBuffer: Buffer;
+
+    if (serializer) {
+      payloadBuffer = serializer.serialize(payload);
+    } else {
+      payloadBuffer = Buffer.from(payload);
+    }
 
     if (payloadBuffer.length > maxPayloadSize) {
-      throw new CommandError(
-        `Maximal payload size is ${maxPayloadSize} bytes, got ${payloadBuffer.length}`
+      throw new ClientError(
+        ClientErrorCode.ErrPayloadTooBig,
+        `${serializer ? 'Serialized payload' : 'Payload'} is too big,` +
+          ` maximum size is ${maxPayloadSize} bytes, got ${payloadBuffer.length}`
       );
     }
 
     return payloadBuffer;
-  }
-
-  /**
-   * @category Client
-   */
-  private createNewWaitingPromise() {
-    const prevWaiting = this._waitingPromise;
-
-    // make the promise that can be resolved externally (simpy expose it's resolve fn)
-    let resolveCurrentWaitingPromise: () => void;
-    const currentWaitingPromise = new Promise<void>((resolve) => {
-      resolveCurrentWaitingPromise = resolve;
-    });
-
-    this._waitingPromise = currentWaitingPromise;
-
-    return {
-      prevWaiting,
-      resolveCurrentWaiting: () => {
-        if (this._waitingPromise === currentWaitingPromise) {
-          this._waitingPromise = undefined;
-        }
-
-        resolveCurrentWaitingPromise();
-      },
-    };
   }
 
   /**
@@ -216,6 +257,7 @@ export class Client extends EventEmitter {
                   conn.off('data', dataListener);
                   reject(
                     new ClientError(
+                      ClientErrorCode.ErrResponseRead,
                       `Failed to read response data after ${this._opt.dataReadTimeoutMs} ms`
                     )
                   );
@@ -261,16 +303,18 @@ export class Client extends EventEmitter {
     args?: string[],
     payload?: any
   ): Promise<ICommandHandledResponse<R>> {
-    const { prevWaiting, resolveCurrentWaiting } = this.createNewWaitingPromise();
+    // wait for the queue
+    const [waitPromise, moveQueue] = this.waitQueue();
 
-    if (prevWaiting) {
-      await prevWaiting;
-    }
+    await waitPromise;
 
     const { _conn: conn } = this;
 
-    if (conn.state !== 'open') {
-      throw new ClientError('Connection is not established yet, call `Client.connect` fist.');
+    if (conn.getState() !== 'open') {
+      throw new ClientError(
+        ClientErrorCode.ErrConnectionNotOpened,
+        `Unable to dispatch command on not opened connection, connection state is '${conn.getState}'`
+      );
     }
 
     const readPromise = this.readCommandResponse();
@@ -282,8 +326,8 @@ export class Client extends EventEmitter {
     const response = await readPromise;
     this.debug(() => ['response received:', response]);
 
-    // resolve current waiting promise
-    resolveCurrentWaiting();
+    // move queue forward
+    moveQueue();
 
     return cmd.handleResponse(response, this._opt.serializer);
   }
@@ -302,10 +346,7 @@ export class Client extends EventEmitter {
 
     const result = await this.dispatchCommand(cmd, [tubeName]);
 
-    // eslint-disable-next-line prefer-destructuring
-    this._usedTube = result.headers[0];
-
-    return this._usedTube;
+    return result.headers[0];
   }
 
   /**
@@ -357,7 +398,7 @@ export class Client extends EventEmitter {
     }
 
     if (result.status === BeanstalkResponseStatus.EXPECTED_CRLF) {
-      throw new CommandError(`Got '${result.status}' status`);
+      throw new BeanstalkError(`Missing trailing CRLF`, result.status);
     }
 
     if (result.status === BeanstalkResponseStatus.DRAINING) {
@@ -580,22 +621,21 @@ export class Client extends EventEmitter {
    *
    * @category Worker Commands
    */
-  public async watch(tubeName: string): Promise<void> {
+  public async watch(tubeName: string): Promise<number> {
     validateTubeName(tubeName);
 
     const cmd = getCommandInstance(BeanstalkCommand.watch);
 
     const result = await this.dispatchCommand(cmd, [tubeName]);
 
-    this._watchedTubes = this._watchedTubes.filter((i) => i !== tubeName).concat([tubeName]);
-
-    if (this._watchedTubes.length !== parseInt(result.headers[0], 10)) {
-      await this.listTubesWatched();
-    }
+    return parseInt(result.headers[0], 10);
   }
 
   /**
    * Removes the named tube from the watch list for the current connection.
+   *
+   * False returned in case of attempt to ignore last tube watched
+   * (`NOT_IGNORED` returned from server).
    *
    * @category Worker Commands
    */
@@ -607,12 +647,6 @@ export class Client extends EventEmitter {
     const result = await this.dispatchCommand(cmd, [tubeName]);
 
     if (result.status === BeanstalkResponseStatus.WATCHING) {
-      this._watchedTubes = this._watchedTubes.filter((i) => i !== tubeName);
-
-      if (this._watchedTubes.length !== parseInt(result.headers[0], 10)) {
-        await this.listTubesWatched();
-      }
-
       return true;
     }
 
@@ -823,8 +857,6 @@ export class Client extends EventEmitter {
     const cmd = getCommandInstance(BeanstalkCommand['list-tubes-watched']);
 
     const result = await this.dispatchCommand(cmd);
-
-    this._watchedTubes = result.data;
 
     return result.data;
   }

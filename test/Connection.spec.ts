@@ -32,7 +32,8 @@ describe('Connection', () => {
 
     // eslint-disable-next-line no-restricted-syntax
     for await (const connection of connections) {
-      if (connection.state !== 'closed' && connection.state !== 'closing') await connection.close();
+      if (connection.getState() !== 'closed' && connection.getState() !== 'closing')
+        await connection.close();
     }
   });
 
@@ -52,13 +53,13 @@ describe('Connection', () => {
       const conn = getNewConnection();
       await conn.open(address.port, address.address);
 
-      expect(conn.state).toBe('open');
+      expect(conn.getState()).toBe('open');
     });
 
     it('should throw on attempt to twice open connection to given remote', async () => {
       const conn = getNewConnection();
       await conn.open(address.port, address.address);
-      expect(conn.state).toBe('open');
+      expect(conn.getState()).toBe('open');
 
       await conn
         .open(address.port, address.address)
@@ -91,14 +92,14 @@ describe('Connection', () => {
       const conn = getNewConnection();
       await conn.open(address.port, address.address);
       await conn.close();
-      expect(conn.state).toBe('closed');
+      expect(conn.getState()).toBe('closed');
     });
 
     it('should throw on attempt to twice close connection', async () => {
       const conn = getNewConnection();
       await conn.open(address.port, address.address);
       await conn.close();
-      expect(conn.state).toBe('closed');
+      expect(conn.getState()).toBe('closed');
 
       await conn
         .close()

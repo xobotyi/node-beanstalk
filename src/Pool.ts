@@ -141,6 +141,6 @@ export class Pool {
     this._idleClients.filter((c) => c !== client);
     this._clients.filter((c) => c !== client);
 
-    await client.end(force);
+    await client.disconnect(force);
   }
 }

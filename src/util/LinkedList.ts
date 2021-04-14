@@ -2,27 +2,22 @@
 export interface ILinkedListNode<V = any> {
   readonly value: V;
 
-  list: LinkedList | null;
-  next: ILinkedListNode | null;
-  prev: ILinkedListNode | null;
+  list: LinkedList | undefined;
+  next: ILinkedListNode | undefined;
+  prev: ILinkedListNode | undefined;
 }
 
 export class LinkedList<V = any> {
-  head: ILinkedListNode<V> | null;
+  head: ILinkedListNode<V> | undefined;
 
-  tail: ILinkedListNode<V> | null;
+  tail: ILinkedListNode<V> | undefined;
 
   size = 0;
-
-  constructor() {
-    this.head = null;
-    this.tail = null;
-  }
 
   /**
    * Remove node from chain and nullish it.
    */
-  private removeNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> | null {
+  removeNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> | undefined {
     const { next, prev } = node;
 
     if (prev) prev.next = next;
@@ -31,9 +26,9 @@ export class LinkedList<V = any> {
     if (node === this.head) this.head = next;
     if (node === this.tail) this.tail = prev;
 
-    node.next = null;
-    node.prev = null;
-    node.list = null;
+    node.next = undefined;
+    node.prev = undefined;
+    node.list = undefined;
 
     this.size--;
 
@@ -43,7 +38,7 @@ export class LinkedList<V = any> {
   /**
    * Push existing list node to list's endings
    */
-  private pushNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> {
+  pushNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> {
     node.list = this;
     node.prev = this.tail;
 
@@ -68,8 +63,8 @@ export class LinkedList<V = any> {
     return this.pushNode({
       list: this,
       value,
-      next: null,
-      prev: null,
+      next: undefined,
+      prev: undefined,
     });
   }
 
@@ -90,5 +85,26 @@ export class LinkedList<V = any> {
     }
 
     return removed;
+  }
+
+  /**
+   * Remove all items from list.
+   * Also dereferences existing list nodes.
+   */
+  truncate(): V[] {
+    let item = this.head;
+
+    const items: V[] = [];
+
+    while (item) {
+      const { next } = item;
+
+      this.removeNode(item);
+
+      items.push(item.value);
+      item = next;
+    }
+
+    return items;
   }
 }

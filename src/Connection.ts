@@ -26,31 +26,25 @@ export interface Connection {
     ((event: 'open', listener: (port: number, host: string) => void) => this) &
     ((event: 'error', listener: (err: Error) => void) => this) &
     ((event: 'data', listener: (data: Buffer) => void) => this);
-
-  prependOnceListener: ((event: string, listener: (...args: any[]) => void) => this) &
-    ((event: 'close', listener: (...args: any[]) => void) => this) &
-    ((event: 'open', listener: (port: number, host: string) => void) => this) &
-    ((event: 'error', listener: (err: Error) => void) => this) &
-    ((event: 'data', listener: (data: Buffer) => void) => this);
 }
 
-type ConnectionState = 'open' | 'opening' | 'closed' | 'closing';
+export type ConnectionState = 'open' | 'opening' | 'closed' | 'closing';
 
 export class Connection extends EventEmitter {
   private _socket?: Socket;
 
   private _state: ConnectionState = 'closed';
 
-  get state(): ConnectionState {
+  getState(): ConnectionState {
     return this._state;
   }
 
-  get isChangingState(): boolean {
+  isChangingState(): boolean {
     return this._state === 'opening' || this._state === 'closing';
   }
 
   async open(port: number, host = 'localhost'): Promise<void> {
-    if (this.isChangingState) {
+    if (this.isChangingState()) {
       throw new ConnectionError(
         ConnectionErrorCode.ErrChangingState,
         `Unable to open connection that is already changing it's state`
@@ -96,7 +90,7 @@ export class Connection extends EventEmitter {
   }
 
   async close(): Promise<void> {
-    if (this.isChangingState) {
+    if (this.isChangingState()) {
       throw new ConnectionError(
         ConnectionErrorCode.ErrChangingState,
         `Unable to close connection that is already changing it's state`
