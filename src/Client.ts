@@ -47,7 +47,7 @@ export class Client extends EventEmitter {
   }
 
   /**
-   * Indicates whether client is waiting for server response.
+   * Amount of requests waiting in queue, including connect and disconnect.
    */
   get queueSize(): number {
     return this._queue.size;
@@ -782,6 +782,8 @@ export class Client extends EventEmitter {
    * @category Other Commands
    */
   public async statsTube(tubeName: string): Promise<IBeanstalkTubeStats | null> {
+    validateTubeName(tubeName);
+
     const cmd = getCommandInstance(BeanstalkCommand['stats-tube']);
 
     const result = await this.dispatchCommand(cmd, [tubeName]);
@@ -800,6 +802,8 @@ export class Client extends EventEmitter {
    * @category Other Commands
    */
   public async statsJob(jobId: number): Promise<IBeanstalkJobStats | null> {
+    validateJobId(jobId);
+
     const cmd = getCommandInstance(BeanstalkCommand['stats-job']);
 
     const result = await this.dispatchCommand(cmd, [`${jobId}`]);

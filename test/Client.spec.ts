@@ -15,6 +15,7 @@ import {
   validatePriority,
   validateTimeout,
   validateTTR,
+  validateTubeName,
 } from '../src/util/validator';
 import SpyInstance = jest.SpyInstance;
 
@@ -139,6 +140,89 @@ describe('Client', () => {
       setTimeout(() => {
         conn.emit('data', Buffer.from('BURIED\r\n'));
       }, 20);
+    });
+  });
+
+  describe('isConnected', () => {
+    it('should return true in case connection is opened', () => {
+      const conn = new ConnectionMock();
+      const c = new Client({}, conn);
+
+      conn.getState.mockReturnValueOnce('open');
+      expect(c.isConnected).toBe(true);
+
+      conn.getState.mockReturnValueOnce('closed');
+      expect(c.isConnected).toBe(false);
+      conn.getState.mockReturnValueOnce('closing');
+      expect(c.isConnected).toBe(false);
+      conn.getState.mockReturnValueOnce('opening');
+      expect(c.isConnected).toBe(false);
+    });
+  });
+
+  describe('isWorking', () => {
+    it('should return true in case anything is currently in queue', () => {
+      const conn = new ConnectionMock();
+      conn.getState.mockReturnValueOnce('open');
+      const c = new Client({}, conn);
+
+      expect(c.isWorking).toBe(false);
+
+      // @ts-expect-error we're mocking private method so obviously TS is unhappy.
+      const readCommandResponseMock = jest.spyOn(c, 'readCommandResponse') as SpyInstance<
+        ReturnType<Client['readCommandResponse']>,
+        Parameters<Client['readCommandResponse']>
+      >;
+
+      readCommandResponseMock.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => {
+              resolve({
+                status: BeanstalkResponseStatus.BURIED,
+                headers: ['100500'],
+              });
+            }, 10);
+          })
+      );
+
+      c.bury(123, 12);
+
+      expect(c.isWorking).toBe(true);
+    });
+  });
+
+  describe('queueSize', () => {
+    it('should return amount of waiting requests', (done) => {
+      const conn = new ConnectionMock();
+      conn.getState.mockReturnValueOnce('open');
+      const c = new Client({}, conn);
+
+      expect(c.queueSize).toBe(0);
+
+      // @ts-expect-error we're mocking private method so obviously TS is unhappy.
+      const readCommandResponseMock = jest.spyOn(c, 'readCommandResponse') as SpyInstance<
+        ReturnType<Client['readCommandResponse']>,
+        Parameters<Client['readCommandResponse']>
+      >;
+
+      readCommandResponseMock.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => {
+              resolve({
+                status: BeanstalkResponseStatus.BURIED,
+                headers: ['100500'],
+              });
+            }, 10);
+          })
+      );
+
+      Promise.allSettled([c.bury(123), c.bury(123), c.bury(123), c.bury(123)]).then(() => {
+        expect(c.queueSize).toBe(0);
+        done();
+      });
+      expect(c.queueSize).toBe(4);
     });
   });
 
@@ -417,6 +501,7 @@ describe('Client', () => {
       (validateDelay as any).mockReset();
       (validateTimeout as any).mockReset();
       (validateJobId as any).mockReset();
+      (validateTubeName as any).mockReset();
     });
 
     describe('put', () => {
@@ -875,9 +960,425 @@ describe('Client', () => {
         expect(await c.touch(123)).toBe(false);
       });
     });
+
+    describe('use', () => {
+      it('should validate tube name', async () => {
+        dispatchCommandMock.mockReturnValue(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.USING,
+            headers: ['tube-name'],
+          })
+        );
+
+        await c.use('tube-name');
+
+        expect(validateTubeName).toHaveBeenCalledTimes(1);
+        expect(validateTubeName).toHaveBeenCalledWith('tube-name');
+      });
+
+      it('should return currently usied tube name', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.USING,
+            headers: ['awesome-tube'],
+          })
+        );
+
+        expect(await c.use('testTube')).toBe('awesome-tube');
+      });
+    });
+
+    describe('watch', () => {
+      it('should validate tube name', async () => {
+        dispatchCommandMock.mockReturnValue(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.WATCHING,
+            headers: ['tube-name'],
+          })
+        );
+
+        await c.watch('tube-name');
+
+        expect(validateTubeName).toHaveBeenCalledTimes(1);
+        expect(validateTubeName).toHaveBeenCalledWith('tube-name');
+      });
+
+      it('should return amount of tubes watched', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.WATCHING,
+            headers: ['123'],
+          })
+        );
+
+        expect(await c.watch('testTube')).toBe(123);
+      });
+    });
+
+    describe('ignore', () => {
+      it('should validate tube name', async () => {
+        dispatchCommandMock.mockReturnValue(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.WATCHING,
+            headers: ['tube-name'],
+          })
+        );
+
+        await c.ignore('tube-name');
+
+        expect(validateTubeName).toHaveBeenCalledTimes(1);
+        expect(validateTubeName).toHaveBeenCalledWith('tube-name');
+      });
+
+      it('should return ignore result of tubes watched', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.WATCHING,
+            headers: ['123'],
+          })
+        );
+        expect(await c.ignore('testTube')).toBe(true);
+
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_IGNORED,
+            headers: ['123'],
+          })
+        );
+        expect(await c.ignore('testTube')).toBe(false);
+      });
+    });
+
+    describe('peek', () => {
+      it('should validate job id', async () => {
+        dispatchCommandMock.mockReturnValue(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.FOUND,
+            headers: ['100500'],
+            data: 'some job payload',
+          })
+        );
+
+        await c.peek(100500);
+
+        expect(validateJobId).toHaveBeenCalledTimes(1);
+        expect(validateJobId).toHaveBeenCalledWith(100500);
+      });
+
+      it('should return job id and payload', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.FOUND,
+            headers: ['100500'],
+            data: 'some job payload',
+          })
+        );
+        expect(await c.peek(100500)).toStrictEqual({
+          id: 100500,
+          payload: 'some job payload',
+        });
+      });
+
+      it('should return null in case job not found', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_FOUND,
+            headers: [],
+          })
+        );
+        expect(await c.peek(100500)).toBe(null);
+      });
+    });
+
+    describe('peekReady', () => {
+      it('should return job id and payload', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.FOUND,
+            headers: ['100500'],
+            data: 'some job payload',
+          })
+        );
+        expect(await c.peekReady()).toStrictEqual({
+          id: 100500,
+          payload: 'some job payload',
+        });
+      });
+
+      it('should return null in case job not found', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_FOUND,
+            headers: [],
+          })
+        );
+        expect(await c.peekReady()).toBe(null);
+      });
+    });
+
+    describe('peekDelayed', () => {
+      it('should return job id and payload', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.FOUND,
+            headers: ['100500'],
+            data: 'some job payload',
+          })
+        );
+        expect(await c.peekDelayed()).toStrictEqual({
+          id: 100500,
+          payload: 'some job payload',
+        });
+      });
+
+      it('should return null in case job not found', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_FOUND,
+            headers: [],
+          })
+        );
+        expect(await c.peekDelayed()).toBe(null);
+      });
+    });
+
+    describe('peekBuried', () => {
+      it('should return job id and payload', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.FOUND,
+            headers: ['100500'],
+            data: 'some job payload',
+          })
+        );
+        expect(await c.peekBuried()).toStrictEqual({
+          id: 100500,
+          payload: 'some job payload',
+        });
+      });
+
+      it('should return null in case job not found', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_FOUND,
+            headers: [],
+          })
+        );
+        expect(await c.peekBuried()).toBe(null);
+      });
+    });
+
+    describe('kick', () => {
+      it('should return amount of kicked jobs', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.KICKED,
+            headers: ['100500'],
+          })
+        );
+        expect(await c.kick(50)).toBe(100500);
+      });
+    });
+
+    describe('kickJob', () => {
+      it('should validate job id', async () => {
+        dispatchCommandMock.mockReturnValue(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.KICKED,
+            headers: ['100500'],
+            data: 'some job payload',
+          })
+        );
+
+        await c.kickJob(100500);
+
+        expect(validateJobId).toHaveBeenCalledTimes(1);
+        expect(validateJobId).toHaveBeenCalledWith(100500);
+      });
+
+      it('should return boolean representing kick result', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.KICKED,
+            headers: ['100500'],
+          })
+        );
+        expect(await c.kickJob(100500)).toBe(true);
+
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_FOUND,
+            headers: ['100500'],
+          })
+        );
+        expect(await c.kickJob(100500)).toBe(false);
+      });
+    });
+
+    describe('stats', () => {
+      it('should return provided data', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.OK,
+            headers: ['100500'],
+            data: 'this is some data',
+          })
+        );
+        expect(await c.stats()).toBe('this is some data');
+      });
+    });
+
+    describe('statsTube', () => {
+      it('should validate job id', async () => {
+        dispatchCommandMock.mockReturnValue(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.OK,
+            headers: ['100500'],
+            data: 'some job payload',
+          })
+        );
+
+        await c.statsTube('tube');
+
+        expect(validateTubeName).toHaveBeenCalledTimes(1);
+        expect(validateTubeName).toHaveBeenCalledWith('tube');
+      });
+
+      it('should return provided data', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.OK,
+            headers: ['100500'],
+            data: 'this is some data',
+          })
+        );
+        expect(await c.statsTube('test-tube')).toBe('this is some data');
+      });
+
+      it('should return null in case tube not found', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_FOUND,
+            headers: [],
+          })
+        );
+        expect(await c.statsTube('test-tube')).toBe(null);
+      });
+    });
+
+    describe('statsJob', () => {
+      it('should validate job id', async () => {
+        dispatchCommandMock.mockReturnValue(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.OK,
+            headers: ['100500'],
+            data: 'some job payload',
+          })
+        );
+
+        await c.statsJob(12345);
+
+        expect(validateJobId).toHaveBeenCalledTimes(1);
+        expect(validateJobId).toHaveBeenCalledWith(12345);
+      });
+
+      it('should return provided data', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.OK,
+            headers: ['100500'],
+            data: 'this is some data',
+          })
+        );
+        expect(await c.statsJob(12345)).toBe('this is some data');
+      });
+
+      it('should return null in case job not found', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_FOUND,
+            headers: [],
+          })
+        );
+        expect(await c.statsJob(12345)).toBe(null);
+      });
+    });
+
+    describe('listTubes', () => {
+      it('should return provided list', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.OK,
+            headers: [],
+            data: ['this', 'is', 'tubes', 'list'],
+          })
+        );
+        expect(await c.listTubes()).toStrictEqual(['this', 'is', 'tubes', 'list']);
+      });
+    });
+
+    describe('listTubesWatched', () => {
+      it('should return provided list', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.OK,
+            headers: [],
+            data: ['this', 'is', 'tubes', 'list'],
+          })
+        );
+        expect(await c.listTubesWatched()).toStrictEqual(['this', 'is', 'tubes', 'list']);
+      });
+    });
+
+    describe('listTubeUsed', () => {
+      it('should return provided list', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.USING,
+            headers: ['some-tube'],
+          })
+        );
+        expect(await c.listTubeUsed()).toBe('some-tube');
+      });
+    });
+
+    describe('pauseTube', () => {
+      it('should validate tube name and delay', async () => {
+        dispatchCommandMock.mockReturnValue(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.PAUSED,
+            headers: [],
+          })
+        );
+
+        await c.pauseTube('tube', 123);
+
+        expect(validateTubeName).toHaveBeenCalledTimes(1);
+        expect(validateTubeName).toHaveBeenCalledWith('tube');
+        expect(validateDelay).toHaveBeenCalledTimes(1);
+        expect(validateDelay).toHaveBeenCalledWith(123);
+      });
+
+      it('should return boolean representing success of tube pause', async () => {
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.PAUSED,
+            headers: [],
+          })
+        );
+        expect(await c.pauseTube('tube', 123)).toBe(true);
+        dispatchCommandMock.mockReturnValueOnce(
+          Promise.resolve({
+            status: BeanstalkResponseStatus.NOT_FOUND,
+            headers: [],
+          })
+        );
+        expect(await c.pauseTube('tube', 123)).toBe(false);
+      });
+    });
   });
 
-  it('should perform async commands one by one', async () => {
+  it('should perform async commands one by one, and not stuck with rejected', async () => {
     const conn = new ConnectionMock();
     conn.getState.mockReturnValue('open');
 
@@ -913,7 +1414,7 @@ describe('Client', () => {
 
     // in this test, dispatchCommandMock implemented the way that first command waits the most so in
     // case unordered execution it should occur in list the last
-    const resolveOrder: number[] = [];
+    let resolveOrder: number[] = [];
 
     await Promise.allSettled([
       c.bury(10).then(() => {
@@ -934,5 +1435,51 @@ describe('Client', () => {
     ]);
 
     expect(resolveOrder).toStrictEqual([10, 20, 30, 40, 50]);
+
+    // here were rejecting promise in the middle, it should not affect the queue advancing
+    call = 5;
+    readCommandResponseMock.mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          const idx = call--;
+
+          setTimeout(() => {
+            if (idx === 3) {
+              reject(new Error('some error'));
+              return;
+            }
+
+            resolve({
+              status: BeanstalkResponseStatus.BURIED,
+              headers: ['100500'],
+            });
+          }, 100 - idx * 15);
+        })
+    );
+
+    resolveOrder = [];
+
+    await Promise.allSettled([
+      c.bury(10).then(() => {
+        resolveOrder.push(10);
+      }),
+      c.bury(20).then(() => {
+        resolveOrder.push(20);
+      }),
+      c
+        .bury(30)
+        .then(() => {
+          resolveOrder.push(30);
+        })
+        .catch(() => {}),
+      c.bury(40).then(() => {
+        resolveOrder.push(40);
+      }),
+      c.bury(50).then(() => {
+        resolveOrder.push(50);
+      }),
+    ]);
+
+    expect(resolveOrder).toStrictEqual([10, 20, 40, 50]);
   });
 });
