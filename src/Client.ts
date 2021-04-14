@@ -72,21 +72,6 @@ export class Client extends EventEmitter {
   }
 
   /**
-   * Passes debug info to the [[IClientCtorOptions.debugFn]] passed to constructor
-   *
-   * @category Client
-   */
-  private debug(argsGetter: () => Parameters<typeof console.debug>): void {
-    if (this._opt.debug) this._opt.debugFn(argsGetter());
-  }
-
-  emit(event: string | symbol, ...args: any[]): boolean {
-    this.debug(() => [`event: ${event.toString()}`, args]);
-
-    return super.emit(event, ...args);
-  }
-
-  /**
    * @category Client
    */
   private attachConnectionListeners(conn: Connection): Connection {
@@ -105,6 +90,7 @@ export class Client extends EventEmitter {
       resolve: () => void;
       reject: (err?: Error) => void;
     }>;
+
     const promise = new Promise<void>((resolve, reject) => {
       listNode = this._queue.push({ resolve, reject });
 
@@ -307,27 +293,26 @@ export class Client extends EventEmitter {
     const [waitPromise, moveQueue] = this.waitQueue();
 
     await waitPromise;
+    let response: ICommandResponse;
+    try {
+      const { _conn: conn } = this;
 
-    const { _conn: conn } = this;
+      if (conn.getState() !== 'open') {
+        throw new ClientError(
+          ClientErrorCode.ErrConnectionNotOpened,
+          `Unable to dispatch command on not opened connection, connection state is '${conn.getState}'`
+        );
+      }
 
-    if (conn.getState() !== 'open') {
-      throw new ClientError(
-        ClientErrorCode.ErrConnectionNotOpened,
-        `Unable to dispatch command on not opened connection, connection state is '${conn.getState}'`
-      );
+      const readPromise = this.readCommandResponse();
+
+      await conn.write(cmd.buildCommandBuffer(args, this.payloadToBuffer(payload)));
+
+      response = await readPromise;
+    } finally {
+      // move queue forward
+      moveQueue();
     }
-
-    const readPromise = this.readCommandResponse();
-
-    await conn
-      .write(cmd.buildCommandBuffer(args, this.payloadToBuffer(payload)))
-      .then((buff) => this.debug(() => ['command sent:', buff.toString()]))
-      .catch((err) => this.debug(() => ['command send error:', err]));
-    const response = await readPromise;
-    this.debug(() => ['response received:', response]);
-
-    // move queue forward
-    moveQueue();
 
     return cmd.handleResponse(response, this._opt.serializer);
   }
@@ -373,11 +358,14 @@ export class Client extends EventEmitter {
    * @category Producer Commands
    */
   public async put(
-    payload: Exclude<any, undefined>,
+    payload: any,
     ttr: number = this._opt.defaultTTR,
     priority: number = this._opt.defaultPriority,
     delay: number = this._opt.defaultDelay
-  ): Promise<{ id: number; state: BeanstalkJobState.buried | BeanstalkJobState.ready }> {
+  ): Promise<{
+    id: number;
+    state: BeanstalkJobState.buried | BeanstalkJobState.ready | BeanstalkJobState.delayed;
+  }> {
     validateTTR(ttr);
     validatePriority(priority);
     validateDelay(delay);
@@ -408,12 +396,11 @@ export class Client extends EventEmitter {
       );
     }
 
+    const state = delay !== 0 ? BeanstalkJobState.delayed : BeanstalkJobState.ready;
+
     return {
       id: parseInt(result.headers[0], 10),
-      state:
-        result.status === BeanstalkResponseStatus.BURIED
-          ? BeanstalkJobState.buried
-          : BeanstalkJobState.ready,
+      state: result.status === BeanstalkResponseStatus.BURIED ? BeanstalkJobState.buried : state,
     };
   }
 
@@ -554,7 +541,9 @@ export class Client extends EventEmitter {
     jobId: number,
     priority: number = this._opt.defaultPriority,
     delay: number = this._opt.defaultDelay
-  ): Promise<null | BeanstalkJobState.buried | BeanstalkJobState.ready> {
+  ): Promise<
+    null | BeanstalkJobState.buried | BeanstalkJobState.ready | BeanstalkJobState.delayed
+  > {
     validateJobId(jobId);
     validatePriority(priority);
     validateDelay(delay);
@@ -567,9 +556,11 @@ export class Client extends EventEmitter {
       return null;
     }
 
-    return result.status === BeanstalkResponseStatus.BURIED
-      ? BeanstalkJobState.buried
-      : BeanstalkJobState.ready;
+    if (result.status === BeanstalkResponseStatus.BURIED) {
+      return BeanstalkJobState.buried;
+    }
+
+    return delay !== 0 ? BeanstalkJobState.delayed : BeanstalkJobState.ready;
   }
 
   /**
