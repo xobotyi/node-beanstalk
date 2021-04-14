@@ -1,3 +1,10 @@
+## [1.5.4](https://github.com/xobotyi/node-beanstalk/compare/v1.5.3...v1.5.4) (2021-04-14)
+
+
+### Bug Fixes
+
+* client tests complete. ([b8bf3c1](https://github.com/xobotyi/node-beanstalk/commit/b8bf3c1645f60340f143d506a2b536a6192a3e3f))
+
 ## [1.5.3](https://github.com/xobotyi/node-beanstalk/compare/v1.5.2...v1.5.3) (2021-04-14)
 
 
