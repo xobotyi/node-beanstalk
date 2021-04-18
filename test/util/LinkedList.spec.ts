@@ -33,7 +33,7 @@ describe('LinkedList', () => {
     expect(list.size).toBe(2);
   });
 
-  it('list.shrinkHead should remove nodes from the head', () => {
+  it('list.unshift should remove node from the head and return its value', () => {
     const list = new LinkedList();
 
     list.push('abc');
@@ -41,17 +41,18 @@ describe('LinkedList', () => {
     const node3 = list.push('ghi');
 
     expect(list.size).toBe(3);
-    expect(list.shrinkHead()).toStrictEqual(['abc']);
+    expect(list.unshift()).toBe('abc');
     expect(list.head).toBe(node2);
     expect(list.tail).toBe(node3);
     expect(list.size).toBe(2);
 
-    expect(list.shrinkHead(2)).toStrictEqual(['def', 'ghi']);
+    expect(list.unshift()).toBe('def');
+    expect(list.unshift()).toBe('ghi');
     expect(list.head).toBeUndefined();
     expect(list.tail).toBeUndefined();
     expect(list.size).toBe(0);
 
-    expect(list.shrinkHead()).toStrictEqual([]);
+    expect(list.unshift()).toBeUndefined();
     expect(list.head).toBeUndefined();
     expect(list.tail).toBeUndefined();
     expect(list.size).toBe(0);

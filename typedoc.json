@@ -11,7 +11,7 @@
   "plugin": [
     "typedoc-neo-theme"
   ],
-  "highlightTheme": "github-dark",
+  "highlightTheme": "material-theme-palenight",
   "source": [
     {
       "path": "https://github.com/xobotyi/node-beanstalk/blob/master/",

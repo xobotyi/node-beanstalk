@@ -23,14 +23,12 @@ export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
   defaultPriority: 1024,
   defaultDelay: 0,
   defaultTTR: 30,
-  debugFn: console.debug,
   serializer: new JsonSerializer(),
   maxPayloadSize: 65_536,
   dataReadTimeoutMs: 1000,
 };
 
 export const DEFAULT_POOL_OPTIONS: Required<IPoolCtorOptions> = {
-  ...DEFAULT_CLIENT_OPTIONS,
+  clientOptions: {},
   capacity: 10,
-  idleTimeoutMs: 10000,
 };
