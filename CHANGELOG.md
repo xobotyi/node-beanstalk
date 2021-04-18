@@ -1,3 +1,10 @@
+## [1.5.10](https://github.com/xobotyi/node-beanstalk/compare/v1.5.9...v1.5.10) (2021-04-18)
+
+
+### Bug Fixes
+
+* remove useless code ([971cc51](https://github.com/xobotyi/node-beanstalk/commit/971cc5159f15de88e4e2e2b7edcead720728efc9))
+
 ## [1.5.9](https://github.com/xobotyi/node-beanstalk/compare/v1.5.8...v1.5.9) (2021-04-18)
 
 
