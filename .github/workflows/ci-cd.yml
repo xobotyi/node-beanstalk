@@ -118,7 +118,7 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0
+          ref: "master"
 
       - name: "Setup Node.js"
         uses: actions/setup-node@v2
