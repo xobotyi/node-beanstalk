@@ -1,3 +1,10 @@
+## [1.5.6](https://github.com/xobotyi/node-beanstalk/compare/v1.5.5...v1.5.6) (2021-04-18)
+
+
+### Bug Fixes
+
+* proper branch fetch before gh-pahes deploy ([7a5b18d](https://github.com/xobotyi/node-beanstalk/commit/7a5b18d27f6209e5969de5d86a12fbfb2037a456))
+
 ## [1.5.5](https://github.com/xobotyi/node-beanstalk/compare/v1.5.4...v1.5.5) (2021-04-18)
 
 
