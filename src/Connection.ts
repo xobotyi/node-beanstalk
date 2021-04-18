@@ -26,6 +26,12 @@ export interface Connection {
     ((event: 'open', listener: (port: number, host: string) => void) => this) &
     ((event: 'error', listener: (err: Error) => void) => this) &
     ((event: 'data', listener: (data: Buffer) => void) => this);
+
+  prependOnceListener: ((event: string, listener: (...args: any[]) => void) => this) &
+    ((event: 'close', listener: (...args: any[]) => void) => this) &
+    ((event: 'open', listener: (port: number, host: string) => void) => this) &
+    ((event: 'error', listener: (err: Error) => void) => this) &
+    ((event: 'data', listener: (data: Buffer) => void) => this);
 }
 
 export type ConnectionState = 'open' | 'opening' | 'closed' | 'closing';

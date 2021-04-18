@@ -68,18 +68,7 @@ export class Client extends EventEmitter {
       ...options,
     };
 
-    this._conn = this.attachConnectionListeners(connection);
-  }
-
-  /**
-   * @category Client
-   */
-  private attachConnectionListeners(conn: Connection): Connection {
-    conn.on('connect', this.emit.bind(this, 'connect'));
-    conn.on('error', this.emit.bind(this, 'error'));
-    conn.on('close', this.emit.bind(this, 'end'));
-
-    return conn;
+    this._conn = connection;
   }
 
   /**
