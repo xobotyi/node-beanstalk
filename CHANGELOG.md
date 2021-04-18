@@ -1,3 +1,11 @@
+## [1.5.5](https://github.com/xobotyi/node-beanstalk/compare/v1.5.4...v1.5.5) (2021-04-18)
+
+
+### Bug Fixes
+
+* add commitlint, improve linting and .npmignore ([503ee97](https://github.com/xobotyi/node-beanstalk/commit/503ee97b9227e5a267c99376c28b71b75852b77e))
+* improve ci-cd workflow ([149588a](https://github.com/xobotyi/node-beanstalk/commit/149588a27e6c9ccca419b09515e8e443c4a678f0))
+
 ## [1.5.4](https://github.com/xobotyi/node-beanstalk/compare/v1.5.3...v1.5.4) (2021-04-14)
 
 
