@@ -1,3 +1,10 @@
+## [1.5.9](https://github.com/xobotyi/node-beanstalk/compare/v1.5.8...v1.5.9) (2021-04-18)
+
+
+### Bug Fixes
+
+* tests for PoolClient and better typings ([ab541c5](https://github.com/xobotyi/node-beanstalk/commit/ab541c59bc6f317e9bb52291cdf7fa8279c13583))
+
 ## [1.5.8](https://github.com/xobotyi/node-beanstalk/compare/v1.5.7...v1.5.8) (2021-04-18)
 
 
