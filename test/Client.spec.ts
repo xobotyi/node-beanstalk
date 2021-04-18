@@ -26,6 +26,7 @@ class ConnectionMock extends Connection {
 
   public isChangingState = jest.fn(() => false);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public open = jest.fn(async (port: number, host?: string) => {});
 
   public write = jest.fn(async <T extends Buffer>(buffer: T): Promise<T> => buffer);

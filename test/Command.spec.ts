@@ -18,7 +18,8 @@ describe('Command', () => {
     it('should throw on unknown command', () => {
       try {
         // @ts-expect-error testing incompatible command
-        const c = new Command('totally unknown command');
+        // eslint-disable-next-line no-new
+        new Command('totally unknown command');
         throw new Error('not thrown!');
       } catch (e) {
         expect(e).toBeInstanceOf(CommandError);
@@ -28,7 +29,8 @@ describe('Command', () => {
 
     it('should throw if unknown status expected', () => {
       try {
-        const c = new Command(BeanstalkCommand.bury, {
+        // eslint-disable-next-line no-new
+        new Command(BeanstalkCommand.bury, {
           // @ts-expect-error testing incompatible status
           expectedStatus: ['totally unknown status'],
         });
