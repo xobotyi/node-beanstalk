@@ -1,3 +1,10 @@
+## [1.5.8](https://github.com/xobotyi/node-beanstalk/compare/v1.5.7...v1.5.8) (2021-04-18)
+
+
+### Bug Fixes
+
+* remove unused code in client & better typing for Connection ([7982750](https://github.com/xobotyi/node-beanstalk/commit/7982750897c3e02043b1c5a0593e2d92e6782cc1))
+
 ## [1.5.7](https://github.com/xobotyi/node-beanstalk/compare/v1.5.6...v1.5.7) (2021-04-18)
 
 
