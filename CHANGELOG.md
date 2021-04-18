@@ -1,3 +1,10 @@
+## [1.5.7](https://github.com/xobotyi/node-beanstalk/compare/v1.5.6...v1.5.7) (2021-04-18)
+
+
+### Bug Fixes
+
+* add @semantic-release/github plugin ([b3144eb](https://github.com/xobotyi/node-beanstalk/commit/b3144ebe0d899ede0cff8df3fd5b9f1d194af08a))
+
 ## [1.5.6](https://github.com/xobotyi/node-beanstalk/compare/v1.5.5...v1.5.6) (2021-04-18)
 
 
