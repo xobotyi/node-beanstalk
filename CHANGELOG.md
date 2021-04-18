@@ -1,3 +1,10 @@
+## [1.5.11](https://github.com/xobotyi/node-beanstalk/compare/v1.5.10...v1.5.11) (2021-04-18)
+
+
+### Bug Fixes
+
+* new docs theme ([4b8ff8e](https://github.com/xobotyi/node-beanstalk/commit/4b8ff8e0836b1ba7f8967d3e9fbd0c4297bd0fde))
+
 ## [1.5.10](https://github.com/xobotyi/node-beanstalk/compare/v1.5.9...v1.5.10) (2021-04-18)
 
 
