@@ -3,5 +3,29 @@
     "src/index.ts"
   ],
   "out": "docs",
-  "includeVersion": true
+  "excludeExternals": true,
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "includeVersion": true,
+  "theme": "./node_modules/typedoc-neo-theme/bin/default",
+  "plugin": [
+    "typedoc-neo-theme"
+  ],
+  "highlightTheme": "github-dark",
+  "source": [
+    {
+      "path": "https://github.com/xobotyi/node-beanstalk/blob/master/",
+      "line": "L"
+    }
+  ],
+  "links": [
+    {
+      "label": "GitHub",
+      "url": "https://github.com/xobotyi/node-beanstalk"
+    },
+    {
+      "label": "npm",
+      "url": "https://www.npmjs.com/package/node-beanstalk"
+    }
+  ]
 }
