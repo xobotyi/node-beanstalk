@@ -35,13 +35,6 @@ export interface IClientCtorOptions {
   defaultTTR?: number;
 
   /**
-   * If true client will debug-output all the events that happen to it using {options.debugFn}
-   *
-   * @default false
-   */
-  debug?: boolean;
-
-  /**
    * Function that will receive all the debugging data
    *
    * @default console.debug

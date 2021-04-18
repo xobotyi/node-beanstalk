@@ -23,7 +23,6 @@ export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
   defaultPriority: 1024,
   defaultDelay: 0,
   defaultTTR: 30,
-  debug: false,
   debugFn: console.debug,
   serializer: new JsonSerializer(),
   maxPayloadSize: 65_536,

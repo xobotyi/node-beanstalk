@@ -31,13 +31,6 @@ export class Pool {
   }
 
   /**
-   * @inheritDoc Client.debug
-   */
-  private debug(argsGetter: () => Parameters<typeof console.debug>): void {
-    if (this._opt.debug) console.debug(argsGetter());
-  }
-
-  /**
    * Total capacity of the pool.
    */
   get capacity(): number {
