@@ -1,3 +1,12 @@
+## [1.6.1](https://github.com/xobotyi/node-beanstalk/compare/v1.6.0...v1.6.1) (2021-04-19)
+
+
+### Bug Fixes
+
+* add package keywords and description ([f5c2156](https://github.com/xobotyi/node-beanstalk/commit/f5c2156b882ac7c61937b6f82a734edd89841d83))
+* code rearrangement and tests fix ([8e71fcf](https://github.com/xobotyi/node-beanstalk/commit/8e71fcfac2bfe4e9bd05e7bc26b48984222f2a02))
+* export all errors tha can be possibly thrown ([a49b2bd](https://github.com/xobotyi/node-beanstalk/commit/a49b2bd594129e08644fb436e05761c50b07c808))
+
 # [1.6.0](https://github.com/xobotyi/node-beanstalk/compare/v1.5.13...v1.6.0) (2021-04-19)
 
 
