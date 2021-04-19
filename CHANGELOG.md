@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/xobotyi/node-beanstalk/compare/v1.6.1...v1.6.2) (2021-04-19)
+
+
+### Bug Fixes
+
+* typos and queued rejection clarification ([a1cf652](https://github.com/xobotyi/node-beanstalk/commit/a1cf6527d98a0e79448acca895178ad5f1561d96))
+
 ## [1.6.1](https://github.com/xobotyi/node-beanstalk/compare/v1.6.0...v1.6.1) (2021-04-19)
 
 
