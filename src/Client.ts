@@ -39,6 +39,17 @@ export class Client extends EventEmitter {
     reject: (err?: Error) => void;
   }> = new LinkedList();
 
+  constructor(options: IClientCtorOptions = {}, connection = new Connection()) {
+    super();
+
+    this._opt = {
+      ...DEFAULT_CLIENT_OPTIONS,
+      ...options,
+    };
+
+    this._conn = connection;
+  }
+
   /**
    * Indicates whether client is waiting for server response.
    */
@@ -58,46 +69,6 @@ export class Client extends EventEmitter {
    */
   get isConnected(): boolean {
     return this._conn.getState() === 'open';
-  }
-
-  constructor(options: IClientCtorOptions = {}, connection = new Connection()) {
-    super();
-
-    this._opt = {
-      ...DEFAULT_CLIENT_OPTIONS,
-      ...options,
-    };
-
-    this._conn = connection;
-  }
-
-  /**
-   * @category Client
-   */
-  private waitQueue(): [waitPromise: Promise<void>, moveQueue: () => void] {
-    let listNode: ILinkedListNode<{
-      resolve: () => void;
-      reject: (err?: Error) => void;
-    }>;
-
-    const promise = new Promise<void>((resolve, reject) => {
-      listNode = this._queue.push({ resolve, reject });
-
-      if (this._queue.head === listNode) {
-        resolve();
-      }
-    });
-
-    return [
-      promise,
-      () => {
-        // remove current node from list
-        this._queue.removeNode(listNode);
-
-        // resolve first promise waiting in queue if it exists
-        this._queue.head?.value.resolve();
-      },
-    ];
   }
 
   /**
@@ -162,148 +133,6 @@ export class Client extends EventEmitter {
     } finally {
       moveQueue();
     }
-  }
-
-  /**
-   * Transforms payload to buffer. Also performs size and type checks.
-   *
-   * In case provided payload is not a [[string | number]] it
-   * will be serialized via [[IClientCtorOptions.serializer]]
-   *
-   * @throws {ClientError}
-   * @category Client
-   */
-  private payloadToBuffer(payload: any): Buffer | undefined {
-    if (payload === undefined) return undefined;
-
-    const { serializer, maxPayloadSize } = this._opt;
-
-    if (typeof payload !== 'string' && !serializer) {
-      throw new ClientError(
-        ClientErrorCode.ErrInvalidPayload,
-        `Serializer not defined, payload has to be string, got ${typeof payload}. Configure serializer or serialize payload manually.`
-      );
-    }
-
-    let payloadBuffer: Buffer;
-
-    if (serializer) {
-      payloadBuffer = serializer.serialize(payload);
-    } else {
-      payloadBuffer = Buffer.from(payload);
-    }
-
-    if (payloadBuffer.length > maxPayloadSize) {
-      throw new ClientError(
-        ClientErrorCode.ErrPayloadTooBig,
-        `${serializer ? 'Serialized payload' : 'Payload'} is too big,` +
-          ` maximum size is ${maxPayloadSize} bytes, got ${payloadBuffer.length}`
-      );
-    }
-
-    return payloadBuffer;
-  }
-
-  /**
-   *
-   * @category Client
-   */
-  private readCommandResponse(): Promise<ICommandResponse> {
-    const conn = this._conn;
-    return new Promise((resolve, reject) => {
-      let response: Buffer = Buffer.alloc(0);
-      let headers: ICommandResponseHeaders | null = null;
-      let dataReadTimeout: NodeJS.Timeout;
-
-      const dataListener = (data: Buffer) => {
-        response = Buffer.concat([response, data]);
-
-        if (!headers) {
-          // check if headers already received
-          headers = parseResponseHeaders(response);
-
-          if (headers) {
-            response = response.slice(headers.headersLineLen);
-
-            if (headers.hasData) {
-              if (response.length < headers.dataLength) {
-                // if response data not read - start read timeout
-                dataReadTimeout = setTimeout(() => {
-                  conn.off('data', dataListener);
-                  reject(
-                    new ClientError(
-                      ClientErrorCode.ErrResponseRead,
-                      `Failed to read response data after ${this._opt.dataReadTimeoutMs} ms`
-                    )
-                  );
-                }, this._opt.dataReadTimeoutMs);
-              }
-            }
-          }
-        }
-
-        if (headers) {
-          if (headers.hasData) {
-            if (response.length >= headers.dataLength) {
-              // response data is read, we're done
-              clearTimeout(dataReadTimeout);
-              conn.off('data', dataListener);
-              resolve({
-                status: headers.status,
-                headers: headers.headers,
-                data: response.slice(0, headers.dataLength),
-              });
-            }
-          } else {
-            conn.off('data', dataListener);
-            resolve({
-              status: headers.status,
-              headers: headers.headers,
-            });
-          }
-        }
-      };
-
-      conn.on('data', dataListener);
-    });
-  }
-
-  /**
-   * Sends command to the server and reads response which then passed to [[Command.handleResponse]].
-   *
-   * @category Client
-   */
-  private async dispatchCommand<R extends BeanstalkResponseStatus = BeanstalkResponseStatus>(
-    cmd: Command<R>,
-    args?: string[],
-    payload?: any
-  ): Promise<ICommandHandledResponse<R>> {
-    // wait for the queue
-    const [waitPromise, moveQueue] = this.waitQueue();
-
-    await waitPromise;
-    let response: ICommandResponse;
-    try {
-      const { _conn: conn } = this;
-
-      if (conn.getState() !== 'open') {
-        throw new ClientError(
-          ClientErrorCode.ErrConnectionNotOpened,
-          `Unable to dispatch command on not opened connection, connection state is '${conn.getState}'`
-        );
-      }
-
-      const readPromise = this.readCommandResponse();
-
-      await conn.write(cmd.buildCommandBuffer(args, this.payloadToBuffer(payload)));
-
-      response = await readPromise;
-    } finally {
-      // move queue forward
-      moveQueue();
-    }
-
-    return cmd.handleResponse(response, this._opt.serializer);
   }
 
   // COMMANDS
@@ -863,5 +692,176 @@ export class Client extends EventEmitter {
     const result = await this.dispatchCommand(cmd, [tubeName, `${delay}`]);
 
     return result.status === BeanstalkResponseStatus.PAUSED;
+  }
+
+  /**
+   * @category Client
+   */
+  private waitQueue(): [waitPromise: Promise<void>, moveQueue: () => void] {
+    let listNode: ILinkedListNode<{
+      resolve: () => void;
+      reject: (err?: Error) => void;
+    }>;
+
+    const promise = new Promise<void>((resolve, reject) => {
+      listNode = this._queue.push({ resolve, reject });
+
+      if (this._queue.head === listNode) {
+        resolve();
+      }
+    });
+
+    return [
+      promise,
+      () => {
+        // remove current node from list
+        this._queue.removeNode(listNode);
+
+        // resolve first promise waiting in queue if it exists
+        this._queue.head?.value.resolve();
+      },
+    ];
+  }
+
+  /**
+   * Transforms payload to buffer. Also performs size and type checks.
+   *
+   * In case provided payload is not a [[string | number]] it
+   * will be serialized via [[IClientCtorOptions.serializer]]
+   *
+   * @throws {ClientError}
+   * @category Client
+   */
+  private payloadToBuffer(payload: any): Buffer | undefined {
+    if (payload === undefined) return undefined;
+
+    const { serializer, maxPayloadSize } = this._opt;
+
+    if (typeof payload !== 'string' && !serializer) {
+      throw new ClientError(
+        ClientErrorCode.ErrInvalidPayload,
+        `Serializer not defined, payload has to be string, got ${typeof payload}. Configure serializer or serialize payload manually.`
+      );
+    }
+
+    let payloadBuffer: Buffer;
+
+    if (serializer) {
+      payloadBuffer = serializer.serialize(payload);
+    } else {
+      payloadBuffer = Buffer.from(payload);
+    }
+
+    if (payloadBuffer.length > maxPayloadSize) {
+      throw new ClientError(
+        ClientErrorCode.ErrPayloadTooBig,
+        `${serializer ? 'Serialized payload' : 'Payload'} is too big,` +
+          ` maximum size is ${maxPayloadSize} bytes, got ${payloadBuffer.length}`
+      );
+    }
+
+    return payloadBuffer;
+  }
+
+  /**
+   *
+   * @category Client
+   */
+  private readCommandResponse(): Promise<ICommandResponse> {
+    const conn = this._conn;
+    return new Promise((resolve, reject) => {
+      let response: Buffer = Buffer.alloc(0);
+      let headers: ICommandResponseHeaders | null = null;
+      let dataReadTimeout: NodeJS.Timeout;
+
+      const dataListener = (data: Buffer) => {
+        response = Buffer.concat([response, data]);
+
+        if (!headers) {
+          // check if headers already received
+          headers = parseResponseHeaders(response);
+
+          if (headers) {
+            response = response.slice(headers.headersLineLen);
+
+            if (headers.hasData) {
+              if (response.length < headers.dataLength) {
+                // if response data not read - start read timeout
+                dataReadTimeout = setTimeout(() => {
+                  conn.off('data', dataListener);
+                  reject(
+                    new ClientError(
+                      ClientErrorCode.ErrResponseRead,
+                      `Failed to read response data after ${this._opt.dataReadTimeoutMs} ms`
+                    )
+                  );
+                }, this._opt.dataReadTimeoutMs);
+              }
+            }
+          }
+        }
+
+        if (headers) {
+          if (headers.hasData) {
+            if (response.length >= headers.dataLength) {
+              // response data is read, we're done
+              clearTimeout(dataReadTimeout);
+              conn.off('data', dataListener);
+              resolve({
+                status: headers.status,
+                headers: headers.headers,
+                data: response.slice(0, headers.dataLength),
+              });
+            }
+          } else {
+            conn.off('data', dataListener);
+            resolve({
+              status: headers.status,
+              headers: headers.headers,
+            });
+          }
+        }
+      };
+
+      conn.on('data', dataListener);
+    });
+  }
+
+  /**
+   * Sends command to the server and reads response which then passed to [[Command.handleResponse]].
+   *
+   * @category Client
+   */
+  private async dispatchCommand<R extends BeanstalkResponseStatus = BeanstalkResponseStatus>(
+    cmd: Command<R>,
+    args?: string[],
+    payload?: any
+  ): Promise<ICommandHandledResponse<R>> {
+    // wait for the queue
+    const [waitPromise, moveQueue] = this.waitQueue();
+
+    await waitPromise;
+    let response: ICommandResponse;
+    try {
+      const { _conn: conn } = this;
+
+      if (conn.getState() !== 'open') {
+        throw new ClientError(
+          ClientErrorCode.ErrConnectionNotOpened,
+          `Unable to dispatch command on not opened connection, connection state is '${conn.getState}'`
+        );
+      }
+
+      const readPromise = this.readCommandResponse();
+
+      await conn.write(cmd.buildCommandBuffer(args, this.payloadToBuffer(payload)));
+
+      response = await readPromise;
+    } finally {
+      // move queue forward
+      moveQueue();
+    }
+
+    return cmd.handleResponse(response, this._opt.serializer);
   }
 }

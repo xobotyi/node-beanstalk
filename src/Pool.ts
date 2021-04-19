@@ -28,13 +28,6 @@ export class Pool {
   }
 
   /**
-   * Current pool state.
-   */
-  getState(): PoolState {
-    return this._state;
-  }
-
-  /**
    * Total capacity of the pool.
    */
   get capacity(): number {
@@ -56,23 +49,12 @@ export class Pool {
     return this._pendingQueue.size;
   }
 
-  private createPendingPromise(): Promise<PoolClient> {
-    return new Promise((resolve, reject) => {
-      this._pendingQueue.push({ resolve, reject });
-    });
+  /**
+   * Current pool state.
+   */
+  getState(): PoolState {
+    return this._state;
   }
-
-  private handleClientRelease = (client: PoolClient): void => {
-    if (this._state !== 'live') return;
-
-    const pending = this._pendingQueue.unshift();
-
-    if (pending) {
-      pending.resolve(client);
-    } else {
-      this._idleClients.push(client);
-    }
-  };
 
   /**
    * Reserve a client from the pool.
@@ -156,4 +138,22 @@ export class Pool {
 
     this._state = 'live';
   }
+
+  private createPendingPromise(): Promise<PoolClient> {
+    return new Promise((resolve, reject) => {
+      this._pendingQueue.push({ resolve, reject });
+    });
+  }
+
+  private handleClientRelease = (client: PoolClient): void => {
+    if (this._state !== 'live') return;
+
+    const pending = this._pendingQueue.unshift();
+
+    if (pending) {
+      pending.resolve(client);
+    } else {
+      this._idleClients.push(client);
+    }
+  };
 }

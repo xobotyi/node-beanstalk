@@ -5,7 +5,7 @@ import { Buffer } from 'buffer';
 import { BeanstalkError } from '../src/error/BeanstalkError';
 import { Connection, ConnectionState } from '../src/Connection';
 import { BeanstalkJobState, Client } from '../src';
-import { ClientError, ClientErrorCode } from '../src/error/ClitenError';
+import { ClientError, ClientErrorCode } from '../src/error/ClientError';
 import { JsonSerializer } from '../src/serializer/JsonSerializer';
 import { Command } from '../src/Command';
 import { BeanstalkCommand, BeanstalkResponseStatus } from '../src/types';
