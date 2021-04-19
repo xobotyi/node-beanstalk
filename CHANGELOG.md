@@ -1,3 +1,10 @@
+## [1.5.13](https://github.com/xobotyi/node-beanstalk/compare/v1.5.12...v1.5.13) (2021-04-19)
+
+
+### Bug Fixes
+
+* make codecov push action occur within test step ([d8f8d8a](https://github.com/xobotyi/node-beanstalk/commit/d8f8d8ae483db7d5e08104e2f7cf3b6275d696ff))
+
 ## [1.5.12](https://github.com/xobotyi/node-beanstalk/compare/v1.5.11...v1.5.12) (2021-04-19)
 
 
