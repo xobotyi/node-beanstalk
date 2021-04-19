@@ -1,3 +1,10 @@
+## [1.5.12](https://github.com/xobotyi/node-beanstalk/compare/v1.5.11...v1.5.12) (2021-04-19)
+
+
+### Bug Fixes
+
+* rework pool ([c625f04](https://github.com/xobotyi/node-beanstalk/commit/c625f04282257b38482292aaf95c577770f62288))
+
 ## [1.5.11](https://github.com/xobotyi/node-beanstalk/compare/v1.5.10...v1.5.11) (2021-04-18)
 
 
