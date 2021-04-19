@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/xobotyi/node-beanstalk/compare/v1.5.13...v1.6.0) (2021-04-19)
+
+
+### Features
+
+* readme ([0730cf8](https://github.com/xobotyi/node-beanstalk/commit/0730cf87acc71461decbe0f5b85c0e9b048b235d))
+
 ## [1.5.13](https://github.com/xobotyi/node-beanstalk/compare/v1.5.12...v1.5.13) (2021-04-19)
 
 
