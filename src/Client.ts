@@ -13,7 +13,7 @@ import {
   ICommandResponseHeaders,
 } from './types';
 import { Command } from './Command';
-import { ClientError, ClientErrorCode } from './error/ClitenError';
+import { ClientError, ClientErrorCode } from './error/ClientError';
 import { getCommandInstance } from './util/getCommandInstance';
 import { DEFAULT_CLIENT_OPTIONS } from './const';
 import { parseResponseHeaders } from './util/parseResponseHeaders';
