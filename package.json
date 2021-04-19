@@ -1,5 +1,12 @@
 {
   "name": "node-beanstalk",
+  "description": "The most comprehensive beanstalk client for nodejs",
+  "keywords": [
+    "nodejs",
+    "beanstalkd",
+    "beanstalk",
+    "node-beanstalk"
+  ],
   "version": "1.6.0",
   "license": "MIT",
   "repository": {

@@ -106,6 +106,14 @@ to be performed and then disconnect the client from server.
 To disconnect client immediately call `client.disconnect(true)`, it will perform disconnect right
 after currently running request.
 
+##### Payload serialization
+
+As in most cases our job payloads are complex objets - they somehow must be serialized to Buffer. In
+general serialized payload can be any bytes sequence, but by default, payload is serialized via JSON
+and casted to buffer, but you can specify your own serializer by passing corresponding parameter to
+client constructor options. Required serializer signature can be found in
+[API docs](https://xobotyi.github.io/node-beanstalk/classes/serializer.html).
+
 ### Pooling
 
 For the cases of being used within webservers when waiting for all previous requests is not an
@@ -153,8 +161,8 @@ them. After disconnect executed all returned clients will be disconnected and no
 idle queue.
 
 Force disconnect `pool.disconnect(true)` will not wait for pending reserve and start disconnection
-immediately (it will still be waiting clients return to the pool) by calling force disconnect on each
-client.
+immediately (it will still be waiting clients return to the pool) by calling force disconnect on
+each client.
 
 ## TEST
 
