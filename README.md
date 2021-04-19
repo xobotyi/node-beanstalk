@@ -38,14 +38,14 @@ yarn add node-beanstalk
 
 ## USAGE
 
-`node-beanstalk` fully
-supports [beanstalk protocol v1.12](https://raw.githubusercontent.com/beanstalkd/beanstalkd/master/doc/protocol.txt)
+`node-beanstalk` fully supports
+[beanstalk protocol v1.12](https://raw.githubusercontent.com/beanstalkd/beanstalkd/master/doc/protocol.txt)
 
 ### Client
 
 `node-beanstalk` is built with use of promises.  
-Each client gives full access to functionality of beanstalk queue manage without strict separation
-to emitter and worker.
+Each client gives you full access to functionality of beanstalk queue manager, without strict
+separation to emitter and worker.
 
 ```ts
 import { Client, BeanstalkJobState } from 'node-beanstalk';
@@ -78,9 +78,9 @@ c.delete(job.id);
 c.disconnect();
 ```
 
-As beanstalk is pretty fast but still synchronous on single connection all consecutive calls will
-wait for the end of previous one. So below code despite the fact of being asyncronous, will be
-executed consecutively.
+As beanstalk is pretty fast but still synchronous on a single connection - all consecutive calls
+will wait for the end of previous one. So below code will be executed consecutively, despite the
+fact of being asyncronous.
 
 ```ts
 import { Client, BeanstalkJobState } from 'node-beanstalk';
@@ -100,18 +100,19 @@ one by one).
 
 ##### Disconnect
 
-To disconnect the client from remote call `client.disconnect()` - it will wait all pending requests
-to be performed and then disconnect the client from server.
+To disconnect the client from remote - call `client.disconnect()`, it will wait for all the pending
+requests to be performed and then disconnect the client from server. All requests queued after
+disconnection will be rejected.
 
-To disconnect client immediately call `client.disconnect(true)`, it will perform disconnect right
+To disconnect client immediately - call `client.disconnect(true)`, it will perform disconnect right
 after currently running request.
 
 ##### Payload serialization
 
 As in most cases our job payloads are complex objets - they somehow must be serialized to Buffer. In
-general serialized payload can be any bytes sequence, but by default, payload is serialized via JSON
-and casted to buffer, but you can specify your own serializer by passing corresponding parameter to
-client constructor options. Required serializer signature can be found in
+general, serialized payload can be any bytes sequence, but by default, payload is serialized via
+JSON and casted to buffer, but you can specify your own serializer by passing corresponding
+parameter to client constructor options. Required serializer interface can be found in
 [API docs](https://xobotyi.github.io/node-beanstalk/classes/serializer.html).
 
 ### Pooling
@@ -121,12 +122,12 @@ option - `node-beasntalk` Pool exists.
 
 ##### Why?
 
-- Connecting new client requires a handshake which takes some time (around 10-20ms), so creating new
-  client on each incoming request would substantially slow down our application.
+- Connecting new client requires a handshake, which takes some time (around 10-20ms), so creating
+  new client on each incoming request would substantially slow down our application.
 - As already being said - each connection can handle only one request at a time. So in case you
-  application use a single client all your simultaneous requests will be pipelined into serial
+  application use a single client - all your simultaneous requests will be pipelined into serial
   execution queue, one after another, that is really no good (despite of `node-beanstalk` queue
-  being very low-cost).
+  being very fast and low-cost).
 
 Client pool allows you to have a pool af reusable clients you can check out, use, and return back to
 the pool.
@@ -150,15 +151,15 @@ try {
 }
 ```
 
-Yoy **must always** release client back to the pool, otherwise, at some point, your pool will be
+You **must always** release client back to the pool, otherwise, at some point, your pool will be
 empty forever, and your subsequent requests will wait forever.
 
 ##### Disconnect
 
 To disconnect all clients in the pool you have to call `pool.disconnect()`.  
-This will wait for all pending client reserves and returns to be done and then disconnect all of
-them. After disconnect executed all returned clients will be disconnected and not returned to the
-idle queue.
+This will wait for all pending client reserves and returns to be done. After disconnect executed all
+returned clients will be disconnected and not returned to the idle queue. All reserves queued after
+disconnection will be rejected.
 
 Force disconnect `pool.disconnect(true)` will not wait for pending reserve and start disconnection
 immediately (it will still be waiting clients return to the pool) by calling force disconnect on
