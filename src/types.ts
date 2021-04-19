@@ -35,13 +35,6 @@ export interface IClientCtorOptions {
   defaultTTR?: number;
 
   /**
-   * Function that will receive all the debugging data
-   *
-   * @default console.debug
-   */
-  debugFn?: typeof console.debug;
-
-  /**
    * Serializer that will process job data
    *
    * @default JsonSerializer
@@ -65,16 +58,13 @@ export interface IClientCtorOptions {
   dataReadTimeoutMs?: number;
 }
 
-export interface IPoolCtorOptions extends IClientCtorOptions {
+export interface IPoolCtorOptions {
   /**
-   * Number of milliseconds that client must remain idle in the pool before it is disconnected
-   * from the backend and discarded.
+   * Options that will be used to instantiate pool clients.
    *
-   * Set to 0 to disable auto-disconnection
-   *
-   * @default 10000
+   * @default undefined
    */
-  idleTimeoutMs?: number;
+  clientOptions?: IClientCtorOptions;
 
   /**
    * Maximum number of clients the pool can contain.

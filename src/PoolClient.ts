@@ -21,7 +21,7 @@ export class PoolClient extends Client {
   /**
    * Release client back to the pool where it can be reserved again.
    */
-  public async releaseClient(): Promise<void> {
+  public releaseClient(): void {
     this.emit('release', this);
   }
 }

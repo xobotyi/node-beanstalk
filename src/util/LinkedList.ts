@@ -73,18 +73,14 @@ export class LinkedList<V = any> {
    *
    * @return Array containing removed values.
    */
-  shrinkHead(count = 1): V[] {
-    if (!this.head) return [];
+  unshift(): V | undefined {
+    if (!this.head) return undefined;
 
-    const removed: V[] = [];
-    while (count && this.head) {
-      removed.push(this.head.value);
-      this.removeNode(this.head);
+    const val = this.head.value;
 
-      count--;
-    }
+    this.removeNode(this.head);
 
-    return removed;
+    return val;
   }
 
   /**
