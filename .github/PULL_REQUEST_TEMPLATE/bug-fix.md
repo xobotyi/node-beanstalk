@@ -1,5 +1,5 @@
 ---
-name: "Bug Fix"
+name: "\U0001F41B Bug Fix"
 about: "Fixing a problem about `node-beanstalk`"
 labels: 'bug'
 ---

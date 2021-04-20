@@ -1,5 +1,5 @@
 ---
-name: "New Feature"
+name: "\U0001F44D New Feature"
 about: "Add some new functionality to `node-beanstalk`"
 labels: 'enhancement'
 ---
