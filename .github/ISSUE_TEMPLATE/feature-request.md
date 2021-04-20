@@ -1,5 +1,5 @@
 ---
-name: "\U0001F44D Feature request"
+name: "\U0001F44D Feature Request"
 about: I'd like `node-beanstalk` to do something new.
 labels: 'enhancement'
 ---

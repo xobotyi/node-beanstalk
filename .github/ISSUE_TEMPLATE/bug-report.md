@@ -1,5 +1,5 @@
 ---
-name: "\U0001F41B Bug report"
+name: "\U0001F41B Bug Report"
 about: Something is wrong with `node-beanstalk`
 labels: 'bug'
 ---
