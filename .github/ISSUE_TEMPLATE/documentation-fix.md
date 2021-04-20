@@ -1,10 +1,7 @@
 ---
 name: "\U0001F4D3 Documentation Fix"
 about: Fixing a problem in an existing docs page
-title: ''
-labels: ''
-assignees: ''
-
+labels: 'documentation'
 ---
 
 ## What docs page needs to be fixed?

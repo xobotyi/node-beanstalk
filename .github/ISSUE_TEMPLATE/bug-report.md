@@ -1,10 +1,7 @@
 ---
-name: "\U0001F41BBug report"
+name: "\U0001F41B Bug report"
 about: Something is wrong with `node-beanstalk`
-title: ''
-labels: ''
-assignees: ''
-
+labels: 'bug'
 ---
 
 <!--
