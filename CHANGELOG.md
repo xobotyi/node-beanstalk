@@ -1,3 +1,11 @@
+## [1.6.3](https://github.com/xobotyi/node-beanstalk/compare/v1.6.2...v1.6.3) (2021-04-21)
+
+
+### Bug Fixes
+
+* **docs:** fix codeblocks styling ([193e26e](https://github.com/xobotyi/node-beanstalk/commit/193e26e03e1d5f9895154ac92f9949d0be2e02ed))
+* **readme:** add client docs link and fix headings ([3e4192b](https://github.com/xobotyi/node-beanstalk/commit/3e4192b0ec097b3c28da56b0b49561f93002a61b))
+
 ## [1.6.2](https://github.com/xobotyi/node-beanstalk/compare/v1.6.1...v1.6.2) (2021-04-19)
 
 
