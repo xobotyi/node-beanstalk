@@ -1,3 +1,10 @@
+## [1.6.4](https://github.com/xobotyi/node-beanstalk/compare/v1.6.3...v1.6.4) (2021-04-21)
+
+
+### Bug Fixes
+
+* somewhy dist directory not included in npm ([57bb069](https://github.com/xobotyi/node-beanstalk/commit/57bb069849181d151d6cc32e19ebf17be000d5a4))
+
 ## [1.6.3](https://github.com/xobotyi/node-beanstalk/compare/v1.6.2...v1.6.3) (2021-04-21)
 
 
