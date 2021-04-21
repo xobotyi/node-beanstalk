@@ -28,6 +28,8 @@
   </p>
 </div>
 
+
+
 ## INSTALL
 
 ```shell
@@ -36,10 +38,13 @@ npm i node-beanstalk
 yarn add node-beanstalk
 ```
 
+
+
 ## USAGE
 
 `node-beanstalk` fully supports
 [beanstalk protocol v1.12](https://raw.githubusercontent.com/beanstalkd/beanstalkd/master/doc/protocol.txt)
+
 
 ### Client
 
@@ -96,9 +101,11 @@ c.reserve();
 ```
 
 Above code will reserve 5 jobs one by one, in asyncronous way (each next promise will be resolved
-one by one).
+one by one).  
+To see all the Client methods and properties see
+[Client API docs](https://xobotyi.github.io/node-beanstalk/classes/client.html)
 
-##### Disconnect
+#### Disconnect
 
 To disconnect the client from remote - call `client.disconnect()`, it will wait for all the pending
 requests to be performed and then disconnect the client from server. All requests queued after
@@ -107,7 +114,7 @@ disconnection will be rejected.
 To disconnect client immediately - call `client.disconnect(true)`, it will perform disconnect right
 after currently running request.
 
-##### Payload serialization
+#### Payload serialization
 
 As in most cases our job payloads are complex objets - they somehow must be serialized to Buffer. In
 general, serialized payload can be any bytes sequence, but by default, payload is serialized via
@@ -115,12 +122,13 @@ JSON and casted to buffer, but you can specify your own serializer by passing co
 parameter to client constructor options. Required serializer interface can be found in
 [API docs](https://xobotyi.github.io/node-beanstalk/classes/serializer.html).
 
+
 ### Pooling
 
 For the cases of being used within webservers when waiting for all previous requests is not an
 option - `node-beasntalk` Pool exists.
 
-##### Why?
+#### Why?
 
 - Connecting new client requires a handshake, which takes some time (around 10-20ms), so creating
   new client on each incoming request would substantially slow down our application.
@@ -132,7 +140,7 @@ option - `node-beasntalk` Pool exists.
 Client pool allows you to have a pool af reusable clients you can check out, use, and return back to
 the pool.
 
-##### Checkout, use, and return
+#### Checkout, use, and return
 
 ```ts
 import { Pool } from 'node-beanstalk';
@@ -154,7 +162,7 @@ try {
 You **must always** release client back to the pool, otherwise, at some point, your pool will be
 empty forever, and your subsequent requests will wait forever.
 
-##### Disconnect
+#### Disconnect
 
 To disconnect all clients in the pool you have to call `pool.disconnect()`.  
 This will wait for all pending client reserves and returns to be done. After disconnect executed all
@@ -164,6 +172,8 @@ disconnection will be rejected.
 Force disconnect `pool.disconnect(true)` will not wait for pending reserve and start disconnection
 immediately (it will still be waiting clients return to the pool) by calling force disconnect on
 each client.
+
+
 
 ## TEST
 
