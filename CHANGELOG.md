@@ -1,3 +1,10 @@
+## [1.6.5](https://github.com/xobotyi/node-beanstalk/compare/v1.6.4...v1.6.5) (2021-04-21)
+
+
+### Bug Fixes
+
+* huge news for me that npm does not run prepublishOnly at CI ([de47406](https://github.com/xobotyi/node-beanstalk/commit/de47406e78a37e5e83ab85b2e6d087d0928e5697))
+
 ## [1.6.4](https://github.com/xobotyi/node-beanstalk/compare/v1.6.3...v1.6.4) (2021-04-21)
 
 
