@@ -1,9 +1,3 @@
----
-name: "\U0001F44D New Feature"
-about: "Add some new functionality to `node-beanstalk`"
-labels: 'enhancement'
----
-
 ### What new capabilities does this PR add?
 
 ### What docs changes are needed to explain this?
