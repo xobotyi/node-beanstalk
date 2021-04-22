@@ -1,3 +1,10 @@
+## [1.6.6](https://github.com/xobotyi/node-beanstalk/compare/v1.6.5...v1.6.6) (2021-04-22)
+
+
+### Bug Fixes
+
+* tweak builds a bit, output is ES5 now ([937bafc](https://github.com/xobotyi/node-beanstalk/commit/937bafca6e55af0817938c2ab20ed67ec04693b6))
+
 ## [1.6.5](https://github.com/xobotyi/node-beanstalk/compare/v1.6.4...v1.6.5) (2021-04-21)
 
 
