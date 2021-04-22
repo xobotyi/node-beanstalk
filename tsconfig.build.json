@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false
+    "noEmit": false,
+    "target": "ES5",
+    "module": "CommonJS"
   },
   "include": [
     "src"

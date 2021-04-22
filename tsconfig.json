@@ -3,9 +3,9 @@
     "lib": [
       "es2020"
     ],
-    "module": "commonjs",
     "moduleResolution": "Node",
-    "target": "es2020",
+    "module": "ESNext",
+    "target": "ESNext",
     "strict": true,
     "strictFunctionTypes": true,
     "esModuleInterop": true,
@@ -14,7 +14,6 @@
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "declaration": true,
-    "declarationMap": true,
     "outDir": "./dist",
     "noEmit": true
   },
