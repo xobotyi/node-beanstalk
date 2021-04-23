@@ -1,3 +1,10 @@
+## [1.6.7](https://github.com/xobotyi/node-beanstalk/compare/v1.6.6...v1.6.7) (2021-04-23)
+
+
+### Bug Fixes
+
+* replace useless here bundlephobia badges ([fdaef93](https://github.com/xobotyi/node-beanstalk/commit/fdaef934447f2b2b73fa1f7f43ce3aab0d5399b0))
+
 ## [1.6.6](https://github.com/xobotyi/node-beanstalk/compare/v1.6.5...v1.6.6) (2021-04-22)
 
 
