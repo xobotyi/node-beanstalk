@@ -16,11 +16,8 @@
     <a href="https://app.codecov.io/gh/xobotyi/node-beanstalk">
       <img src="https://flat.badgen.net/codecov/c/github/xobotyi/node-beanstalk" alt="Coverage">
     </a>
-    <a href="https://bundlephobia.com/result?p=node-beanstalk">
-      <img src="https://flat.badgen.net/bundlephobia/minzip/node-beanstalk" alt="Minified bundle size">
-    </a>
-    <a href="https://bundlephobia.com/result?p=node-beanstalk">
-      <img src="https://flat.badgen.net/bundlephobia/tree-shaking/node-beanstalk" alt="Tree shaking">
+    <a href="https://www.npmjs.com/package/node-beanstalk">
+      <img src="https://flat.badgen.net/npm/types/node-beanstalk" alt="NPM Downloads">
     </a>
   </p>
   <p>
