@@ -34,7 +34,7 @@
     "@semantic-release/npm": "^7.1.1",
     "@types/jest": "^26.0.22",
     "@xobotyi/eslint-config": "^2.2.0",
-    "commitlint": "^12.1.1",
+    "commitlint": "^13.1.0",
     "cpy-cli": "^3.1.1",
     "eslint": "^7.24.0",
     "husky": "^7.0.0",
