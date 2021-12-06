@@ -53,7 +53,7 @@ describe('JsonSerializer', () => {
       try {
         s.serialize(obj);
         throw new Error('not thrown!');
-      } catch (e) {
+      } catch (e: any) {
         expect(e).toBeInstanceOf(SerializerError);
         expect(e.code).toBe(SerializerErrorCode.ErrSerializeError);
       }
@@ -93,7 +93,7 @@ describe('JsonSerializer', () => {
       try {
         s.deserialize(Buffer.from('{"invalid json'));
         throw new Error('not thrown!');
-      } catch (e) {
+      } catch (e: any) {
         expect(e).toBeInstanceOf(SerializerError);
         expect(e.code).toBe(SerializerErrorCode.ErrDeserializeError);
       }

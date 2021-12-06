@@ -169,18 +169,17 @@ export interface ICommandResponse {
   data?: Buffer;
 }
 
-export type ICommandHandledResponse<
-  R extends BeanstalkResponseStatus = BeanstalkResponseStatus
-> = R extends IBeanstalkDataResponseStatus
-  ? {
-      status: R;
-      headers: string[];
-      data: any;
-    }
-  : {
-      status: R;
-      headers: string[];
-    };
+export type ICommandHandledResponse<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> =
+  R extends IBeanstalkDataResponseStatus
+    ? {
+        status: R;
+        headers: string[];
+        data: any;
+      }
+    : {
+        status: R;
+        headers: string[];
+      };
 
 export interface IBeanstalkStats {
   /**

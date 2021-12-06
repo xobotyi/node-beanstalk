@@ -12,7 +12,7 @@ describe('getCommandInstance', () => {
       // @ts-expect-error testing unknown command
       getCommandInstance('DEFINITELY_UNKNOWN_COMMAND');
       throw new Error('not thrown!');
-    } catch (e) {
+    } catch (e: any) {
       expect(e).toBeInstanceOf(CommandError);
       expect(e.code).toBe(CommandErrorCode.ErrCommandUnknown);
     }

@@ -142,23 +142,23 @@ describe('Connection', () => {
         });
     });
 
-    it('should write given buffer to underlying socket', async (done) => {
+    it('should write given buffer to underlying socket', (done) => {
       const conn = getNewConnection();
-      await conn.open(address.port, address.address);
+      conn.open(address.port, address.address).then(() => {
+        const sendBuffer = Buffer.from('hey!');
 
-      const sendBuffer = Buffer.from('hey!');
+        serverSocket.on('data', async (data) => {
+          expect(data).toStrictEqual(sendBuffer);
+          done();
+        });
 
-      serverSocket.on('data', async (data) => {
-        expect(data).toStrictEqual(sendBuffer);
-        done();
+        conn.write(sendBuffer);
       });
-
-      await conn.write(sendBuffer);
     });
   });
 
   describe('events', () => {
-    it('should emit `open` event on connection opened', async (done) => {
+    it('should emit `open` event on connection opened', (done) => {
       const conn = getNewConnection();
       conn.on('open', async (port, host) => {
         expect(typeof port).toBe('number');
@@ -166,16 +166,15 @@ describe('Connection', () => {
         await conn.close();
         done();
       });
-      await conn.open(address.port, address.address);
+      conn.open(address.port, address.address);
     });
 
-    it('should emit `close` event on connection close', async (done) => {
+    it('should emit `close` event on connection close', (done) => {
       const conn = getNewConnection();
       conn.on('close', () => {
         done();
       });
-      await conn.open(address.port, address.address);
-      await conn.close();
+      conn.open(address.port, address.address).then(() => conn.close());
     });
   });
 });

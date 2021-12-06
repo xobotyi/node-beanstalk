@@ -51,7 +51,7 @@ describe('Client', () => {
       expect(conn.open).toHaveBeenCalledWith(1234, 'example.com');
     });
 
-    it('should create queue item', async (done) => {
+    it('should create queue item', (done) => {
       const conn = new ConnectionMock();
       conn.getState.mockReturnValue('closed');
       const c = new Client(undefined, conn);
@@ -73,7 +73,7 @@ describe('Client', () => {
       try {
         await c.connect();
         throw new Error('not thrown!');
-      } catch (e) {
+      } catch (e: any) {
         expect(e).toBeInstanceOf(ClientError);
         expect(e.code).toBe(ClientErrorCode.ErrConnectionNotClosed);
       }
@@ -100,13 +100,13 @@ describe('Client', () => {
       try {
         await c.disconnect();
         throw new Error('not thrown!');
-      } catch (e) {
+      } catch (e: any) {
         expect(e).toBeInstanceOf(ClientError);
         expect(e.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
       }
     });
 
-    it('force disconnect should clear current queue and reject all queued promises', async (done) => {
+    it('force disconnect should clear current queue and reject all queued promises', (done) => {
       const conn = new ConnectionMock();
       conn.getState.mockReturnValue('open');
       const c = new Client(undefined, conn);
@@ -283,7 +283,7 @@ describe('Client', () => {
         try {
           payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
           throw new Error('not thrown!');
-        } catch (e) {
+        } catch (e: any) {
           expect(e).toBeInstanceOf(ClientError);
           expect(e.code).toBe(ClientErrorCode.ErrPayloadTooBig);
         }
@@ -326,7 +326,7 @@ describe('Client', () => {
         try {
           payloadToBuffer(123);
           throw new Error('not thrown!');
-        } catch (e) {
+        } catch (e: any) {
           expect(e).toBeInstanceOf(ClientError);
           expect(e.code).toBe(ClientErrorCode.ErrInvalidPayload);
         }
@@ -334,7 +334,7 @@ describe('Client', () => {
         try {
           payloadToBuffer({ baz: ['bax', 123] });
           throw new Error('not thrown!');
-        } catch (e) {
+        } catch (e: any) {
           expect(e).toBeInstanceOf(ClientError);
           expect(e.code).toBe(ClientErrorCode.ErrInvalidPayload);
         }
@@ -344,7 +344,7 @@ describe('Client', () => {
         try {
           payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
           throw new Error('not thrown!');
-        } catch (e) {
+        } catch (e: any) {
           expect(e).toBeInstanceOf(ClientError);
           expect(e.code).toBe(ClientErrorCode.ErrPayloadTooBig);
         }

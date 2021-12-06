@@ -1,4 +1,4 @@
-import yaml from 'js-yaml';
+import { load } from 'js-yaml';
 import { CommandError, CommandErrorCode } from './error/CommandError';
 import { CRLF_BUFF } from './const';
 import {
@@ -94,7 +94,7 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
           res.data = serializer.deserialize(res.data);
         }
       } else if (this.opt.yamlBody) {
-        res.data = yaml.load(res.data.toString());
+        res.data = load(res.data.toString());
       }
     }
 

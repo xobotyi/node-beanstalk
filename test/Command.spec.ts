@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer';
-import yaml from 'js-yaml';
+import { dump } from 'js-yaml';
 import { Command } from '../src/Command';
 import { BeanstalkCommand, BeanstalkResponseStatus } from '../src/types';
 import { CommandError, CommandErrorCode } from '../src/error/CommandError';
@@ -21,7 +21,7 @@ describe('Command', () => {
         // eslint-disable-next-line no-new
         new Command('totally unknown command');
         throw new Error('not thrown!');
-      } catch (e) {
+      } catch (e: any) {
         expect(e).toBeInstanceOf(CommandError);
         expect(e.code).toBe(CommandErrorCode.ErrCommandUnknown);
       }
@@ -35,7 +35,7 @@ describe('Command', () => {
           expectedStatus: ['totally unknown status'],
         });
         throw new Error('not thrown!');
-      } catch (e) {
+      } catch (e: any) {
         expect(e).toBeInstanceOf(CommandError);
         expect(e.code).toBe(CommandErrorCode.ErrResponseStatusUnknown);
       }
@@ -88,7 +88,7 @@ describe('Command', () => {
       try {
         cmd.handleResponse({ status: BeanstalkResponseStatus.UNKNOWN_COMMAND, headers: [] });
         throw new Error('not thrown!');
-      } catch (e) {
+      } catch (e: any) {
         expect(e).toBeInstanceOf(CommandError);
         expect(e.code).toBe(CommandErrorCode.ErrErrorResponseStatus);
       }
@@ -100,7 +100,7 @@ describe('Command', () => {
       try {
         cmd.handleResponse({ status: BeanstalkResponseStatus.OK, headers: [] });
         throw new Error('not thrown!');
-      } catch (e) {
+      } catch (e: any) {
         expect(e).toBeInstanceOf(CommandError);
         expect(e.code).toBe(CommandErrorCode.ErrUnexpectedResponseStatus);
       }
@@ -190,7 +190,7 @@ describe('Command', () => {
           {
             status: BeanstalkResponseStatus.BURIED,
             headers: ['123'],
-            data: Buffer.from(`${yaml.dump(['hello', 'world'])}\r\n`),
+            data: Buffer.from(`${dump(['hello', 'world'])}\r\n`),
           },
           new JsonSerializer()
         )
