@@ -1,3 +1,10 @@
+## [1.6.8](https://github.com/xobotyi/node-beanstalk/compare/v1.6.7...v1.6.8) (2022-04-13)
+
+
+### Bug Fixes
+
+* remove [@types](https://github.com/types) packages from dependencies ([8918167](https://github.com/xobotyi/node-beanstalk/commit/891816744f63a95f18b86a8d326ae6ed39f76c01))
+
 ## [1.6.7](https://github.com/xobotyi/node-beanstalk/compare/v1.6.6...v1.6.7) (2021-04-23)
 
 
