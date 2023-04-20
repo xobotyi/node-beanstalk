@@ -756,7 +756,7 @@ export class Client extends EventEmitter {
       throw new ClientError(
         ClientErrorCode.ErrPayloadTooBig,
         `${serializer ? 'Serialized payload' : 'Payload'} is too big,` +
-          ` maximum size is ${maxPayloadSize} bytes, got ${payloadBuffer.length}`
+        ` maximum size is ${maxPayloadSize} bytes, got ${payloadBuffer.length}`
       );
     }
 
@@ -848,7 +848,7 @@ export class Client extends EventEmitter {
       if (conn.getState() !== 'open') {
         throw new ClientError(
           ClientErrorCode.ErrConnectionNotOpened,
-          `Unable to dispatch command on not opened connection, connection state is '${conn.getState}'`
+          `Unable to dispatch command on not opened connection, connection state is '${conn.getState()}'`
         );
       }
 
