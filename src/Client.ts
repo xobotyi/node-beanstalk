@@ -756,7 +756,7 @@ export class Client extends EventEmitter {
       throw new ClientError(
         ClientErrorCode.ErrPayloadTooBig,
         `${serializer ? 'Serialized payload' : 'Payload'} is too big,` +
-        ` maximum size is ${maxPayloadSize} bytes, got ${payloadBuffer.length}`
+          ` maximum size is ${maxPayloadSize} bytes, got ${payloadBuffer.length}`
       );
     }
 
