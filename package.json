@@ -35,7 +35,7 @@
     "@types/node": "^20.0.0",
     "@xobotyi/eslint-config": "^2.3.0",
     "commitlint": "^17.0.0",
-    "cpy-cli": "^4.1.0",
+    "cpy-cli": "^5.0.0",
     "eslint": "^8.13.0",
     "husky": "^8.0.1",
     "jest": "^27.5.1",
