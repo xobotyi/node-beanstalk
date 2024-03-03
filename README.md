@@ -1,6 +1,6 @@
 <div align="center">
 
-#node-beanstalk
+# node-beanstalk
 
 [![NPM Version](https://flat.badgen.net/npm/v/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
 [![NPM Downloads](https://flat.badgen.net/npm/dm/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
