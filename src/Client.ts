@@ -848,7 +848,7 @@ export class Client extends EventEmitter {
       if (conn.getState() !== 'open') {
         throw new ClientError(
           ClientErrorCode.ErrConnectionNotOpened,
-          `Unable to dispatch command on not opened connection, connection state is '${conn.getState}'`
+          `Unable to dispatch command on not opened connection, connection state is '${conn.getState()}'`
         );
       }
 
