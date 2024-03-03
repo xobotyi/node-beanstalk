@@ -25,7 +25,7 @@ jobs:
           node-version: 16
 
       - name: "Install dependencies"
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: "Lint"
         run: yarn lint
@@ -75,7 +75,7 @@ jobs:
           node-version: 16
 
       - name: "Install dependencies"
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: "Build package"
         run: yarn build
@@ -104,10 +104,10 @@ jobs:
           node-version: 16
 
       - name: "Install dependencies"
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
 
       - name: "Build docs"
-        run: yarn docs:buid
+        run: yarn docs:build
 
       - name: "Deploy"
         run: |
