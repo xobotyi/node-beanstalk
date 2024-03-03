@@ -1,31 +1,18 @@
 <div align="center">
-  <h1>node-beanstalk</h1>
-  <p>
-    <a href="https://www.npmjs.com/package/node-beanstalk">
-      <img src="https://flat.badgen.net/npm/v/node-beanstalk" alt="NPM Version">
-    </a>
-    <a href="https://www.npmjs.com/package/node-beanstalk">
-      <img src="https://flat.badgen.net/npm/dm/node-beanstalk" alt="NPM Downloads">
-    </a>
-    <a href="https://www.npmjs.com/package/node-beanstalk">
-      <img src="https://flat.badgen.net/npm/dependents/node-beanstalk" alt="NPM Dependents">
-    </a>
-    <a href="https://github.com/xobotyi/node-beanstalk/actions">
-      <img src="https://img.shields.io/github/workflow/status/xobotyi/node-beanstalk/CI?style=flat-square" alt="Build">
-    </a>
-    <a href="https://app.codecov.io/gh/xobotyi/node-beanstalk">
-      <img src="https://flat.badgen.net/codecov/c/github/xobotyi/node-beanstalk" alt="Coverage">
-    </a>
-    <a href="https://www.npmjs.com/package/node-beanstalk">
-      <img src="https://flat.badgen.net/npm/types/node-beanstalk" alt="NPM Downloads">
-    </a>
-  </p>
+
+#node-beanstalk
+
+[![NPM Version](https://flat.badgen.net/npm/v/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
+[![NPM Downloads](https://flat.badgen.net/npm/dm/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
+[![NPM Dependents](https://flat.badgen.net/npm/dependents/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
+[![Build](https://img.shields.io/github/actions/workflow/status/xobotyi/node-beanstalk/ci-cd.yml?branch=master&style=flat-square)](https://github.com/xobotyi/node-beanstalk/actions)
+[![Coverage](https://flat.badgen.net/codecov/c/github/xobotyi/node-beanstalk)](https://app.codecov.io/gh/xobotyi/node-beanstalk)
+[![Types](https://flat.badgen.net/npm/types/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
+
   <p>
     <strong><a href="https://xobotyi.github.io/node-beanstalk/">API Docs</a></strong>
   </p>
 </div>
-
-
 
 ## INSTALL
 
@@ -35,13 +22,10 @@ npm i node-beanstalk
 yarn add node-beanstalk
 ```
 
-
-
 ## USAGE
 
 `node-beanstalk` fully supports
 [beanstalk protocol v1.12](https://raw.githubusercontent.com/beanstalkd/beanstalkd/master/doc/protocol.txt)
-
 
 ### Client
 
@@ -50,25 +34,25 @@ Each client gives you full access to functionality of beanstalk queue manager, w
 separation to emitter and worker.
 
 ```ts
-import { Client, BeanstalkJobState } from 'node-beanstalk';
+import { Client, BeanstalkJobState } from "node-beanstalk";
 
 const c = new Client();
 
 // connect to beasntalkd server
 await c.connect();
 // use our own tube
-await c.use('my-own-tube');
+await c.use("my-own-tube");
 
 // put our very important job
 const putJob = await c.put({ foo: "My awsome payload", bar: ["baz", "qux"] }, 40);
 if (putJob.state !== BeanstalkJobState.ready) {
   // as a result of put command job can done in `buried` state,
   // or `delayed` in case delay or client's default delay been specified
-  throw new Error('job is not in ready state');
+  throw new Error("job is not in ready state");
 }
 
 // watch our tube to be able to reserve from it
-await c.watch('my-own-tube')
+await c.watch("my-own-tube");
 
 // acquire new job (ideally the one we've just put)
 const job = await c.reserveWithTimeout(10);
@@ -85,7 +69,7 @@ will wait for the end of previous one. So below code will be executed consecutiv
 fact of being asyncronous.
 
 ```ts
-import { Client, BeanstalkJobState } from 'node-beanstalk';
+import { Client, BeanstalkJobState } from "node-beanstalk";
 
 const c = new Client();
 await c.connect();
@@ -119,7 +103,6 @@ JSON and casted to buffer, but you can specify your own serializer by passing co
 parameter to client constructor options. Required serializer interface can be found in
 [API docs](https://xobotyi.github.io/node-beanstalk/classes/serializer.html).
 
-
 ### Pooling
 
 For the cases of being used within webservers when waiting for all previous requests is not an
@@ -140,7 +123,7 @@ the pool.
 #### Checkout, use, and return
 
 ```ts
-import { Pool } from 'node-beanstalk';
+import { Pool } from "node-beanstalk";
 
 const p = new Pool({ capacity: 5 });
 
@@ -149,10 +132,10 @@ const client = await p.connect();
 
 try {
   // do some work
-  await client.statsTube('my-own-tube')
+  await client.statsTube("my-own-tube");
 } finally {
   // return client back to the pool
-  client.releaseClient()
+  client.releaseClient();
 }
 ```
 
@@ -170,8 +153,6 @@ Force disconnect `pool.disconnect(true)` will not wait for pending reserve and s
 immediately (it will still be waiting clients return to the pool) by calling force disconnect on
 each client.
 
-
-
 ## TEST
 
 `node-beanstalk` is built to be as much tests-covered as it is possible, but not to go nuts with LOC
@@ -179,4 +160,4 @@ coverage. It is important to have comprehensive unit-testing to make sure that e
 fine, and it is my goal for this package.
 
 It is pretty hard to make real tests for the sockets witch is used in this package, so `Connection`
-class is still at 80% covered with tests, maybe I'll finish it later.   
+class is still at 80% covered with tests, maybe I'll finish it later.
