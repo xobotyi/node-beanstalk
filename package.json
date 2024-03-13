@@ -25,7 +25,7 @@
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
-    "@commitlint/config-conventional": "^19.0.3",
+    "@commitlint/config-conventional": "^19.1.0",
     "@jamesacarr/jest-reporter-github-actions": "^0.0.4",
     "@react-hookz/eslint-formatter-gha": "^2.0.1",
     "@semantic-release/changelog": "^6.0.1",
