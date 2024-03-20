@@ -454,20 +454,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@commitlint/cli@npm:^19.2.0":
-  version: 19.2.0
-  resolution: "@commitlint/cli@npm:19.2.0"
+"@commitlint/cli@npm:^19.2.1":
+  version: 19.2.1
+  resolution: "@commitlint/cli@npm:19.2.1"
   dependencies:
     "@commitlint/format": "npm:^19.0.3"
     "@commitlint/lint": "npm:^19.1.0"
     "@commitlint/load": "npm:^19.2.0"
-    "@commitlint/read": "npm:^19.2.0"
+    "@commitlint/read": "npm:^19.2.1"
     "@commitlint/types": "npm:^19.0.3"
     execa: "npm:^8.0.1"
     yargs: "npm:^17.0.0"
   bin:
     commitlint: cli.js
-  checksum: 10c0/ef9792dd52a0146fbd87792ade1638e7a321876180d75e856e746f93d7bc067dcb62b56e1b79858f9915abb98ed3308904763c85054d22d8c4f278d31eb3f9c4
+  checksum: 10c0/14057446e60c403793af2a92c019440f83cdaf77bec6d48ad0102270a5b32fbd60b9929fbd4be6b6f7dadc7981ebe95ba54798d2f3d993429f364b3e9b46c9d1
   languageName: node
   linkType: hard
 
@@ -580,16 +580,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@commitlint/read@npm:^19.2.0":
-  version: 19.2.0
-  resolution: "@commitlint/read@npm:19.2.0"
+"@commitlint/read@npm:^19.2.1":
+  version: 19.2.1
+  resolution: "@commitlint/read@npm:19.2.1"
   dependencies:
     "@commitlint/top-level": "npm:^19.0.0"
     "@commitlint/types": "npm:^19.0.3"
     execa: "npm:^8.0.1"
     git-raw-commits: "npm:^4.0.0"
     minimist: "npm:^1.2.8"
-  checksum: 10c0/7703132c8bf6afd2388be4da7158d9a23b7835039ab968067477cac70443a0dfba2905f2bb0d82cb373ec43a4928791ada82f0d280631e805c7c043c175cdaaf
+  checksum: 10c0/9aef7e24164fe502c59b8acb867a9193bff2aab9bcdd74b9c18e2fada27d631360a1e3ce74898104bc8eae45129216d4227d22fa20ca65b59d6ad45b26d71b66
   languageName: node
   linkType: hard
 
@@ -3332,15 +3332,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"commitlint@npm:^19.2.0":
-  version: 19.2.0
-  resolution: "commitlint@npm:19.2.0"
+"commitlint@npm:^19.2.1":
+  version: 19.2.1
+  resolution: "commitlint@npm:19.2.1"
   dependencies:
-    "@commitlint/cli": "npm:^19.2.0"
+    "@commitlint/cli": "npm:^19.2.1"
     "@commitlint/types": "npm:^19.0.3"
   bin:
     commitlint: cli.js
-  checksum: 10c0/10e87514fd1edb7ef4d4b3f7d6ff611ed314a2c19d64759570fbd33438211af196d2505123c8ddf46310c4bf725178213ab09613cb0d9740b1a6a829ac019453
+  checksum: 10c0/e596e6cae5b18a33575b162ead811789956bc8c7f372356be456cf3c15b5348fb5343929bea5cc6e10e4b94819d9df44ce3372c2d46315d565620d531cd15132
   languageName: node
   linkType: hard
 
@@ -7631,7 +7631,7 @@ __metadata:
     "@types/js-yaml": "npm:^4.0.9"
     "@types/node": "npm:^20.11.30"
     "@xobotyi/eslint-config": "npm:^2.3.0"
-    commitlint: "npm:^19.2.0"
+    commitlint: "npm:^19.2.1"
     cpy-cli: "npm:^5.0.0"
     eslint: "npm:^8.57.0"
     husky: "npm:^9.0.11"
