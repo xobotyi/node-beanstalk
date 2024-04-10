@@ -112,7 +112,7 @@ jobs:
         run: yarn --immutable
       - name: "Release"
         id: "release"
-        uses: codfish/semantic-release-action@v3.2.0
+        uses: codfish/semantic-release-action@v3.3.0
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
