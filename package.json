@@ -34,7 +34,7 @@
     "@semantic-release/npm": "^11.0.3",
     "@types/jest": "^29.5.12",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.12.10",
+    "@types/node": "^20.12.11",
     "@xobotyi/eslint-config": "^2.3.0",
     "commitlint": "^19.3.0",
     "cpy-cli": "^5.0.0",
