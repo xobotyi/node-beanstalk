@@ -12,7 +12,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@actions/core@npm:^1.10.1, @actions/core@npm:^1.2.6":
+"@actions/core@npm:^1.2.6":
   version: 1.10.1
   resolution: "@actions/core@npm:1.10.1"
   dependencies:
@@ -1638,15 +1638,6 @@ __metadata:
     "@pnpm/network.ca-file": "npm:^1.0.1"
     config-chain: "npm:^1.1.11"
   checksum: 10c0/71393dcfce85603fddd8484b486767163000afab03918303253ae97992615b91d25942f83751366cb40ad2ee32b0ae0a033561de9d878199a024286ff98b0296
-  languageName: node
-  linkType: hard
-
-"@react-hookz/eslint-formatter-gha@npm:^2.0.1":
-  version: 2.0.1
-  resolution: "@react-hookz/eslint-formatter-gha@npm:2.0.1"
-  dependencies:
-    "@actions/core": "npm:^1.10.1"
-  checksum: 10c0/4e4552f8d3867157eb696b96d77ade1be42bf65b10c179716557cde5856c42c90eb53173997d65a89693119f1959254297b8f2ea8989d9454234626c1909d3ed
   languageName: node
   linkType: hard
 
@@ -4145,6 +4136,34 @@ __metadata:
   bin:
     eslint-config-prettier: bin/cli.js
   checksum: 10c0/19f8c497d9bdc111a17a61b25ded97217be3755bbc4714477dfe535ed539dddcaf42ef5cf8bb97908b058260cf89a3d7c565cb0be31096cbcd39f4c2fa5fe43c
+  languageName: node
+  linkType: hard
+
+"eslint-formatter-gha@npm:^1.5":
+  version: 1.5.2
+  resolution: "eslint-formatter-gha@npm:1.5.2"
+  dependencies:
+    eslint-formatter-json: "npm:^8.40.0"
+    eslint-formatter-stylish: "npm:^8.40.0"
+  checksum: 10c0/df69b7fc2dde5f6f274008ba5f3e11f450a8e4877cc121d8ff84aa84dd38baa72ebc12c2146f2ca4567397b8b3c290e3c166f539ef6491fa4ece4dc4c23087cc
+  languageName: node
+  linkType: hard
+
+"eslint-formatter-json@npm:^8.40.0":
+  version: 8.40.0
+  resolution: "eslint-formatter-json@npm:8.40.0"
+  checksum: 10c0/5e9f75ed4c54f7bf8f64deb4c96394c8c45a3052b8a9813f36958676489c3d04d6c9c7e1d58bdbfb2ad5ed92f351a890b7e221befd029101e83d3a4e1c44e1c4
+  languageName: node
+  linkType: hard
+
+"eslint-formatter-stylish@npm:^8.40.0":
+  version: 8.40.0
+  resolution: "eslint-formatter-stylish@npm:8.40.0"
+  dependencies:
+    chalk: "npm:^4.0.0"
+    strip-ansi: "npm:^6.0.1"
+    text-table: "npm:^0.2.0"
+  checksum: 10c0/ad7f7fcacb5fff5fc1709df8e1d42aeb958f5451dcfc58e77aab5ab064d4f1af61153ba46900e7f8daf5f35c9200afa3128f0ebb55895094353719f23bd3de4b
   languageName: node
   linkType: hard
 
@@ -7771,7 +7790,6 @@ __metadata:
   dependencies:
     "@commitlint/config-conventional": "npm:^19.2.2"
     "@jamesacarr/jest-reporter-github-actions": "npm:^0.0.4"
-    "@react-hookz/eslint-formatter-gha": "npm:^2.0.1"
     "@semantic-release/changelog": "npm:^6.0.1"
     "@semantic-release/git": "npm:^10.0.1"
     "@semantic-release/github": "npm:^9.2.6"
@@ -7783,6 +7801,7 @@ __metadata:
     commitlint: "npm:^19.3.0"
     cpy-cli: "npm:^5.0.0"
     eslint: "npm:^8.57.0"
+    eslint-formatter-gha: "npm:^1.5"
     husky: "npm:^9.0.11"
     jest: "npm:^29.7.0"
     js-yaml: "npm:^4.1.0"
