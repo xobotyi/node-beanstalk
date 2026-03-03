@@ -30,7 +30,7 @@ jobs:
       - name: "Install dependencies"
         run: yarn --immutable
       - name: "Lint"
-        run: yarn lint -f @react-hookz/gha
+        run: yarn lint -f eslint-formatter-gha
 
   build:
     name: "Build"

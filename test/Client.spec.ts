@@ -18,6 +18,7 @@ import {
   validateTubeName,
 } from '../src/util/validator';
 import SpyInstance = jest.SpyInstance;
+import { AddressInfo, createServer } from 'net';
 
 class ConnectionMock extends Connection {
   public getState = jest.fn((): ConnectionState => 'closed');
@@ -1482,5 +1483,65 @@ describe('Client', () => {
     ]);
 
     expect(resolveOrder).toStrictEqual([10, 20, 40, 50]);
+  });
+
+  describe('server terminated', () => {
+    it('should handle termination during reserve', async () => {
+      const server = createServer();
+
+      server.listen(() => {
+        server.on('connection', async (socket) => {
+          // Wait for the client to issue the "reserve with timeout" command, then close the socket.
+          socket.on('data', (data) => {
+            expect(data.toString() === 'reserve-with-timeout 2');
+            socket.destroy();
+          });
+        });
+      });
+
+      const address = server.address() as AddressInfo;
+      const client = new Client({ host: address.address, port: address.port });
+      const onClose = new Promise<void>((resolve) => {
+        client.on('close', resolve);
+      });
+      await client.connect();
+
+      const result = client.reserveWithTimeout(2);
+
+      expect(result).rejects.toEqual(
+        new ClientError(ClientErrorCode.ErrDisconnecting, 'Connection closed')
+      );
+
+      await onClose;
+      expect(client.isConnected).toBe(false);
+
+      // Try to reconnect.
+      await client.connect();
+      await client.disconnect();
+
+      server.close();
+    });
+  });
+
+  describe('events', () => {
+    it('should emit events', async () => {
+      const conn = new ConnectionMock();
+      conn.getState.mockReturnValue('closed');
+
+      const c = new Client({ host: 'example.com', port: 1234 }, conn);
+      const connectEvent = new Promise<void>((resolve) => {
+        c.on('connect', resolve);
+      });
+
+      await Promise.all([c.connect(), connectEvent]);
+
+      const closeEvent = new Promise<void>((resolve) => {
+        c.on('close', resolve);
+      });
+
+      conn.emit('close');
+
+      await closeEvent;
+    });
   });
 });

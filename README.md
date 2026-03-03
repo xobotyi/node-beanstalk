@@ -95,6 +95,54 @@ disconnection will be rejected.
 To disconnect client immediately - call `client.disconnect(true)`, it will perform disconnect right
 after currently running request.
 
+#### Connection Errors
+
+If the connection to the Beanstalk server is closed unexpectedly then any command in progress will be aborted
+by rejecting the promise, and the `Client` will emit a `close` event.
+
+```ts
+import { Client } from 'node-beanstalk';
+
+const reconnect = async () => {
+    console.log('Reconnecting...');
+
+    // Wait for a cooldown period before retrying.
+    await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+
+    try {
+        await c.connect();
+    } catch (e) {
+        // Ignore exceptions.
+        // Failed calls to `connect() will emit `close` again.
+    }
+};
+
+const c = new Client({ port: 11300, host: 'beanstalk' });
+
+c.on('close', reconnect);
+await c.connect();
+
+while (true) {
+    try {
+        console.log('Reserving...');
+        await c.reserve();
+    } catch (e) {
+        // Wait to be reconnected.
+        if (!c.isConnected) {
+            console.log('Awaiting reconnection...');
+            await new Promise<void>((resolve) => c.once('connect', resolve));
+        }
+    }
+}
+```
+
+#### Events
+
+The following events are emitted by the `Client`:
+
+  `connect`: Emitted when a call to `connect()` completes.
+  `close`: Emitted when the connection to the Beanstalk server is closed.
+
 #### Payload serialization
 
 As in most cases our job payloads are complex objets - they somehow must be serialized to Buffer. In

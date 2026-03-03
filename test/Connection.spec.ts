@@ -5,15 +5,10 @@ import { ConnectionError } from '../src/error/ConnectionError';
 describe('Connection', () => {
   const server = createServer();
   let address: AddressInfo;
-  let serverSocket: Socket;
 
   beforeAll((done) => {
     server.listen(() => {
       address = server.address() as AddressInfo;
-
-      server.on('connection', (sock) => {
-        serverSocket = sock;
-      });
       done();
     });
   });
@@ -142,23 +137,37 @@ describe('Connection', () => {
         });
     });
 
-    if (process.env.CI === undefined) {
-      // somewhy this test fails on CI
-      // ToDo: investigate later
-      it('should write given buffer to underlying socket', (done) => {
-        const conn = getNewConnection();
-        conn.open(address.port, address.address).then(() => {
+    it('should write given buffer to underlying socket', (done) => {
+      const conn = getNewConnection();
+
+      // Connections from previous tests may still be pending, therefore when the server receives the connect() event
+      // it may be a connection from a previous test. To ensure we get correct connect event, start a new server.
+      const writeServer = createServer();
+
+      writeServer.listen(async () => {
+        // Create a promise that resolves to the server's side of the connection.
+        const serverSocket = new Promise<Socket>((resolve) => {
+          writeServer.on('connection', (sock) => {
+            resolve(sock);
+          });
+        });
+
+        // Open a connection to the writeServer.
+        const serverAddress = writeServer.address() as AddressInfo;
+
+        conn.open(serverAddress.port, serverAddress.address).then(async () => {
           const sendBuffer = Buffer.from('hey!');
 
-          serverSocket.on('data', async (data) => {
+          (await serverSocket).on('data', (data) => {
             expect(data).toStrictEqual(sendBuffer);
+            writeServer.close();
             done();
           });
 
           conn.write(sendBuffer);
         });
       });
-    }
+    });
   });
 
   describe('events', () => {
