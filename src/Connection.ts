@@ -72,7 +72,7 @@ export class Connection extends EventEmitter {
       socket
         .setNoDelay(true)
         .setKeepAlive(true)
-        .on('close', () => this.emit('close'))
+        .on('close', () => this.handleSocketClose(socket))
         .on('error', (err) => reject(err))
         .on('data', (data) => this.emit('data', data))
         .connect(port, host, () => {
@@ -95,6 +95,17 @@ export class Connection extends EventEmitter {
     });
   }
 
+  private handleSocketClose(socket: Socket): void {
+    // A socket replaced by a later `open()` must not touch the new socket's state.
+    if (this._socket && this._socket !== socket) {
+      return;
+    }
+
+    this._state = 'closed';
+    this._socket = undefined;
+    this.emit('close');
+  }
+
   async close(): Promise<void> {
     if (this.isChangingState()) {
       throw new ConnectionError(
@@ -113,15 +124,23 @@ export class Connection extends EventEmitter {
     this._state = 'closing';
 
     const sock = this._socket;
-    if (sock) {
-      await new Promise<void>((resolve) => {
-        sock.end(resolve);
-      });
-      await sock.destroy();
+    if (!sock) {
+      this._state = 'closed';
+      return;
     }
 
-    this._socket = undefined;
-    this._state = 'closed';
+    // `destroy()` returns before the socket emits `close`. `handleSocketClose`
+    // sets the final state; a `close` listener may already have called `open()`.
+    const closed = sock.closed
+      ? Promise.resolve()
+      : new Promise<void>((resolve) => {
+          sock.once('close', resolve);
+        });
+    await new Promise<void>((resolve) => {
+      sock.end(resolve);
+    });
+    sock.destroy();
+    await closed;
   }
 
   async write<T extends Buffer>(buffer: T): Promise<T> {

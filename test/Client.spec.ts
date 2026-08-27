@@ -2,6 +2,7 @@
 jest.mock('../src/util/validator');
 
 import { Buffer } from 'buffer';
+import { AddressInfo, createServer, Server, Socket } from 'net';
 import { BeanstalkError } from '../src/error/BeanstalkError';
 import { Connection, ConnectionState } from '../src/Connection';
 import { BeanstalkJobState, Client } from '../src';
@@ -1482,5 +1483,140 @@ describe('Client', () => {
     ]);
 
     expect(resolveOrder).toStrictEqual([10, 20, 40, 50]);
+  });
+
+  describe('connection death', () => {
+    const servers: Server[] = [];
+
+    async function listen(onConnection: (sock: Socket) => void, port = 0): Promise<AddressInfo> {
+      const server = createServer(onConnection);
+      servers.push(server);
+      await new Promise<void>((resolve) => {
+        server.listen(port, resolve);
+      });
+      return server.address() as AddressInfo;
+    }
+
+    afterAll(() => {
+      servers.forEach((server) => server.close());
+    });
+
+    it('should emit `connect` after connecting', async () => {
+      const { port, address: host } = await listen(() => {});
+      const c = new Client({ host, port });
+      const connectSpy = jest.fn();
+      c.on('connect', connectSpy);
+
+      await c.connect();
+
+      expect(connectSpy).toHaveBeenCalledTimes(1);
+      await c.disconnect();
+    });
+
+    it('should end in `closed` and emit `close` when nobody listens on the port', async () => {
+      const { port, address: host } = await listen(() => {});
+      await new Promise<void>((resolve) => {
+        servers.pop()?.close(() => resolve());
+      });
+      const c = new Client({ host, port });
+      const closeSpy = jest.fn();
+      const connectSpy = jest.fn();
+      c.on('close', closeSpy);
+      c.on('connect', connectSpy);
+      c.on('error', () => {});
+      const closed = new Promise<void>((resolve) => {
+        c.once('close', resolve);
+      });
+
+      await expect(c.connect()).rejects.toMatchObject({ code: 'ECONNREFUSED' });
+      await closed;
+      expect(c.isConnected).toBe(false);
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+      expect(connectSpy).not.toHaveBeenCalled();
+
+      await listen(() => {}, port);
+      await c.connect();
+      expect(c.isConnected).toBe(true);
+      expect(connectSpy).toHaveBeenCalledTimes(1);
+      await c.disconnect();
+    });
+
+    it('should reject the command in flight when the server destroys the socket', async () => {
+      const { port, address: host } = await listen((sock) =>
+        sock.once('data', () => sock.destroy())
+      );
+      const c = new Client({ host, port });
+      const closeSpy = jest.fn();
+      c.on('close', closeSpy);
+      c.on('error', () => {});
+      await c.connect();
+
+      await expect(c.use('tube')).rejects.toMatchObject({
+        code: ClientErrorCode.ErrConnectionClosed,
+      });
+      expect(c.isConnected).toBe(false);
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+
+      await c.connect();
+      expect(c.isConnected).toBe(true);
+      await c.disconnect();
+    });
+
+    it('should reject a command issued on a client that already died', async () => {
+      const { port, address: host } = await listen((sock) => sock.destroy());
+      const c = new Client({ host, port });
+      const closed = new Promise<void>((resolve) => {
+        c.on('close', resolve);
+      });
+      await c.connect();
+      await closed;
+
+      await expect(c.use('tube')).rejects.toMatchObject({
+        code: ClientErrorCode.ErrConnectionNotOpened,
+      });
+    });
+
+    it('should not emit `error` when the close is our own disconnect', async () => {
+      const { port, address: host } = await listen(() => {});
+      const c = new Client({ host, port });
+      const errorSpy = jest.fn();
+      c.on('error', errorSpy);
+      const closed = new Promise<void>((resolve) => {
+        c.on('close', resolve);
+      });
+      await c.connect();
+
+      await expect(c.disconnect()).resolves.toBeUndefined();
+      await closed;
+
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(c.isConnected).toBe(false);
+    });
+
+    it('should reject the command and emit `error` then `close` on a reset while writing', async () => {
+      const { port, address: host } = await listen((sock) => {
+        sock.once('data', () => sock.resetAndDestroy());
+      });
+      const c = new Client({ host, port });
+      const events: string[] = [];
+      c.on('error', () => {
+        events.push('error');
+      });
+      const closed = new Promise<void>((resolve) => {
+        c.on('close', () => {
+          events.push('close');
+          resolve();
+        });
+      });
+      await c.connect();
+
+      await expect(c.use('tube')).rejects.toMatchObject({
+        code: ClientErrorCode.ErrConnectionClosed,
+      });
+      await closed;
+
+      expect(c.isConnected).toBe(false);
+      expect(events).toStrictEqual(['error', 'close']);
+    });
   });
 });

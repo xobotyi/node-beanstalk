@@ -1,4 +1,5 @@
-import { AddressInfo, createServer, Socket } from 'net';
+import { AddressInfo, createServer, Server, Socket } from 'net';
+import { setImmediate } from 'node:timers/promises';
 import { Connection } from '../src/Connection';
 import { ConnectionError } from '../src/error/ConnectionError';
 
@@ -26,6 +27,21 @@ describe('Connection', () => {
     connections.push(conn);
     return conn;
   }
+
+  const ownServers: Server[] = [];
+
+  async function listen(onConnection?: (sock: Socket) => void): Promise<AddressInfo> {
+    const own = createServer(onConnection);
+    ownServers.push(own);
+    await new Promise<void>((resolve) => {
+      own.listen(resolve);
+    });
+    return own.address() as AddressInfo;
+  }
+
+  afterAll(() => {
+    ownServers.forEach((own) => own.close());
+  });
 
   afterAll(async () => {
     server.close();
@@ -179,6 +195,65 @@ describe('Connection', () => {
         done();
       });
       conn.open(address.port, address.address).then(() => conn.close());
+    });
+  });
+
+  describe('socket death', () => {
+    it('should become `closed` and emit `close` once when the peer destroys the socket', async () => {
+      const { port, address: host } = await listen((sock) => sock.destroy());
+
+      const conn = getNewConnection();
+      const closeSpy = jest.fn();
+      conn.on('close', closeSpy);
+
+      await conn.open(port, host);
+      await new Promise<void>((resolve) => {
+        conn.once('close', resolve);
+      });
+      await setImmediate();
+
+      expect(conn.getState()).toBe('closed');
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('reopen', () => {
+    it('should emit `close` once before `close()` resolves when reopened right away', async () => {
+      const { port, address: host } = await listen();
+
+      const conn = getNewConnection();
+      const closeSpy = jest.fn(() => conn.getState());
+      conn.on('close', closeSpy);
+
+      await conn.open(port, host);
+      await conn.close();
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+      expect(closeSpy).toHaveReturnedWith('closed');
+      await conn.open(port, host);
+      await setImmediate();
+
+      expect(conn.getState()).toBe('open');
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+
+      await conn.close();
+      expect(closeSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should allow `open()` from inside the `close` listener', async () => {
+      const { port, address: host } = await listen();
+
+      const conn = getNewConnection();
+      let reopened: Promise<void> | undefined;
+      conn.once('close', () => {
+        reopened = conn.open(port, host);
+      });
+
+      await conn.open(port, host);
+      await conn.close();
+      await expect(reopened).resolves.toBeUndefined();
+
+      expect(conn.getState()).toBe('open');
+      await conn.close();
     });
   });
 });

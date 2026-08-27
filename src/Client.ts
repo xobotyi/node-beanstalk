@@ -48,6 +48,8 @@ export class Client extends EventEmitter {
     };
 
     this._conn = connection;
+    this._conn.on('close', () => this.emit('close'));
+    this._conn.on('error', (err) => this.emit('error', err));
   }
 
   /**
@@ -90,6 +92,8 @@ export class Client extends EventEmitter {
       await waitPromise;
 
       await this._conn.open(this._opt.port, this._opt.host);
+
+      this.emit('connect');
     } finally {
       moveQueue();
     }
@@ -773,6 +777,17 @@ export class Client extends EventEmitter {
       let response: Buffer = Buffer.alloc(0);
       let headers: ICommandResponseHeaders | null = null;
       let dataReadTimeout: NodeJS.Timeout;
+      let cleanup: () => void;
+
+      const closeListener = () => {
+        cleanup();
+        reject(
+          new ClientError(
+            ClientErrorCode.ErrConnectionClosed,
+            'Connection closed while awaiting response'
+          )
+        );
+      };
 
       const dataListener = (data: Buffer) => {
         response = Buffer.concat([response, data]);
@@ -788,7 +803,7 @@ export class Client extends EventEmitter {
               if (response.length < headers.dataLength) {
                 // if response data not read - start read timeout
                 dataReadTimeout = setTimeout(() => {
-                  conn.off('data', dataListener);
+                  cleanup();
                   reject(
                     new ClientError(
                       ClientErrorCode.ErrResponseRead,
@@ -805,8 +820,7 @@ export class Client extends EventEmitter {
           if (headers.hasData) {
             if (response.length >= headers.dataLength) {
               // response data is read, we're done
-              clearTimeout(dataReadTimeout);
-              conn.off('data', dataListener);
+              cleanup();
               resolve({
                 status: headers.status,
                 headers: headers.headers,
@@ -814,7 +828,7 @@ export class Client extends EventEmitter {
               });
             }
           } else {
-            conn.off('data', dataListener);
+            cleanup();
             resolve({
               status: headers.status,
               headers: headers.headers,
@@ -824,6 +838,15 @@ export class Client extends EventEmitter {
       };
 
       conn.on('data', dataListener);
+      conn.on('close', closeListener);
+      conn.on('error', closeListener);
+
+      cleanup = () => {
+        clearTimeout(dataReadTimeout);
+        conn.off('data', dataListener);
+        conn.off('close', closeListener);
+        conn.off('error', closeListener);
+      };
     });
   }
 
@@ -852,11 +875,10 @@ export class Client extends EventEmitter {
         );
       }
 
-      const readPromise = this.readCommandResponse();
+      const buffer = cmd.buildCommandBuffer(args, this.payloadToBuffer(payload));
 
-      await conn.write(cmd.buildCommandBuffer(args, this.payloadToBuffer(payload)));
-
-      response = await readPromise;
+      // Promise.all keeps the read promise handled when the write fails.
+      [response] = await Promise.all([this.readCommandResponse(), conn.write(buffer)]);
     } finally {
       // move queue forward
       moveQueue();
