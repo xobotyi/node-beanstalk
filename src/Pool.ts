@@ -20,6 +20,9 @@ export class Pool {
 
   private _state: PoolState = 'live';
 
+  /** Set by a graceful `disconnect()` while it waits its turn in the queue. No client is created. */
+  private _draining = false;
+
   constructor(options: IPoolCtorOptions = {}) {
     this._opt = {
       ...DEFAULT_POOL_OPTIONS,
@@ -71,13 +74,14 @@ export class Pool {
       throw new PoolError(`Unable to gain client, pool is not live: ${this._state}`);
     }
 
+    if (this._draining) {
+      throw new PoolError('Unable to gain client, pool is disconnecting.');
+    }
+
     let client: PoolClient;
 
     if (this._clients.length < this._opt.capacity) {
-      client = new PoolClient(this._opt.clientOptions);
-      this._clients.push(client);
-
-      await client.connect();
+      client = await this.createClient();
     } else {
       client = this._idleClients.unshift() ?? (await this.createPendingPromise());
     }
@@ -101,11 +105,12 @@ export class Pool {
       );
     }
 
-    if (this._pendingQueue.size) {
-      if (!force) {
-        // in case non-forced disconnect - we wait in queue
-        await this.createPendingPromise();
-      }
+    this._draining = true;
+
+    if (this._pendingQueue.size && !force) {
+      // Wait our turn in the queue. The wait is rejected when every client died and
+      // no release can serve the queue any more; the drain then goes on.
+      await this.createPendingPromise().catch(() => undefined);
     }
 
     this._state = 'disconnecting';
@@ -136,7 +141,58 @@ export class Pool {
       );
     }
 
+    this._draining = false;
     this._state = 'live';
+  }
+
+  private async createClient(): Promise<PoolClient> {
+    const client = new PoolClient(this._opt.clientOptions);
+    this._clients.push(client);
+
+    // Death is reported by the rejected command and by `close`. An `error` without a
+    // listener would end the process. A write onto a reset socket emits `error` before
+    // `close`, and the holder's release runs in between, so the client dies on both.
+    const evict = () => this.evict(client);
+    client.on('error', evict);
+    client.on('close', evict);
+
+    try {
+      await client.connect();
+    } catch (err) {
+      this.evict(client);
+      throw err;
+    }
+
+    return client;
+  }
+
+  private evict(client: PoolClient): void {
+    const index = this._clients.indexOf(client);
+    if (index === -1) return;
+
+    this._clients.splice(index, 1);
+    this._idleClients.remove(client);
+
+    this.serveNextPending();
+  }
+
+  private serveNextPending(): void {
+    if (this._state !== 'live' || this._clients.length >= this._opt.capacity) return;
+
+    if (this._draining) {
+      // A drain creates no client. With no client left, no release can ever serve the queue.
+      if (this._clients.length === 0) {
+        this._pendingQueue.truncate().forEach(({ reject }) => {
+          reject(new PoolError('Unable to gain client, pool is disconnecting.'));
+        });
+      }
+      return;
+    }
+
+    const pending = this._pendingQueue.unshift();
+    if (!pending) return;
+
+    this.createClient().then(pending.resolve, pending.reject);
   }
 
   private createPendingPromise(): Promise<PoolClient> {
@@ -146,7 +202,8 @@ export class Pool {
   }
 
   private handleClientRelease = (client: PoolClient): void => {
-    if (this._state !== 'live') return;
+    // An evicted client can still be released by the holder that had it when it died.
+    if (this._state !== 'live' || !this._clients.includes(client)) return;
 
     const pending = this._pendingQueue.unshift();
 

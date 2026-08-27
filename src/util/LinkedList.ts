@@ -84,6 +84,25 @@ export class LinkedList<V = any> {
   }
 
   /**
+   * Remove the first node that holds {value}.
+   *
+   * @return Whether a node was removed.
+   */
+  remove(value: V): boolean {
+    let node = this.head;
+
+    while (node) {
+      if (node.value === value) {
+        this.removeNode(node);
+        return true;
+      }
+      node = node.next;
+    }
+
+    return false;
+  }
+
+  /**
    * Remove all items from list.
    * Also dereferences existing list nodes.
    */
