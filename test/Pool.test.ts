@@ -279,8 +279,12 @@ describe('Pool', () => {
       });
     });
 
-    function newPool(capacity = 1, commandTimeoutMs = 0): Pool {
-      const p = new Pool({ capacity, clientOptions: { host, port, commandTimeoutMs } });
+    function newPool(capacity = 1, commandTimeoutMs = 0, pendingTimeoutMs = 0): Pool {
+      const p = new Pool({
+        capacity,
+        pendingTimeoutMs,
+        clientOptions: { host, port, commandTimeoutMs },
+      });
       pools.push(p);
       return p;
     }
@@ -486,6 +490,56 @@ describe('Pool', () => {
 
       await expect(p.connect()).rejects.toMatchObject({ code: 'ECONNREFUSED' });
       await expect(p.connect()).rejects.toMatchObject({ code: 'ECONNREFUSED' });
+    });
+
+    describe('pending timeout', () => {
+      it('rejects a waiter that gets no client within the budget', async () => {
+        const p = newPool(1, 0, 50);
+        await p.connect();
+
+        const started = Date.now();
+        await expect(p.connect()).rejects.toStrictEqual(
+          new PoolError('No client available within 50 ms')
+        );
+        expect(Date.now() - started).toBeLessThan(500);
+        expect(p.waitingCount).toBe(0);
+      });
+
+      it('puts a client released after the budget into idle and hands it to a later caller', async () => {
+        const p = newPool(1, 0, 20);
+        const holder = await p.connect();
+        await expect(p.connect()).rejects.toBeInstanceOf(PoolError);
+
+        holder.releaseClient();
+        expect(p.idleCount).toBe(1);
+
+        expect(await p.connect()).toBe(holder);
+        expect(p.idleCount).toBe(0);
+        expect(sockets).toHaveLength(1);
+      });
+
+      it('serves a waiter before the budget passes', async () => {
+        const p = newPool(1, 0, 1000);
+        const holder = await p.connect();
+        const waiting = p.connect();
+
+        holder.releaseClient();
+
+        expect(await waiting).toBe(holder);
+        expect(p.waitingCount).toBe(0);
+      });
+
+      it('waits without a bound by default', async () => {
+        const p = newPool();
+        const holder = await p.connect();
+        const waiting = p.connect();
+
+        expect(await stillQueued(waiting)).toBe(true);
+        expect(p.waitingCount).toBe(1);
+
+        holder.releaseClient();
+        expect(await waiting).toBe(holder);
+      });
     });
   });
 

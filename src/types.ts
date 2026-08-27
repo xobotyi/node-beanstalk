@@ -90,6 +90,17 @@ export interface IPoolCtorOptions {
    * @default 10
    */
   capacity?: number;
+
+  /**
+   * Maximum time in milliseconds a `connect()` call waits in the queue for a client.
+   * When it passes, the call is rejected with a `PoolError`. `0` disables the limit.
+   *
+   * Set it above `clientOptions.commandTimeoutMs`, so that a waiter is still queued when a
+   * command hits its deadline and frees a slot.
+   *
+   * @default 0
+   */
+  pendingTimeoutMs?: number;
 }
 
 export interface IClientRawReservedJob {

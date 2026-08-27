@@ -33,4 +33,5 @@ export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
 export const DEFAULT_POOL_OPTIONS: Required<IPoolCtorOptions> = {
   clientOptions: {},
   capacity: 10,
+  pendingTimeoutMs: 0,
 };

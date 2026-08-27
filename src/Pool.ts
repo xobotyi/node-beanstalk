@@ -6,6 +6,13 @@ import { PoolError } from './error/PoolError';
 
 export type PoolState = 'live' | 'disconnected' | 'disconnecting';
 
+interface IPendingEntry {
+  resolve: (client: PoolClient) => void;
+  reject: (err: PoolError) => void;
+  /** Wait budget, set when `pendingTimeoutMs > 0`. */
+  timer?: NodeJS.Timeout;
+}
+
 export class Pool {
   private readonly _opt: Required<IPoolCtorOptions>;
 
@@ -13,10 +20,7 @@ export class Pool {
 
   private readonly _idleClients: LinkedList<PoolClient> = new LinkedList();
 
-  private readonly _pendingQueue: LinkedList<{
-    resolve: (client: PoolClient) => void;
-    reject: (err: PoolError) => void;
-  }> = new LinkedList();
+  private readonly _pendingQueue: LinkedList<IPendingEntry> = new LinkedList();
 
   private _state: PoolState = 'live';
 
@@ -110,16 +114,13 @@ export class Pool {
     if (this._pendingQueue.size && !force) {
       // Wait our turn in the queue. The wait is rejected when every client died and
       // no release can serve the queue any more; the drain then goes on.
-      await this.createPendingPromise().catch(() => undefined);
+      // The drain has no wait budget.
+      await this.createPendingPromise(0).catch(() => undefined);
     }
 
     this._state = 'disconnecting';
 
-    // reject all pending queue
-    // eslint-disable-next-line no-restricted-syntax
-    for (const { reject } of this._pendingQueue.truncate()) {
-      reject(new PoolError('Unable to gain client, pool is disconnecting.'));
-    }
+    this.rejectAllPending(new PoolError('Unable to gain client, pool is disconnecting.'));
 
     this._idleClients.truncate();
 
@@ -182,22 +183,30 @@ export class Pool {
     if (this._draining) {
       // A drain creates no client. With no client left, no release can ever serve the queue.
       if (this._clients.length === 0) {
-        this._pendingQueue.truncate().forEach(({ reject }) => {
-          reject(new PoolError('Unable to gain client, pool is disconnecting.'));
-        });
+        this.rejectAllPending(new PoolError('Unable to gain client, pool is disconnecting.'));
       }
       return;
     }
 
-    const pending = this._pendingQueue.unshift();
+    const pending = this.takePending();
     if (!pending) return;
 
     this.createClient().then(pending.resolve, pending.reject);
   }
 
-  private createPendingPromise(): Promise<PoolClient> {
+  /** A queued waiter holds no socket, so the timer is the only bound on its wait. */
+  private createPendingPromise(timeoutMs = this._opt.pendingTimeoutMs): Promise<PoolClient> {
     return new Promise((resolve, reject) => {
-      this._pendingQueue.push({ resolve, reject });
+      const entry: IPendingEntry = { resolve, reject };
+      const node = this._pendingQueue.push(entry);
+
+      if (timeoutMs > 0) {
+        entry.timer = setTimeout(() => {
+          this._pendingQueue.removeNode(node);
+          reject(new PoolError(`No client available within ${timeoutMs} ms`));
+        }, timeoutMs);
+        entry.timer.unref();
+      }
     });
   }
 
@@ -205,7 +214,7 @@ export class Pool {
     // An evicted client can still be released by the holder that had it when it died.
     if (this._state !== 'live' || !this._clients.includes(client)) return;
 
-    const pending = this._pendingQueue.unshift();
+    const pending = this.takePending();
 
     if (pending) {
       pending.resolve(client);
@@ -213,4 +222,17 @@ export class Pool {
       this._idleClients.push(client);
     }
   };
+
+  private rejectAllPending(err: PoolError): void {
+    this._pendingQueue.truncate().forEach(({ reject, timer }) => {
+      if (timer) clearTimeout(timer);
+      reject(err);
+    });
+  }
+
+  private takePending(): IPendingEntry | undefined {
+    const pending = this._pendingQueue.unshift();
+    if (pending?.timer) clearTimeout(pending.timer);
+    return pending;
+  }
 }
