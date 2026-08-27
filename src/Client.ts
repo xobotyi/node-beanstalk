@@ -778,6 +778,22 @@ export class Client extends EventEmitter {
       let headers: ICommandResponseHeaders | null = null;
       let dataReadTimeout: NodeJS.Timeout;
       let cleanup: () => void;
+      let commandTimeout: NodeJS.Timeout | undefined;
+
+      const { commandTimeoutMs } = this._opt;
+      if (commandTimeoutMs > 0) {
+        // The stuck command owns the queue head, so only a destroy frees the client.
+        commandTimeout = setTimeout(() => {
+          cleanup();
+          reject(
+            new ClientError(
+              ClientErrorCode.ErrCommandTimeout,
+              `No response within ${commandTimeoutMs} ms`
+            )
+          );
+          conn.destroy();
+        }, commandTimeoutMs);
+      }
 
       const closeListener = () => {
         cleanup();
@@ -843,6 +859,7 @@ export class Client extends EventEmitter {
 
       cleanup = () => {
         clearTimeout(dataReadTimeout);
+        clearTimeout(commandTimeout);
         conn.off('data', dataListener);
         conn.off('close', closeListener);
         conn.off('error', closeListener);

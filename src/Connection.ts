@@ -96,8 +96,8 @@ export class Connection extends EventEmitter {
   }
 
   private handleSocketClose(socket: Socket): void {
-    // A socket replaced by a later `open()` must not touch the new socket's state.
-    if (this._socket && this._socket !== socket) {
+    // A socket replaced by a later `open()` or dropped by `destroy()` already had its `close`.
+    if (this._socket !== socket) {
       return;
     }
 
@@ -141,6 +141,19 @@ export class Connection extends EventEmitter {
     });
     sock.destroy();
     await closed;
+  }
+
+  /** Emits `close` synchronously; the later socket `close` event is ignored. */
+  destroy(): void {
+    const sock = this._socket;
+    if (!sock) {
+      return;
+    }
+
+    this._state = 'closed';
+    this._socket = undefined;
+    sock.destroy();
+    this.emit('close');
   }
 
   async write<T extends Buffer>(buffer: T): Promise<T> {

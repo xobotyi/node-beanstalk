@@ -26,6 +26,7 @@ export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
   serializer: new JsonSerializer(),
   maxPayloadSize: 65_536,
   dataReadTimeoutMs: 1000,
+  commandTimeoutMs: 0,
 };
 
 export const DEFAULT_POOL_OPTIONS: Required<IPoolCtorOptions> = {

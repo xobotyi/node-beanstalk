@@ -1618,5 +1618,138 @@ describe('Client', () => {
       expect(c.isConnected).toBe(false);
       expect(events).toStrictEqual(['error', 'close']);
     });
+
+    describe('commandTimeoutMs', () => {
+      const RESPONSE = Buffer.from('INSERTED 1\r\n');
+
+      it('should reject the command and drop the connection when the server never answers', async () => {
+        let peerClosed = Promise.resolve();
+        const { port, address: host } = await listen((sock) => {
+          // read (and drop) the command so the client's FIN is seen and the socket closes
+          sock.resume();
+          peerClosed = new Promise((resolve) => {
+            sock.once('close', resolve);
+          });
+        });
+        const c = new Client({ host, port, commandTimeoutMs: 50 });
+        const closeSpy = jest.fn();
+        const errorSpy = jest.fn();
+        c.on('close', closeSpy);
+        c.on('error', errorSpy);
+        const closed = new Promise<void>((resolve) => {
+          c.once('close', resolve);
+        });
+        await c.connect();
+
+        const started = Date.now();
+        await expect(c.put('job')).rejects.toMatchObject({
+          code: ClientErrorCode.ErrCommandTimeout,
+          message: 'No response within 50 ms',
+        });
+        expect(Date.now() - started).toBeLessThan(1000);
+        expect(c.isConnected).toBe(false);
+
+        await closed;
+        expect(closeSpy).toHaveBeenCalledTimes(1);
+        expect(errorSpy).not.toHaveBeenCalled();
+        await peerClosed;
+
+        await c.connect();
+        expect(c.isConnected).toBe(true);
+        await c.disconnect();
+      });
+
+      it('should settle a command queued behind the stuck one', async () => {
+        let peerClosed = Promise.resolve();
+        const { port, address: host } = await listen((sock) => {
+          // read (and drop) the command so the client's FIN is seen and the socket closes
+          sock.resume();
+          peerClosed = new Promise((resolve) => {
+            sock.once('close', resolve);
+          });
+        });
+        const c = new Client({ host, port, commandTimeoutMs: 50 });
+        const errorSpy = jest.fn();
+        c.on('error', errorSpy);
+        await c.connect();
+
+        const stuck = c.put('job');
+        const queued = c.use('tube');
+
+        await expect(stuck).rejects.toMatchObject({ code: ClientErrorCode.ErrCommandTimeout });
+        await expect(queued).rejects.toMatchObject({
+          code: ClientErrorCode.ErrConnectionNotOpened,
+        });
+        await peerClosed;
+        expect(errorSpy).not.toHaveBeenCalled();
+      });
+
+      it('should emit `close` once when the rejection handler reconnects at once', async () => {
+        let answer = false;
+        const { port, address: host } = await listen((sock) => {
+          sock.on('data', () => {
+            if (answer) {
+              sock.write(RESPONSE);
+            }
+          });
+        });
+        const c = new Client({ host, port, commandTimeoutMs: 50 });
+        const closeSpy = jest.fn();
+        c.on('close', closeSpy);
+        await c.connect();
+
+        const reconnected = c.put('job').catch((err) => {
+          expect(err).toMatchObject({ code: ClientErrorCode.ErrCommandTimeout });
+          return c.connect();
+        });
+
+        await expect(reconnected).resolves.toBeUndefined();
+        expect(c.isConnected).toBe(true);
+        answer = true;
+        await expect(c.put('job')).resolves.toStrictEqual({
+          id: 1,
+          state: BeanstalkJobState.ready,
+        });
+        // wait past the first socket's own `close` event
+        await new Promise((resolve) => {
+          setTimeout(resolve, 20);
+        });
+        expect(closeSpy).toHaveBeenCalledTimes(1);
+        await c.disconnect();
+      });
+
+      it('should not arm a deadline by default', async () => {
+        const { port, address: host } = await listen((sock) => {
+          sock.once('data', () => {
+            setTimeout(() => sock.write(RESPONSE), 100);
+          });
+        });
+        const c = new Client({ host, port });
+        await c.connect();
+
+        await expect(c.put('job')).resolves.toStrictEqual({
+          id: 1,
+          state: BeanstalkJobState.ready,
+        });
+        await c.disconnect();
+      });
+
+      it('should clear the deadline on a fast response', async () => {
+        const { port, address: host } = await listen((sock) => {
+          sock.once('data', () => sock.write(RESPONSE));
+        });
+        const c = new Client({ host, port, commandTimeoutMs: 10_000 });
+        const closeSpy = jest.fn();
+        c.on('close', closeSpy);
+        await c.connect();
+
+        await expect(c.put('job')).resolves.toStrictEqual({
+          id: 1,
+          state: BeanstalkJobState.ready,
+        });
+        await c.disconnect();
+        expect(closeSpy).toHaveBeenCalledTimes(1);
+      });
+    });
   });
 });

@@ -56,6 +56,15 @@ export interface IClientCtorOptions {
    * @default 1000
    */
   dataReadTimeoutMs?: number;
+
+  /**
+   * Time in milliseconds a command may wait for the complete response, headers and data.
+   * On expiry the command rejects with `ErrCommandTimeout` and the connection is destroyed,
+   * so the client emits `close`. `0` disables the deadline.
+   *
+   * @default 0
+   */
+  commandTimeoutMs?: number;
 }
 
 export interface IPoolCtorOptions {
