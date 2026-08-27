@@ -27,6 +27,7 @@ export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
   maxPayloadSize: 65_536,
   dataReadTimeoutMs: 1000,
   commandTimeoutMs: 0,
+  connectTimeoutMs: 0,
 };
 
 export const DEFAULT_POOL_OPTIONS: Required<IPoolCtorOptions> = {

@@ -65,6 +65,15 @@ export interface IClientCtorOptions {
    * @default 0
    */
   commandTimeoutMs?: number;
+
+  /**
+   * Time in milliseconds `connect()` may wait for the TCP connection.
+   * On expiry `connect()` rejects with `ErrConnectTimeout`, the socket is destroyed and
+   * the client emits `close`. `0` leaves the dial to the OS timeout.
+   *
+   * @default 0
+   */
+  connectTimeoutMs?: number;
 }
 
 export interface IPoolCtorOptions {

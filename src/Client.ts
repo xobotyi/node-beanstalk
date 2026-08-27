@@ -91,7 +91,7 @@ export class Client extends EventEmitter {
     try {
       await waitPromise;
 
-      await this._conn.open(this._opt.port, this._opt.host);
+      await this._conn.open(this._opt.port, this._opt.host, this._opt.connectTimeoutMs);
 
       this.emit('connect');
     } finally {

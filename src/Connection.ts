@@ -49,7 +49,11 @@ export class Connection extends EventEmitter {
     return this._state === 'opening' || this._state === 'closing';
   }
 
-  async open(port: number, host = 'localhost'): Promise<void> {
+  /**
+   * `timeoutMs > 0` bounds the dial. On expiry the socket is destroyed, `close` is emitted
+   * and the promise rejects with `ErrConnectTimeout`. `0` leaves the dial to the OS.
+   */
+  async open(port: number, host = 'localhost', timeoutMs = 0): Promise<void> {
     if (this.isChangingState()) {
       throw new ConnectionError(
         ConnectionErrorCode.ErrChangingState,
@@ -69,21 +73,71 @@ export class Connection extends EventEmitter {
     return new Promise<void>((resolve, reject) => {
       const socket = new Socket();
       this._socket = socket;
+
+      let settled = false;
+      let deadline: NodeJS.Timeout | undefined;
+      const settle = () => {
+        settled = true;
+        clearTimeout(deadline);
+      };
+      const fail = (err: Error) => {
+        settle();
+        reject(err);
+      };
+
+      if (timeoutMs > 0) {
+        deadline = setTimeout(() => {
+          fail(
+            new ConnectionError(
+              ConnectionErrorCode.ErrConnectTimeout,
+              `Connection not established within ${timeoutMs} ms`
+            )
+          );
+          this.destroy();
+        }, timeoutMs);
+      }
+
       socket
         .setNoDelay(true)
         .setKeepAlive(true)
-        .on('close', () => this.handleSocketClose(socket))
-        .on('error', (err) => reject(err))
+        .on('close', () => {
+          this.handleSocketClose(socket);
+          // A socket dropped while `opening` (by `destroy()`) settles the dial.
+          if (!settled) {
+            fail(
+              new ConnectionError(
+                ConnectionErrorCode.ErrNotOpened,
+                'Socket closed before the connection was established'
+              )
+            );
+          }
+        })
+        .on('error', (err: any) => {
+          if (!settled) {
+            fail(err);
+            return;
+          }
+
+          // A socket dropped by `destroy()` or replaced by a later `open()` is not ours to report.
+          if (this._socket !== socket) {
+            return;
+          }
+
+          // ignore disconnect errors during disconnect procedure
+          if (this._state === 'closing' && (err.code === 'ECONNRESET' || err.code === 'EPIPE')) {
+            return;
+          }
+
+          this.emit('error', err);
+        })
         .on('data', (data) => this.emit('data', data))
         .connect(port, host, () => {
-          socket.off('error', reject).on('error', (err: any) => {
-            // ignore disconnect errors during disconnect procedure
-            if (this._state === 'closing' && (err.code === 'ECONNRESET' || err.code === 'EPIPE')) {
-              return;
-            }
-
-            this.emit('error', err);
-          });
+          settle();
+          // A dial that lands after the deadline dropped this socket must not leave an orphan.
+          if (this._socket !== socket) {
+            socket.destroy();
+            return;
+          }
 
           this._state = 'open';
 

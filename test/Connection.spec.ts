@@ -256,4 +256,60 @@ describe('Connection', () => {
       await conn.close();
     });
   });
+  describe('connect timeout', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('should reject with `ErrConnectTimeout`, emit `close` and end `closed` when the dial never lands', async () => {
+      // A dial into a black hole: no callback, no error. Faked, because a local server always answers.
+      const connectSpy = jest
+        .spyOn(Socket.prototype, 'connect')
+        .mockImplementationOnce(function connect(this: Socket) {
+          return this;
+        });
+      const conn = getNewConnection();
+      const closeSpy = jest.fn(() => conn.getState());
+      conn.on('close', closeSpy);
+
+      const started = Date.now();
+      await expect(conn.open(address.port, address.address, 50)).rejects.toMatchObject({
+        name: 'ConnectionError',
+        code: 'ErrConnectTimeout',
+        message: 'Connection not established within 50 ms',
+      });
+      expect(Date.now() - started).toBeLessThan(1000);
+      expect(conn.getState()).toBe('closed');
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+      expect(closeSpy).toHaveReturnedWith('closed');
+      expect(connectSpy.mock.instances[0].destroyed).toBe(true);
+
+      await conn.open(address.port, address.address);
+      expect(conn.getState()).toBe('open');
+      await conn.close();
+    });
+
+    it('should settle `open()` when `destroy()` runs while opening', async () => {
+      jest
+        .spyOn(Socket.prototype, 'connect')
+        .mockImplementationOnce(function connect(this: Socket) {
+          return this;
+        });
+      const conn = getNewConnection();
+      const closeSpy = jest.fn();
+      conn.on('close', closeSpy);
+
+      const opening = conn.open(address.port, address.address);
+      expect(conn.getState()).toBe('opening');
+      conn.destroy();
+
+      await expect(opening).rejects.toMatchObject({
+        name: 'ConnectionError',
+        code: 'ErrNotOpened',
+      });
+      expect(conn.getState()).toBe('closed');
+      await setImmediate();
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });
