@@ -95,6 +95,40 @@ disconnection will be rejected.
 To disconnect client immediately - call `client.disconnect(true)`, it will perform disconnect right
 after currently running request.
 
+#### Connection errors and timeouts
+
+When the connection is lost, the running command rejects with `ErrConnectionClosed`, the `Client`
+emits `close` and later commands reject with `ErrConnectionNotOpened` until `connect()` succeeds
+again. The `Client` also emits `connect` and `error`; an `error` without a listener throws, as with
+any Node `EventEmitter`.
+
+The options `connectTimeoutMs`, `commandTimeoutMs` and `dataReadTimeoutMs` bound the wait for the
+server, see the
+[API docs](https://xobotyi.github.io/node-beanstalk/interfaces/iclientctoroptions.html).
+
+Reconnect on `close`:
+
+```ts
+import { Client } from "node-beanstalk";
+
+const c = new Client({ connectTimeoutMs: 5000, commandTimeoutMs: 30_000 });
+
+c.on("error", console.error);
+c.on("close", async () => {
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  try {
+    // Tube state belongs to the connection, so the new one needs `watch` again.
+    await c.connect();
+    await c.watch("my-own-tube");
+  } catch (e) {
+    // A failed dial emits `close` again, so the next retry follows.
+  }
+});
+
+await c.connect();
+await c.watch("my-own-tube");
+```
+
 #### Payload serialization
 
 As in most cases our job payloads are complex objets - they somehow must be serialized to Buffer. In
@@ -152,6 +186,27 @@ disconnection will be rejected.
 Force disconnect `pool.disconnect(true)` will not wait for pending reserve and start disconnection
 immediately (it will still be waiting clients return to the pool) by calling force disconnect on
 each client.
+
+#### Dead clients and timeouts
+
+The pool removes a client that emitted `close` or `error`. Its slot, like the slot of a failed
+`connect()` of a new client, goes to the first waiter in the queue as a fresh connected client.
+Releasing a dead client is ignored. `pool.connect()` rejects while a graceful `pool.disconnect()`
+is in progress.
+
+Pool option `pendingTimeoutMs` (default `0`, disabled) bounds the wait in the queue. Set it above
+`clientOptions.commandTimeoutMs`, then a waiter lives long enough to inherit the slot of a client
+whose command hit its deadline.
+
+```ts
+import { Pool } from "node-beanstalk";
+
+const p = new Pool({
+  capacity: 5,
+  pendingTimeoutMs: 10_000,
+  clientOptions: { connectTimeoutMs: 5000, commandTimeoutMs: 5000 },
+});
+```
 
 ## TEST
 
