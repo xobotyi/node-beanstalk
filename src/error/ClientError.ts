@@ -7,6 +7,8 @@ export enum ClientErrorCode {
   ErrConnectionNotOpened = 'ErrConnectionNotOpened',
   ErrConnectionNotClosed = 'ErrConnectionNotClosed',
   ErrDisconnecting = 'ErrDisconnecting',
+  ErrConnectionClosed = 'ErrConnectionClosed',
+  ErrCommandTimeout = 'ErrCommandTimeout',
 }
 
 export class ClientError extends ErrorWithCode {

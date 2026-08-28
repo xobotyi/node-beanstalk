@@ -49,13 +49,31 @@ export interface IClientCtorOptions {
   maxPayloadSize?: number;
 
   /**
-   * Time in milliseconds which client will wait for data chunks.
-   * If full data will not be read in given amount of time, client
-   * will quit (disconnect and throw error).
+   * Time in milliseconds the client waits for the data chunks after the response headers arrived.
+   * On expiry the command rejects with a {@link ClientError} `ErrResponseRead`; the connection
+   * stays open and no `close` is emitted.
    *
    * @default 1000
    */
   dataReadTimeoutMs?: number;
+
+  /**
+   * Time in milliseconds a command may wait for the complete response, headers and data.
+   * On expiry the command rejects with a {@link ClientError} `ErrCommandTimeout` and the
+   * connection is destroyed, so the client emits `close`. `0` disables the deadline.
+   *
+   * @default 0
+   */
+  commandTimeoutMs?: number;
+
+  /**
+   * Time in milliseconds `connect()` may wait for the TCP connection.
+   * On expiry `connect()` rejects with a {@link ConnectionError} `ErrConnectTimeout`, the socket
+   * is destroyed and the client emits `close`. `0` leaves the dial to the OS timeout.
+   *
+   * @default 0
+   */
+  connectTimeoutMs?: number;
 }
 
 export interface IPoolCtorOptions {
@@ -72,6 +90,17 @@ export interface IPoolCtorOptions {
    * @default 10
    */
   capacity?: number;
+
+  /**
+   * Maximum time in milliseconds a `connect()` call waits in the queue for a client.
+   * When it passes, the call is rejected with a {@link PoolError}. `0` disables the limit.
+   *
+   * Set it above `clientOptions.commandTimeoutMs`, so that a waiter is still queued when a
+   * command hits its deadline and frees a slot.
+   *
+   * @default 0
+   */
+  pendingTimeoutMs?: number;
 }
 
 export interface IClientRawReservedJob {
