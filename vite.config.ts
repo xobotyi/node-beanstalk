@@ -44,7 +44,6 @@ export default defineConfig({
 			'eslint/no-new': 'off',
 			'eslint/no-promise-executor-return': 'off',
 			'eslint/no-redeclare': 'off',
-			'eslint/no-underscore-dangle': 'off',
 			'promise/always-return': 'off',
 			'promise/catch-or-return': 'off',
 			'promise/prefer-await-to-then': 'off',
