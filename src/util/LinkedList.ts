@@ -14,9 +14,11 @@ export class LinkedList<V = any> {
 	size = 0;
 
 	/**
-	 * Remove node from chain and nullish it.
+	 * Remove node from chain and nullish it. A node that is not in this list is left unchanged and yields undefined.
 	 */
 	removeNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> | undefined {
+		if (node.list !== this) return undefined;
+
 		const {next, prev} = node;
 
 		if (prev) prev.next = next;
