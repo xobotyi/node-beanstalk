@@ -1,11 +1,11 @@
 export class BeanstalkError extends Error {
-  name = 'BeanstalkError';
+	name = 'BeanstalkError';
 
-  public readonly code: string;
+	public readonly code: string;
 
-  constructor(message: string, code: string) {
-    super(message);
+	constructor(message: string, code: string) {
+		super(message);
 
-    this.code = code;
-  }
+		this.code = code;
+	}
 }

@@ -1,9 +1,9 @@
-import { ErrorWithCode } from './ErrorWithCode';
+import {ErrorWithCode} from './ErrorWithCode';
 
 export enum ResponseErrorCode {
-  ErrInvalidBodyLength = 'ErrInvalidBodyLength',
+	ErrInvalidBodyLength = 'ErrInvalidBodyLength',
 }
 
 export class ResponseError extends ErrorWithCode<ResponseErrorCode> {
-  name = 'ResponseError';
+	name = 'ResponseError';
 }

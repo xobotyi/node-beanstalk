@@ -1,12 +1,10 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "noEmit": false,
-    "moduleResolution": "Node10",
-    "target": "ES5",
-    "module": "CommonJS"
-  },
-  "include": [
-    "src"
-  ]
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"moduleResolution": "Node10",
+		"target": "ES5",
+		"module": "CommonJS"
+	},
+	"include": ["src"]
 }

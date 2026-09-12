@@ -1,179 +1,178 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
-import { EventEmitter } from 'events';
-import { AddressInfo, createServer } from 'net';
-import { Connection } from '../src/Connection';
-import { ConnectionError } from '../src/error/ConnectionError';
+import {afterAll, beforeAll, describe, expect, it} from 'vite-plus/test';
+import {EventEmitter} from 'events';
+import {AddressInfo, createServer} from 'net';
+import {Connection} from '../src/Connection';
+import {ConnectionError} from '../src/error/ConnectionError';
 
 describe('Connection', () => {
-  const server = createServer();
-  let address: AddressInfo;
-  const inbound = new EventEmitter();
+	const server = createServer();
+	let address: AddressInfo;
+	const inbound = new EventEmitter();
 
-  beforeAll(async () => {
-    await new Promise<void>((resolve) => server.listen(resolve));
-    address = server.address() as AddressInfo;
+	beforeAll(async () => {
+		await new Promise<void>((resolve) => server.listen(resolve));
+		address = server.address() as AddressInfo;
 
-    server.on('connection', (sock) => {
-      sock.on('data', (data) => inbound.emit('data', data));
-    });
-  });
+		server.on('connection', (sock) => {
+			sock.on('data', (data) => inbound.emit('data', data));
+		});
+	});
 
-  const connections: Connection[] = [];
+	const connections: Connection[] = [];
 
-  function getNewConnection() {
-    const conn = new Connection();
+	function getNewConnection() {
+		const conn = new Connection();
 
-    connections.push(conn);
-    return conn;
-  }
+		connections.push(conn);
+		return conn;
+	}
 
-  afterAll(async () => {
-    server.close();
+	afterAll(async () => {
+		server.close();
 
-    for await (const connection of connections) {
-      if (connection.getState() !== 'closed' && connection.getState() !== 'closing')
-        await connection.close();
-    }
-  });
+		for await (const connection of connections) {
+			if (connection.getState() !== 'closed' && connection.getState() !== 'closing') await connection.close();
+		}
+	});
 
-  it('should be defined', () => {
-    expect(Connection).toBeDefined();
-  });
+	it('should be defined', () => {
+		expect(Connection).toBeDefined();
+	});
 
-  it('should be creatable by `new`', () => {
-    const conn = getNewConnection();
+	it('should be creatable by `new`', () => {
+		const conn = getNewConnection();
 
-    expect(conn).toBeDefined();
-    expect(conn).toBeInstanceOf(Connection);
-  });
+		expect(conn).toBeDefined();
+		expect(conn).toBeInstanceOf(Connection);
+	});
 
-  describe('connection.open()', () => {
-    it('should connect to the given remote', async () => {
-      const conn = getNewConnection();
-      await conn.open(address.port, address.address);
+	describe('connection.open()', () => {
+		it('should connect to the given remote', async () => {
+			const conn = getNewConnection();
+			await conn.open(address.port, address.address);
 
-      expect(conn.getState()).toBe('open');
-    });
+			expect(conn.getState()).toBe('open');
+		});
 
-    it('should throw on attempt to twice open connection to given remote', async () => {
-      const conn = getNewConnection();
-      await conn.open(address.port, address.address);
-      expect(conn.getState()).toBe('open');
+		it('should throw on attempt to twice open connection to given remote', async () => {
+			const conn = getNewConnection();
+			await conn.open(address.port, address.address);
+			expect(conn.getState()).toBe('open');
 
-      await conn
-        .open(address.port, address.address)
-        .then(() => {
-          throw new Error('not thrown!');
-        })
-        .catch((err: ConnectionError) => {
-          expect(err).toBeInstanceOf(ConnectionError);
-          expect(err.code).toBe('ErrAlreadyOpened');
-        });
-    });
+			await conn
+				.open(address.port, address.address)
+				.then(() => {
+					throw new Error('not thrown!');
+				})
+				.catch((err: ConnectionError) => {
+					expect(err).toBeInstanceOf(ConnectionError);
+					expect(err.code).toBe('ErrAlreadyOpened');
+				});
+		});
 
-    it('should throw on attempt to connect while opening or closing connection', async () => {
-      const conn = getNewConnection();
-      conn.open(address.port, address.address);
-      await conn
-        .open(address.port, address.address)
-        .then(() => {
-          throw new Error('not thrown!');
-        })
-        .catch((err: ConnectionError) => {
-          expect(err).toBeInstanceOf(ConnectionError);
-          expect(err.code).toBe('ErrChangingState');
-        });
-    });
-  });
+		it('should throw on attempt to connect while opening or closing connection', async () => {
+			const conn = getNewConnection();
+			conn.open(address.port, address.address);
+			await conn
+				.open(address.port, address.address)
+				.then(() => {
+					throw new Error('not thrown!');
+				})
+				.catch((err: ConnectionError) => {
+					expect(err).toBeInstanceOf(ConnectionError);
+					expect(err.code).toBe('ErrChangingState');
+				});
+		});
+	});
 
-  describe('connection.close()', () => {
-    it('should connect to the given remote', async () => {
-      const conn = getNewConnection();
-      await conn.open(address.port, address.address);
-      await conn.close();
-      expect(conn.getState()).toBe('closed');
-    });
+	describe('connection.close()', () => {
+		it('should connect to the given remote', async () => {
+			const conn = getNewConnection();
+			await conn.open(address.port, address.address);
+			await conn.close();
+			expect(conn.getState()).toBe('closed');
+		});
 
-    it('should throw on attempt to twice close connection', async () => {
-      const conn = getNewConnection();
-      await conn.open(address.port, address.address);
-      await conn.close();
-      expect(conn.getState()).toBe('closed');
+		it('should throw on attempt to twice close connection', async () => {
+			const conn = getNewConnection();
+			await conn.open(address.port, address.address);
+			await conn.close();
+			expect(conn.getState()).toBe('closed');
 
-      await conn
-        .close()
-        .then(() => {
-          throw new Error('not thrown!');
-        })
-        .catch((err: ConnectionError) => {
-          expect(err).toBeInstanceOf(ConnectionError);
-          expect(err.code).toBe('ErrAlreadyClosed');
-        });
-    });
+			await conn
+				.close()
+				.then(() => {
+					throw new Error('not thrown!');
+				})
+				.catch((err: ConnectionError) => {
+					expect(err).toBeInstanceOf(ConnectionError);
+					expect(err.code).toBe('ErrAlreadyClosed');
+				});
+		});
 
-    it('should throw on attempt to connect while opening or closing connection', async () => {
-      const conn = getNewConnection();
-      conn.open(address.port, address.address);
-      await conn
-        .close()
-        .then(() => {
-          throw new Error('not thrown!');
-        })
-        .catch((err: ConnectionError) => {
-          expect(err).toBeInstanceOf(ConnectionError);
-          expect(err.code).toBe('ErrChangingState');
-        });
-    });
-  });
+		it('should throw on attempt to connect while opening or closing connection', async () => {
+			const conn = getNewConnection();
+			conn.open(address.port, address.address);
+			await conn
+				.close()
+				.then(() => {
+					throw new Error('not thrown!');
+				})
+				.catch((err: ConnectionError) => {
+					expect(err).toBeInstanceOf(ConnectionError);
+					expect(err.code).toBe('ErrChangingState');
+				});
+		});
+	});
 
-  describe('connection.write()', () => {
-    it('should throw in case of calling on unopened connection', async () => {
-      const conn = getNewConnection();
+	describe('connection.write()', () => {
+		it('should throw in case of calling on unopened connection', async () => {
+			const conn = getNewConnection();
 
-      await conn
-        .write(Buffer.from('hey!'))
-        .then(() => {
-          throw new Error('not thrown!');
-        })
-        .catch((err: ConnectionError) => {
-          expect(err).toBeInstanceOf(ConnectionError);
-          expect(err.code).toBe('ErrNotOpened');
-        });
-    });
+			await conn
+				.write(Buffer.from('hey!'))
+				.then(() => {
+					throw new Error('not thrown!');
+				})
+				.catch((err: ConnectionError) => {
+					expect(err).toBeInstanceOf(ConnectionError);
+					expect(err.code).toBe('ErrNotOpened');
+				});
+		});
 
-    it('should write given buffer to underlying socket', async () => {
-      const conn = getNewConnection();
-      await conn.open(address.port, address.address);
-      const received = new Promise((resolve) => inbound.once('data', resolve));
-      const sendBuffer = Buffer.from('hey!');
+		it('should write given buffer to underlying socket', async () => {
+			const conn = getNewConnection();
+			await conn.open(address.port, address.address);
+			const received = new Promise((resolve) => inbound.once('data', resolve));
+			const sendBuffer = Buffer.from('hey!');
 
-      await conn.write(sendBuffer);
+			await conn.write(sendBuffer);
 
-      await expect(received).resolves.toStrictEqual(sendBuffer);
-    });
-  });
+			await expect(received).resolves.toStrictEqual(sendBuffer);
+		});
+	});
 
-  describe('events', () => {
-    it('should emit `open` event on connection opened', async () => {
-      const conn = getNewConnection();
-      const opened = new Promise<unknown[]>((resolve) => conn.on('open', (...args) => resolve(args)));
+	describe('events', () => {
+		it('should emit `open` event on connection opened', async () => {
+			const conn = getNewConnection();
+			const opened = new Promise<unknown[]>((resolve) => conn.on('open', (...args) => resolve(args)));
 
-      await conn.open(address.port, address.address);
+			await conn.open(address.port, address.address);
 
-      const [port, host] = await opened;
-      expect(typeof port).toBe('number');
-      expect(typeof host).toBe('string');
-      await conn.close();
-    });
+			const [port, host] = await opened;
+			expect(typeof port).toBe('number');
+			expect(typeof host).toBe('string');
+			await conn.close();
+		});
 
-    it('should emit `close` event on connection close', async () => {
-      const conn = getNewConnection();
-      const closed = new Promise<void>((resolve) => conn.on('close', resolve));
+		it('should emit `close` event on connection close', async () => {
+			const conn = getNewConnection();
+			const closed = new Promise<void>((resolve) => conn.on('close', resolve));
 
-      await conn.open(address.port, address.address);
-      await conn.close();
+			await conn.open(address.port, address.address);
+			await conn.close();
 
-      await closed;
-    });
-  });
+			await closed;
+		});
+	});
 });

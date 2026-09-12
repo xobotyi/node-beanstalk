@@ -34,25 +34,25 @@ Each client gives you full access to functionality of beanstalk queue manager, w
 separation to emitter and worker.
 
 ```ts
-import { Client, BeanstalkJobState } from "node-beanstalk";
+import {Client, BeanstalkJobState} from 'node-beanstalk';
 
 const c = new Client();
 
 // connect to beasntalkd server
 await c.connect();
 // use our own tube
-await c.use("my-own-tube");
+await c.use('my-own-tube');
 
 // put our very important job
-const putJob = await c.put({ foo: "My awsome payload", bar: ["baz", "qux"] }, 40);
+const putJob = await c.put({foo: 'My awsome payload', bar: ['baz', 'qux']}, 40);
 if (putJob.state !== BeanstalkJobState.ready) {
-  // as a result of put command job can done in `buried` state,
-  // or `delayed` in case delay or client's default delay been specified
-  throw new Error("job is not in ready state");
+	// as a result of put command job can done in `buried` state,
+	// or `delayed` in case delay or client's default delay been specified
+	throw new Error('job is not in ready state');
 }
 
 // watch our tube to be able to reserve from it
-await c.watch("my-own-tube");
+await c.watch('my-own-tube');
 
 // acquire new job (ideally the one we've just put)
 const job = await c.reserveWithTimeout(10);
@@ -69,7 +69,7 @@ will wait for the end of previous one. So below code will be executed consecutiv
 fact of being asyncronous.
 
 ```ts
-import { Client, BeanstalkJobState } from "node-beanstalk";
+import {Client, BeanstalkJobState} from 'node-beanstalk';
 
 const c = new Client();
 await c.connect();
@@ -123,19 +123,19 @@ the pool.
 #### Checkout, use, and return
 
 ```ts
-import { Pool } from "node-beanstalk";
+import {Pool} from 'node-beanstalk';
 
-const p = new Pool({ capacity: 5 });
+const p = new Pool({capacity: 5});
 
 // acquire our very own client
 const client = await p.connect();
 
 try {
-  // do some work
-  await client.statsTube("my-own-tube");
+	// do some work
+	await client.statsTube('my-own-tube');
 } finally {
-  // return client back to the pool
-  client.releaseClient();
+	// return client back to the pool
+	client.releaseClient();
 }
 ```
 

@@ -1,57 +1,57 @@
 {
-  "name": "node-beanstalk",
-  "description": "The most comprehensive beanstalk client for nodejs",
-  "keywords": [
-    "nodejs",
-    "beanstalkd",
-    "beanstalk",
-    "node-beanstalk"
-  ],
-  "version": "1.6.8",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/xobotyi/node-beanstalk.git"
-  },
-  "bugs": {
-    "url": "https://github.com/xobotyi/node-beanstalk/issues"
-  },
-  "files": [
-    "dist"
-  ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "dependencies": {
-    "js-yaml": "^4.1.0"
-  },
-  "devDependencies": {
-    "@semantic-release/changelog": "^6.0.1",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^9.2.6",
-    "@semantic-release/npm": "^11.0.3",
-    "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.14.10",
-    "@ver0/oxlint-config": "^2.0.2",
-    "@vitest/coverage-v8": "4.1.11",
-    "cpy-cli": "^5.0.0",
-    "rimraf": "^5.0.8",
-    "semantic-release": "^23.1.1",
-    "typedoc": "^0.26.3",
-    "typescript": "^5.5.3",
-    "vite-plus": "^0.3.1"
-  },
-  "scripts": {
-    "docs:build": "yarn typedoc && cpy .static/typedoc/style.css docs/assets/css/",
-    "build": "yarn build:cleanup && yarn build:tsc",
-    "build:cleanup": "rimraf ./dist",
-    "build:tsc": "tsc -p ./tsconfig.build.json",
-    "test": "vp test",
-    "test:coverage": "vp test --coverage",
-    "lint": "vp lint",
-    "lint:fix": "vp lint --fix",
-    "fmt": "vp fmt --write",
-    "check": "vp check",
-    "typecheck": "tsc"
-  },
-  "packageManager": "yarn@4.18.0"
+	"name": "node-beanstalk",
+	"version": "1.6.8",
+	"description": "The most comprehensive beanstalk client for nodejs",
+	"keywords": [
+		"beanstalk",
+		"beanstalkd",
+		"node-beanstalk",
+		"nodejs"
+	],
+	"bugs": {
+		"url": "https://github.com/xobotyi/node-beanstalk/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/xobotyi/node-beanstalk.git"
+	},
+	"files": [
+		"dist"
+	],
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"docs:build": "yarn typedoc && cpy .static/typedoc/style.css docs/assets/css/",
+		"build": "yarn build:cleanup && yarn build:tsc",
+		"build:cleanup": "rimraf ./dist",
+		"build:tsc": "tsc -p ./tsconfig.build.json",
+		"test": "vp test",
+		"test:coverage": "vp test --coverage",
+		"lint": "vp lint",
+		"lint:fix": "vp lint --fix",
+		"fmt": "vp fmt --write",
+		"check": "vp check",
+		"typecheck": "tsc"
+	},
+	"dependencies": {
+		"js-yaml": "^4.1.0"
+	},
+	"devDependencies": {
+		"@semantic-release/changelog": "^6.0.1",
+		"@semantic-release/git": "^10.0.1",
+		"@semantic-release/github": "^9.2.6",
+		"@semantic-release/npm": "^11.0.3",
+		"@types/js-yaml": "^4.0.9",
+		"@types/node": "^20.14.10",
+		"@ver0/oxlint-config": "^2.0.2",
+		"@vitest/coverage-v8": "4.1.11",
+		"cpy-cli": "^5.0.0",
+		"rimraf": "^5.0.8",
+		"semantic-release": "^23.1.1",
+		"typedoc": "^0.26.3",
+		"typescript": "^5.5.3",
+		"vite-plus": "^0.3.1"
+	},
+	"packageManager": "yarn@4.18.0"
 }
