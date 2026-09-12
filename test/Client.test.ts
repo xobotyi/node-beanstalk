@@ -1,4 +1,5 @@
 import {Buffer} from 'node:buffer';
+import {setImmediate} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockInstance} from 'vite-plus/test';
 import {BeanstalkError} from '../src/error/BeanstalkError.js';
 import {Connection, type ConnectionState} from '../src/Connection.js';
@@ -72,6 +73,262 @@ describe('Client', () => {
 				expect(error).toBeInstanceOf(ClientError);
 				expect(error.code).toBe(ClientErrorCode.ErrConnectionNotClosed);
 			}
+		});
+	});
+
+	describe('Symbol.asyncDispose', () => {
+		it('awaits a disconnect that is already in flight instead of queueing another', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const disconnecting = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			const settled = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+
+			await expect(Promise.race([settled, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await expect(disposed).resolves.toBeUndefined();
+			await disconnecting;
+			expect(conn.close).toHaveBeenCalledTimes(1);
+
+			conn.getState.mockReturnValueOnce('closed');
+			await c.connect();
+			await expect(c[Symbol.asyncDispose]()).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(2);
+		});
+
+		it('disconnects a connected client on scope exit once its queued requests settle', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+
+			const disposed = c[Symbol.asyncDispose]();
+
+			await setImmediate();
+			expect(conn.close).not.toHaveBeenCalled();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			await disposed;
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('rejects when its own disconnect fails', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockRejectedValueOnce(new Error('socket gone'));
+			const c = new Client(undefined, conn);
+
+			await expect(c[Symbol.asyncDispose]()).rejects.toThrow('socket gone');
+		});
+
+		it('follows a forced disconnect that supersedes the one disposal itself started', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+
+			const disposed = c[Symbol.asyncDispose]();
+			const forced = c.disconnect(true);
+
+			await setImmediate();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			const settledBeforeForcedClose = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+			await expect(Promise.race([settledBeforeForcedClose, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await forced;
+			await expect(disposed).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('follows two successive forced disconnects to the final close', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+			const first = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			const second = c.disconnect(true);
+			const third = c.disconnect(true);
+
+			await expect(first).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			await expect(second).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			await setImmediate();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			const settledBeforeFinalClose = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+			await expect(Promise.race([settledBeforeFinalClose, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await third;
+			await expect(disposed).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('rejects when the disconnect it follows fails without a successor', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const disconnecting = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			closing.reject(new Error('socket gone'));
+
+			await expect(disconnecting).rejects.toThrow('socket gone');
+			await expect(disposed).rejects.toThrow('socket gone');
+		});
+
+		it('reports a failed disconnect even when a later default disconnect succeeds', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockImplementationOnce(async () => {
+				conn.getState.mockReturnValue('closed');
+
+				return Promise.reject(new Error('socket gone'));
+			});
+			const c = new Client(undefined, conn);
+			const failing = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			const later = c.disconnect();
+
+			await expect(failing).rejects.toThrow('socket gone');
+			await expect(later).resolves.toBeUndefined();
+			await expect(disposed).rejects.toThrow('socket gone');
+		});
+
+		it('resolves when two default disconnects run back to back', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockImplementation(async () => {
+				conn.getState.mockReturnValue('closed');
+
+				return Promise.resolve();
+			});
+			const c = new Client(undefined, conn);
+			const first = c.disconnect();
+			const second = c.disconnect();
+
+			await expect(first).resolves.toBeUndefined();
+			await expect(second).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('resolves when the disconnect it follows is queued behind one that already closed', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockImplementation(async () => {
+				conn.getState.mockReturnValue('closed');
+
+				return Promise.resolve();
+			});
+			const c = new Client(undefined, conn);
+			const first = c.disconnect();
+			const second = c.disconnect(true);
+
+			const disposed = c[Symbol.asyncDispose]();
+
+			await expect(first).resolves.toBeUndefined();
+			await expect(second).resolves.toBeUndefined();
+			await expect(disposed).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('retries the disconnect after an earlier one rejected', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockRejectedValueOnce(new Error('socket gone'));
+			const c = new Client(undefined, conn);
+
+			await expect(c.disconnect()).rejects.toThrow('socket gone');
+			await expect(c[Symbol.asyncDispose]()).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(2);
+		});
+
+		it('follows a forced disconnect that supersedes the one it started awaiting', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+			const older = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			const newer = c.disconnect(true);
+
+			await expect(older).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			await setImmediate();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			const settled = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+			await expect(Promise.race([settled, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await newer;
+			await expect(disposed).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('awaits the newest disconnect after a forced one rejected an older one', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+			const older = c.disconnect();
+			const newer = c.disconnect(true);
+
+			await expect(older).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			const disposed = c[Symbol.asyncDispose]();
+			await setImmediate();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			const settledBeforeClose = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+			await expect(Promise.race([settledBeforeClose, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await newer;
+			await disposed;
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('does nothing on a client that is not connected', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('closed');
+			const c = new Client(undefined, conn);
+
+			await expect(c[Symbol.asyncDispose]()).resolves.toBeUndefined();
+			expect(conn.close).not.toHaveBeenCalled();
 		});
 	});
 

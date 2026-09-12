@@ -11,4 +11,11 @@ export class PoolClient extends Client<IPoolClientEvents> {
 	public releaseClient(): void {
 		this.emit('release', this);
 	}
+
+	/**
+	 * Releases the client back to the pool, so `await using` returns it on scope exit instead of disconnecting.
+	 */
+	override async [Symbol.asyncDispose](): Promise<void> {
+		this.releaseClient();
+	}
 }

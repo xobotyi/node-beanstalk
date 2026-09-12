@@ -100,6 +100,15 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 		this._state = 'closed';
 	}
 
+	/**
+	 * Closes the connection if it is open, so `await using` releases the socket on scope exit.
+	 */
+	async [Symbol.asyncDispose](): Promise<void> {
+		if (this._state !== 'open') return;
+
+		await this.close();
+	}
+
 	async write<T extends Buffer>(buffer: T): Promise<T> {
 		const sock = this._socket;
 		if (this._state !== 'open' || !sock) {
