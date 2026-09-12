@@ -93,7 +93,7 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 			await new Promise<void>((resolve) => {
 				sock.end(resolve);
 			});
-			await sock.destroy();
+			sock.destroy();
 		}
 
 		this._socket = undefined;

@@ -99,11 +99,8 @@ export class Pool {
 			throw new PoolError(`Unable to disconnect pool that is not live, current state: ${this._state}`);
 		}
 
-		if (this._pendingQueue.size > 0) {
-			if (!force) {
-				// in case non-forced disconnect - we wait in queue
-				await this.createPendingPromise();
-			}
+		if (this._pendingQueue.size > 0 && !force) {
+			await this.createPendingPromise();
 		}
 
 		this._state = 'disconnecting';

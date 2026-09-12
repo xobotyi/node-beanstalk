@@ -8,5 +8,5 @@ export enum ConnectionErrorCode {
 }
 
 export class ConnectionError extends ErrorWithCode<ConnectionErrorCode> {
-	readonly name = 'ConnectionError';
+	name = 'ConnectionError' as const;
 }

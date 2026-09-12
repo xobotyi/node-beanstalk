@@ -18,7 +18,7 @@ export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | nu
 
 	if (hasData) {
 		const lengthHeader = headers.pop();
-		dataLength = Number.parseInt(lengthHeader as string, 10);
+		dataLength = Number.parseInt(lengthHeader!, 10);
 
 		if (Number.isNaN(dataLength)) {
 			throw new ResponseError(
