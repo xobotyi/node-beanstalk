@@ -41,7 +41,7 @@
 		"typecheck": "tsc"
 	},
 	"dependencies": {
-		"js-yaml": "^4.1.0"
+		"js-yaml": "^4.3.2"
 	},
 	"devDependencies": {
 		"@semantic-release/changelog": "^6.0.1",
