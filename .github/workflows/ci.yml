@@ -104,7 +104,7 @@ jobs:
       - name: 'Install dependencies'
         run: vp install --frozen-lockfile
       - name: 'Release'
-        uses: codfish/semantic-release-action@v3.4.1
+        run: vp exec semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
