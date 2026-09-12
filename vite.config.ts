@@ -6,7 +6,6 @@ import vitest from '@ver0/oxlint-config/vitest.js';
 
 export default defineConfig({
 	fmt: {
-		ignorePatterns: ['CHANGELOG.md'],
 		printWidth: 120,
 		useTabs: true,
 		tabWidth: 2,
