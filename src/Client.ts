@@ -29,7 +29,7 @@ import {
 import {Connection} from './Connection.js';
 import {type ILinkedListNode, LinkedList} from './util/LinkedList.js';
 
-export class Client extends EventEmitter {
+export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [never]> extends EventEmitter<Events> {
 	private readonly _conn: Connection;
 
 	private readonly _opt: Required<IClientCtorOptions>;
