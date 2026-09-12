@@ -1,4 +1,4 @@
-export interface IClientCtorOptions {
+export type IClientCtorOptions = {
 	/**
 	 * Connection host.
 	 *
@@ -35,11 +35,12 @@ export interface IClientCtorOptions {
 	defaultTTR?: number;
 
 	/**
-	 * Serializer that will process job data
+	 * Serializer that will process job data. Pass `undefined` explicitly to disable serialization: outgoing payloads
+	 * must then be strings, and received payloads stay raw buffers.
 	 *
 	 * @default JsonSerializer
 	 */
-	serializer?: Serializer;
+	serializer?: Serializer | undefined;
 
 	/**
 	 * Maximal payload size in bytes
@@ -56,9 +57,9 @@ export interface IClientCtorOptions {
 	 * @default 1000
 	 */
 	dataReadTimeoutMs?: number;
-}
+};
 
-export interface IPoolCtorOptions {
+export type IPoolCtorOptions = {
 	/**
 	 * Options that will be used to instantiate pool clients.
 	 *
@@ -72,12 +73,12 @@ export interface IPoolCtorOptions {
 	 * @default 10
 	 */
 	capacity?: number;
-}
+};
 
-export interface IClientRawReservedJob {
+export type IClientRawReservedJob = {
 	id: number;
 	payload: any;
-}
+};
 
 export abstract class Serializer {
 	abstract serialize(data: any): Buffer;
@@ -155,19 +156,19 @@ export const BeanstalkErrorResponseStatus = {
 } as const;
 export type IBeanstalkErrorResponseStatus = keyof typeof BeanstalkErrorResponseStatus;
 
-export interface ICommandResponseHeaders {
+export type ICommandResponseHeaders = {
 	status: BeanstalkResponseStatus;
 	hasData: boolean;
 	dataLength: number;
 	headers: string[];
 	headersLineLen: number;
-}
+};
 
-export interface ICommandResponse {
+export type ICommandResponse = {
 	status: BeanstalkResponseStatus;
 	headers: string[];
 	data?: Buffer;
-}
+};
 
 export type ICommandHandledResponse<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> =
 	R extends IBeanstalkDataResponseStatus
@@ -181,7 +182,7 @@ export type ICommandHandledResponse<R extends BeanstalkResponseStatus = Beanstal
 				headers: string[];
 			};
 
-export interface IBeanstalkStats {
+export type IBeanstalkStats = {
 	/**
 	 * The number of ready jobs with priority < 1024.
 	 */
@@ -430,9 +431,9 @@ export interface IBeanstalkStats {
 	 * The machine architecture as determined by uname
 	 */
 	platform: string;
-}
+};
 
-export interface IBeanstalkTubeStats {
+export type IBeanstalkTubeStats = {
 	/**
 	 * The tube's name.
 	 */
@@ -503,7 +504,7 @@ export interface IBeanstalkTubeStats {
 	 * The number of seconds until the tube is un-paused.
 	 */
 	'pause-time-left': number;
-}
+};
 
 export enum BeanstalkJobState {
 	ready = 'ready',
@@ -512,7 +513,7 @@ export enum BeanstalkJobState {
 	buried = 'buried',
 }
 
-export interface IBeanstalkJobStats {
+export type IBeanstalkJobStats = {
 	/**
 	 * The job id
 	 */
@@ -586,4 +587,4 @@ export interface IBeanstalkJobStats {
 	 * The number of times this job has been kicked.
 	 */
 	kicks: number;
-}
+};

@@ -1,27 +1,27 @@
 import {type IPoolCtorOptions} from './types.js';
 import {DEFAULT_POOL_OPTIONS} from './const.js';
-import {PoolClient} from './PoolClient.js';
-import {LinkedList} from './util/LinkedList.js';
-import {PoolError} from './error/PoolError.js';
+import {PoolClient} from './pool-client.js';
+import {LinkedList} from './util/linked-list.js';
+import {PoolError} from './error/pool-error.js';
 
 export type PoolState = 'live' | 'disconnected' | 'disconnecting';
 
 export class Pool {
-	private readonly _opt: Required<IPoolCtorOptions>;
+	readonly #opt: Required<IPoolCtorOptions>;
 
-	private readonly _clients: PoolClient[] = [];
+	readonly #clients: PoolClient[] = [];
 
-	private readonly _idleClients = new LinkedList<PoolClient>();
+	readonly #idleClients = new LinkedList<PoolClient>();
 
-	private readonly _pendingQueue = new LinkedList<{
+	readonly #pendingQueue = new LinkedList<{
 		resolve: (client: PoolClient) => void;
 		reject: (err: PoolError) => void;
 	}>();
 
-	private _state: PoolState = 'live';
+	#state: PoolState = 'live';
 
 	constructor(options: IPoolCtorOptions = {}) {
-		this._opt = {
+		this.#opt = {
 			...DEFAULT_POOL_OPTIONS,
 			...options,
 		};
@@ -31,14 +31,14 @@ export class Pool {
 	 * Total capacity of the pool.
 	 */
 	get capacity(): number {
-		return this._opt.capacity;
+		return this.#opt.capacity;
 	}
 
 	/**
 	 * Amount of clients which are not reserved and currently idle in the pool.
 	 */
 	get idleCount(): number {
-		return this._idleClients.size;
+		return this.#idleClients.size;
 	}
 
 	/**
@@ -46,14 +46,14 @@ export class Pool {
 	 * this number to see if you need to adjust the size of the pool.
 	 */
 	get waitingCount(): number {
-		return this._pendingQueue.size;
+		return this.#pendingQueue.size;
 	}
 
 	/**
 	 * Current pool state.
 	 */
 	getState(): PoolState {
-		return this._state;
+		return this.#state;
 	}
 
 	/**
@@ -67,19 +67,19 @@ export class Pool {
 	 * If the pool is not full a new client will be created and connected.
 	 */
 	public async connect(): Promise<PoolClient> {
-		if (this._state !== 'live') {
-			throw new PoolError(`Unable to gain client, pool is not live: ${this._state}`);
+		if (this.#state !== 'live') {
+			throw new PoolError(`Unable to gain client, pool is not live: ${this.#state}`);
 		}
 
 		let client: PoolClient;
 
-		if (this._clients.length < this._opt.capacity) {
-			client = new PoolClient(this._opt.clientOptions);
-			this._clients.push(client);
+		if (this.#clients.length < this.#opt.capacity) {
+			client = new PoolClient(this.#opt.clientOptions);
+			this.#clients.push(client);
 
 			await client.connect();
 		} else {
-			client = this._idleClients.unshift() ?? (await this.createPendingPromise());
+			client = this.#idleClients.unshift() ?? (await this.createPendingPromise());
 		}
 
 		client.once('release', this.handleClientRelease);
@@ -95,58 +95,55 @@ export class Pool {
 	 * If {force} set to truthy value - clients pending requests will not be awaited.
 	 */
 	public async disconnect(force = false): Promise<void> {
-		if (this._state !== 'live') {
-			throw new PoolError(`Unable to disconnect pool that is not live, current state: ${this._state}`);
+		if (this.#state !== 'live') {
+			throw new PoolError(`Unable to disconnect pool that is not live, current state: ${this.#state}`);
 		}
 
-		if (this._pendingQueue.size > 0) {
-			if (!force) {
-				// in case non-forced disconnect - we wait in queue
-				await this.createPendingPromise();
-			}
+		if (this.#pendingQueue.size > 0 && !force) {
+			await this.createPendingPromise();
 		}
 
-		this._state = 'disconnecting';
+		this.#state = 'disconnecting';
 
 		// reject all pending queue
-		for (const {reject} of this._pendingQueue.truncate()) {
+		for (const {reject} of this.#pendingQueue.truncate()) {
 			reject(new PoolError('Unable to gain client, pool is disconnecting.'));
 		}
 
-		this._idleClients.truncate();
+		this.#idleClients.truncate();
 
 		// disconnect all existing clients
-		await Promise.allSettled(this._clients.splice(0).map(async (client) => client.disconnect(force)));
+		await Promise.allSettled(this.#clients.splice(0).map(async (client) => client.disconnect(force)));
 
-		this._state = 'disconnected';
+		this.#state = 'disconnected';
 	}
 
 	/**
 	 * Restore pool from disconnected state.
 	 */
 	public restore(): void {
-		if (this._state !== 'disconnected') {
-			throw new PoolError(`Unable to restore pool that was not disconnected, current state: ${this._state}`);
+		if (this.#state !== 'disconnected') {
+			throw new PoolError(`Unable to restore pool that was not disconnected, current state: ${this.#state}`);
 		}
 
-		this._state = 'live';
+		this.#state = 'live';
 	}
 
 	private async createPendingPromise(): Promise<PoolClient> {
 		return new Promise((resolve, reject) => {
-			this._pendingQueue.push({resolve, reject});
+			this.#pendingQueue.push({resolve, reject});
 		});
 	}
 
 	private readonly handleClientRelease = (client: PoolClient): void => {
-		if (this._state !== 'live') return;
+		if (this.#state !== 'live') return;
 
-		const pending = this._pendingQueue.unshift();
+		const pending = this.#pendingQueue.unshift();
 
 		if (pending) {
 			pending.resolve(client);
 		} else {
-			this._idleClients.push(client);
+			this.#idleClients.push(client);
 		}
 	};
 }

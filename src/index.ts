@@ -1,13 +1,13 @@
-export {Client} from './Client.js';
-export {Pool} from './Pool.js';
+export {Client} from './client.js';
+export {Pool} from './pool.js';
 
-export {BeanstalkError} from './error/BeanstalkError.js';
-export {ClientError} from './error/ClientError.js';
-export {CommandError} from './error/CommandError.js';
-export {ConnectionError} from './error/ConnectionError.js';
-export {PoolError} from './error/PoolError.js';
-export {ResponseError} from './error/ResponseError.js';
-export {SerializerError} from './error/SerializerError.js';
+export {BeanstalkError} from './error/beanstalk-error.js';
+export {ClientError} from './error/client-error.js';
+export {CommandError} from './error/command-error.js';
+export {ConnectionError} from './error/connection-error.js';
+export {PoolError} from './error/pool-error.js';
+export {ResponseError} from './error/response-error.js';
+export {SerializerError} from './error/serializer-error.js';
 
 export {BeanstalkJobState, BeanstalkResponseStatus} from './types.js';
 

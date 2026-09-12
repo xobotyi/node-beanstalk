@@ -1,6 +1,6 @@
 import {BeanstalkCommand, BeanstalkResponseStatus} from '../types.js';
-import {Command, type ICommandCtorOptions} from '../Command.js';
-import {CommandError, CommandErrorCode} from '../error/CommandError.js';
+import {Command, type ICommandCtorOptions} from '../command.js';
+import {CommandError, CommandErrorCode} from '../error/command-error.js';
 
 const commandConfig = {
 	[BeanstalkCommand.put]: {
@@ -126,10 +126,10 @@ const commandInstances: Partial<
 export function getCommandInstance<Cmd extends BeanstalkCommand>(
 	cmd: Cmd,
 ): Command<ICommandConfig[Cmd]['expectedStatus'][number]> {
-	let command = commandInstances[cmd] as Command<ICommandConfig[Cmd]['expectedStatus'][number]>;
+	let command = commandInstances[cmd] as Command<ICommandConfig[Cmd]['expectedStatus'][number]> | undefined;
 	if (command) return command;
 
-	const cfg = commandConfig[cmd] as ICommandCtorOptions<ICommandConfig[Cmd]['expectedStatus'][number]>;
+	const cfg = commandConfig[cmd] as ICommandCtorOptions<ICommandConfig[Cmd]['expectedStatus'][number]> | undefined;
 	if (!cfg) {
 		throw new CommandError(CommandErrorCode.ErrCommandUnknown, `Unknown beanstalk command '${cmd}'`);
 	}

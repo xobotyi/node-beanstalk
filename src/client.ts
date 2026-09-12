@@ -8,16 +8,17 @@ import {
 	type IBeanstalkTubeStats,
 	type IClientCtorOptions,
 	type IClientRawReservedJob,
+	type Serializer,
 	type ICommandHandledResponse,
 	type ICommandResponse,
 	type ICommandResponseHeaders,
 } from './types.js';
-import {type Command} from './Command.js';
-import {ClientError, ClientErrorCode} from './error/ClientError.js';
-import {getCommandInstance} from './util/getCommandInstance.js';
+import {type Command} from './command.js';
+import {ClientError, ClientErrorCode} from './error/client-error.js';
+import {getCommandInstance} from './util/get-command-instance.js';
 import {DEFAULT_CLIENT_OPTIONS} from './const.js';
-import {parseResponseHeaders} from './util/parseResponseHeaders.js';
-import {BeanstalkError} from './error/BeanstalkError.js';
+import {parseNumericHeader, parseResponseHeaders} from './util/parse-response-headers.js';
+import {BeanstalkError} from './error/beanstalk-error.js';
 import {
 	validateDelay,
 	validateJobId,
@@ -26,49 +27,89 @@ import {
 	validateTTR,
 	validateTubeName,
 } from './util/validator.js';
-import {Connection} from './Connection.js';
-import {type ILinkedListNode, LinkedList} from './util/LinkedList.js';
+import {Connection} from './connection.js';
+import {type ILinkedListNode, LinkedList} from './util/linked-list.js';
 
-export class Client extends EventEmitter {
-	private readonly _conn: Connection;
+const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 
-	private readonly _opt: Required<IClientCtorOptions>;
+export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [never]> extends EventEmitter<Events> {
+	readonly #conn: Connection;
 
-	private readonly _queue = new LinkedList<{
+	readonly #opt: Omit<Required<IClientCtorOptions>, 'serializer'> & {serializer: Serializer | undefined};
+
+	readonly #queue = new LinkedList<{
 		resolve: () => void;
 		reject: (err?: Error) => void;
 	}>();
 
+	#disconnecting: Promise<void> | undefined;
+
 	constructor(options: IClientCtorOptions = {}, connection = new Connection()) {
 		super();
 
-		this._opt = {
+		this.#opt = {
 			...DEFAULT_CLIENT_OPTIONS,
 			...options,
 		};
 
-		this._conn = connection;
+		this.#conn = connection;
 	}
 
 	/**
 	 * Indicates whether client is waiting for server response.
 	 */
 	get isWorking(): boolean {
-		return this._queue.size > 0;
+		return this.#queue.size > 0;
 	}
 
 	/**
 	 * Amount of requests waiting in queue, including connect and disconnect.
 	 */
 	get queueSize(): number {
-		return this._queue.size;
+		return this.#queue.size;
 	}
 
 	/**
 	 * Indicates whether client is connected to the server.
 	 */
 	get isConnected(): boolean {
-		return this._conn.getState() === 'open';
+		return this.#conn.getState() === 'open';
+	}
+
+	/**
+	 * Disconnects the client if it is connected, so `await using` closes the connection on scope exit. A disconnect
+	 * that is already in flight is awaited instead of queued again.
+	 */
+	async [Symbol.asyncDispose](): Promise<void> {
+		if (this.#disconnecting) {
+			await this.followDisconnect(this.#disconnecting, this.#disconnecting);
+			return;
+		}
+
+		if (!this.isConnected) return;
+
+		const own = this.disconnect();
+
+		await this.followDisconnect(own, this.#disconnecting);
+	}
+
+	/**
+	 * Awaits a disconnect, moving on to a forced one that supersedes it instead of failing with the superseded call's
+	 * rejection. A forced disconnect rejects the calls it displaces with ErrDisconnecting, which is how a superseded
+	 * disconnect is told apart from one that failed. `tracked` is the promise `#disconnecting` held for that disconnect.
+	 */
+	private async followDisconnect(followed: Promise<void>, tracked: Promise<void> | undefined): Promise<void> {
+		try {
+			await followed;
+		} catch (error) {
+			const successor = this.#disconnecting;
+			const displaced = error instanceof ClientError && error.code === DISPLACED_BY_FORCED_DISCONNECT;
+			const superseded = displaced && successor !== undefined && successor !== tracked;
+
+			if (!superseded) throw error;
+
+			await this.followDisconnect(successor, successor);
+		}
 	}
 
 	/**
@@ -77,19 +118,19 @@ export class Client extends EventEmitter {
 	 * @category Client
 	 */
 	public async connect(): Promise<void> {
-		if (this._conn.getState() !== 'closed') {
+		if (this.#conn.getState() !== 'closed') {
 			throw new ClientError(
 				ClientErrorCode.ErrConnectionNotClosed,
-				`Unable to open non-closed connection, current state: ${this._conn.getState()}`,
+				`Unable to open non-closed connection, current state: ${this.#conn.getState()}`,
 			);
 		}
 
-		const [waitPromise, moveQueue] = await this.waitQueue();
+		const [waitPromise, moveQueue] = this.waitQueue();
 
 		try {
 			await waitPromise;
 
-			await this._conn.open(this._opt.port, this._opt.host);
+			await this.#conn.open(this.#opt.port, this.#opt.host);
 		} finally {
 			moveQueue();
 		}
@@ -100,36 +141,51 @@ export class Client extends EventEmitter {
 	 *
 	 * If {force} set to truthy value - only currently running request will be awaited.
 	 *
+	 * A disconnect whose turn comes after another one already closed the connection resolves without closing again.
+	 *
 	 * @category Client
 	 */
 	public async disconnect(force = false): Promise<void> {
-		if (this._conn.getState() !== 'open') {
+		if (this.#conn.getState() !== 'open') {
 			throw new ClientError(
 				ClientErrorCode.ErrConnectionNotOpened,
-				`Unable to close non-opened connection, current state: ${this._conn.getState()}`,
+				`Unable to close non-opened connection, current state: ${this.#conn.getState()}`,
 			);
 		}
 
+		const disconnecting = this.closeAfterQueue(force);
+		this.#disconnecting = disconnecting;
+
+		try {
+			await disconnecting;
+		} finally {
+			if (this.#disconnecting === disconnecting) this.#disconnecting = undefined;
+		}
+	}
+
+	private async closeAfterQueue(force: boolean): Promise<void> {
 		if (force) {
 			// The thing is to empty whole queue and return head node to the list.
 			// As head node representing currently running request we want to await it
 			// even if force disconnecting.
-			const {head} = this._queue;
+			const {head} = this.#queue;
 
-			this._queue.truncate().forEach((i) => {
-				if (i.reject === head?.value.reject) return;
-				i.reject(new ClientError(ClientErrorCode.ErrDisconnecting, 'Client is disconnecting'));
-			});
+			for (const {reject} of this.#queue.truncate()) {
+				if (reject === head?.value.reject) continue;
+				reject(new ClientError(ClientErrorCode.ErrDisconnecting, 'Client is disconnecting'));
+			}
 
-			if (head) this._queue.pushNode(head);
+			if (head) this.#queue.pushNode(head);
 		}
 
-		const [waitPromise, moveQueue] = await this.waitQueue();
+		const [waitPromise, moveQueue] = this.waitQueue();
 
 		try {
 			await waitPromise;
 
-			await this._conn.close();
+			if (this.#conn.getState() !== 'open') return;
+
+			await this.#conn.close();
 		} finally {
 			moveQueue();
 		}
@@ -177,9 +233,9 @@ export class Client extends EventEmitter {
 	 */
 	public async put(
 		payload: any,
-		ttr: number = this._opt.defaultTTR,
-		priority: number = this._opt.defaultPriority,
-		delay: number = this._opt.defaultDelay,
+		ttr: number = this.#opt.defaultTTR,
+		priority: number = this.#opt.defaultPriority,
+		delay: number = this.#opt.defaultDelay,
 	): Promise<{
 		id: number;
 		state: BeanstalkJobState.buried | BeanstalkJobState.ready | BeanstalkJobState.delayed;
@@ -211,7 +267,7 @@ export class Client extends EventEmitter {
 		const state = delay === 0 ? BeanstalkJobState.ready : BeanstalkJobState.delayed;
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			state: result.status === BeanstalkResponseStatus.BURIED ? BeanstalkJobState.buried : state,
 		};
 	}
@@ -256,7 +312,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -290,7 +346,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -300,6 +356,7 @@ export class Client extends EventEmitter {
 	 * the client has limited time to run (TTR) the job before the job times out.
 	 * When the job times out, the server will put the job back into the ready queue.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Worker Commands
 	 */
 	public async reserveJob(jobId: number): Promise<null | IClientRawReservedJob> {
@@ -314,7 +371,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -325,6 +382,7 @@ export class Client extends EventEmitter {
 	 * delete jobs that it has reserved, ready jobs, delayed jobs, and jobs that are
 	 * buried.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Worker Commands
 	 */
 	public async delete(jobId: number): Promise<boolean> {
@@ -342,7 +400,7 @@ export class Client extends EventEmitter {
 	 * its state as "ready") to be run by any client. It is normally used when the job
 	 * fails because of a transitory error.
 	 *
-	 * @param jobId - job id to release.
+	 * @param jobId - integer id of the job to release.
 	 * @param priority - a new priority to assign to the job.
 	 * @param delay - integer number of seconds to wait before putting the job in
 	 * the ready queue. The job will be in the "delayed" state during this time.
@@ -351,8 +409,8 @@ export class Client extends EventEmitter {
 	 */
 	public async release(
 		jobId: number,
-		priority: number = this._opt.defaultPriority,
-		delay: number = this._opt.defaultDelay,
+		priority: number = this.#opt.defaultPriority,
+		delay: number = this.#opt.defaultDelay,
 	): Promise<null | BeanstalkJobState.buried | BeanstalkJobState.ready | BeanstalkJobState.delayed> {
 		validateJobId(jobId);
 		validatePriority(priority);
@@ -378,12 +436,12 @@ export class Client extends EventEmitter {
 	 * FIFO linked list and will not be touched by the server again until a client
 	 * kicks them with the [[Client.kick]] command
 	 *
-	 * @param jobId - job id to bury.
+	 * @param jobId - integer id of the job to bury.
 	 * @param priority - a new priority to assign to the job.
 	 *
 	 * @category Worker Commands
 	 */
-	public async bury(jobId: number, priority: number = this._opt.defaultPriority): Promise<boolean> {
+	public async bury(jobId: number, priority: number = this.#opt.defaultPriority): Promise<boolean> {
 		validateJobId(jobId);
 		validatePriority(priority);
 
@@ -402,6 +460,7 @@ export class Client extends EventEmitter {
 	 * (e.g. it may do this on DEADLINE_SOON). The command postpones the auto
 	 * release of a reserved job until TTR seconds from when the command is issued
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Worker Commands
 	 */
 	public async touch(jobId: number): Promise<boolean> {
@@ -429,7 +488,7 @@ export class Client extends EventEmitter {
 
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
-		return Number.parseInt(result.headers[0], 10);
+		return parseNumericHeader(result.headers[0]);
 	}
 
 	/**
@@ -448,6 +507,8 @@ export class Client extends EventEmitter {
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
 		if (result.status === BeanstalkResponseStatus.WATCHING) {
+			parseNumericHeader(result.headers[0]);
+
 			return true;
 		}
 
@@ -457,6 +518,7 @@ export class Client extends EventEmitter {
 	/**
 	 * Inspect a job with given ID without reserving it.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Other Commands
 	 */
 	public async peek(jobId: number): Promise<null | IClientRawReservedJob> {
@@ -471,7 +533,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -491,7 +553,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -511,7 +573,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -531,7 +593,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -551,7 +613,7 @@ export class Client extends EventEmitter {
 
 		const result = await this.dispatchCommand(cmd, [`${bound}`]);
 
-		return Number.parseInt(result.headers[0], 10);
+		return parseNumericHeader(result.headers[0]);
 	}
 
 	/**
@@ -560,6 +622,7 @@ export class Client extends EventEmitter {
 	 * delayed state, it will be moved to the ready queue of the the same tube where it
 	 * currently belongs.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Other Commands
 	 */
 	public async kickJob(jobId: number): Promise<boolean> {
@@ -609,6 +672,7 @@ export class Client extends EventEmitter {
 	 * The stats-job command gives statistical information about the specified job if
 	 * it exists.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Other Commands
 	 */
 	public async statsJob(jobId: number): Promise<IBeanstalkJobStats | null> {
@@ -696,9 +760,9 @@ export class Client extends EventEmitter {
 		}>;
 
 		const promise = new Promise<void>((resolve, reject) => {
-			listNode = this._queue.push({resolve, reject});
+			listNode = this.#queue.push({resolve, reject});
 
-			if (this._queue.head === listNode) {
+			if (this.#queue.head === listNode) {
 				resolve();
 			}
 		});
@@ -707,10 +771,10 @@ export class Client extends EventEmitter {
 			promise,
 			() => {
 				// remove current node from list
-				this._queue.removeNode(listNode);
+				this.#queue.removeNode(listNode);
 
 				// resolve first promise waiting in queue if it exists
-				this._queue.head?.value.resolve();
+				this.#queue.head?.value.resolve();
 			},
 		];
 	}
@@ -727,7 +791,7 @@ export class Client extends EventEmitter {
 	private payloadToBuffer(payload: any): Buffer | undefined {
 		if (payload === undefined) return undefined;
 
-		const {serializer, maxPayloadSize} = this._opt;
+		const {serializer, maxPayloadSize} = this.#opt;
 
 		if (typeof payload !== 'string' && !serializer) {
 			throw new ClientError(
@@ -759,8 +823,19 @@ export class Client extends EventEmitter {
 	 *
 	 * @category Client
 	 */
+	/**
+	 * Force-disconnects after response framing is lost, so no later command reads a stale body as its own headers.
+	 */
+	private async abandonConnection(): Promise<void> {
+		try {
+			await this.disconnect(true);
+		} catch {
+			// the connection is already closing or closed; the rejection that triggered the teardown carries the cause
+		}
+	}
+
 	private async readCommandResponse(): Promise<ICommandResponse> {
-		const conn = this._conn;
+		const conn = this.#conn;
 		return new Promise((resolve, reject) => {
 			let response: Buffer = Buffer.alloc(0);
 			let headers: ICommandResponseHeaders | null = null;
@@ -771,24 +846,29 @@ export class Client extends EventEmitter {
 
 				if (!headers) {
 					// check if headers already received
-					headers = parseResponseHeaders(response);
+					try {
+						headers = parseResponseHeaders(response);
+					} catch (error) {
+						conn.off('data', dataListener);
+						reject(error instanceof Error ? error : new Error(String(error)));
+						void this.abandonConnection();
+						return;
+					}
 
 					if (headers) {
-						response = response.slice(headers.headersLineLen);
+						response = response.subarray(headers.headersLineLen);
 
-						if (headers.hasData) {
-							if (response.length < headers.dataLength) {
-								// if response data not read - start read timeout
-								dataReadTimeout = setTimeout(() => {
-									conn.off('data', dataListener);
-									reject(
-										new ClientError(
-											ClientErrorCode.ErrResponseRead,
-											`Failed to read response data after ${this._opt.dataReadTimeoutMs} ms`,
-										),
-									);
-								}, this._opt.dataReadTimeoutMs);
-							}
+						if (headers.hasData && response.length < headers.dataLength) {
+							// if response data not read - start read timeout
+							dataReadTimeout = setTimeout(() => {
+								conn.off('data', dataListener);
+								reject(
+									new ClientError(
+										ClientErrorCode.ErrResponseRead,
+										`Failed to read response data after ${this.#opt.dataReadTimeoutMs} ms`,
+									),
+								);
+							}, this.#opt.dataReadTimeoutMs);
 						}
 					}
 				}
@@ -802,7 +882,7 @@ export class Client extends EventEmitter {
 							resolve({
 								status: headers.status,
 								headers: headers.headers,
-								data: response.slice(0, headers.dataLength),
+								data: response.subarray(0, headers.dataLength),
 							});
 						}
 					} else {
@@ -835,7 +915,7 @@ export class Client extends EventEmitter {
 		await waitPromise;
 		let response: ICommandResponse;
 		try {
-			const {_conn: conn} = this;
+			const conn = this.#conn;
 
 			if (conn.getState() !== 'open') {
 				throw new ClientError(
@@ -854,6 +934,6 @@ export class Client extends EventEmitter {
 			moveQueue();
 		}
 
-		return cmd.handleResponse(response, this._opt.serializer);
+		return cmd.handleResponse(response, this.#opt.serializer);
 	}
 }

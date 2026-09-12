@@ -1,4 +1,4 @@
-import {ErrorWithCode} from './ErrorWithCode.js';
+import {ErrorWithCode} from './error-with-code.js';
 
 export enum ConnectionErrorCode {
 	ErrChangingState = 'ErrChangingState',
@@ -8,5 +8,5 @@ export enum ConnectionErrorCode {
 }
 
 export class ConnectionError extends ErrorWithCode<ConnectionErrorCode> {
-	readonly name = 'ConnectionError';
+	name = 'ConnectionError' as const;
 }

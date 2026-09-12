@@ -1,12 +1,14 @@
 import {Buffer} from 'node:buffer';
+import {setImmediate} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockInstance} from 'vite-plus/test';
-import {BeanstalkError} from '../src/error/BeanstalkError.js';
-import {Connection, type ConnectionState} from '../src/Connection.js';
+import {BeanstalkError} from '../src/error/beanstalk-error.js';
+import {Connection, type ConnectionState} from '../src/connection.js';
 import {BeanstalkJobState, Client} from '../src/index.js';
-import {ClientError, ClientErrorCode} from '../src/error/ClientError.js';
-import {JsonSerializer} from '../src/serializer/JsonSerializer.js';
-import {Command} from '../src/Command.js';
-import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types.js';
+import {ClientError, ClientErrorCode} from '../src/error/client-error.js';
+import {ResponseError, ResponseErrorCode} from '../src/error/response-error.js';
+import {JsonSerializer} from '../src/serializer/json-serializer.js';
+import {Command} from '../src/command.js';
+import {BeanstalkCommand, BeanstalkResponseStatus, type ICommandResponse} from '../src/types.js';
 import {
 	validateDelay,
 	validateJobId,
@@ -19,21 +21,21 @@ import {
 vi.mock('../src/util/validator');
 
 class ConnectionMock extends Connection {
-	public getState = vi.fn((): ConnectionState => 'closed');
+	public getState = vi.fn<() => ConnectionState>(() => 'closed');
 
-	public close = vi.fn(async () => {});
+	public close = vi.fn<() => Promise<void>>(async () => {});
 
-	public isChangingState = vi.fn(() => false);
+	public isChangingState = vi.fn<() => boolean>(() => false);
 
-	public open = vi.fn(async (port: number, host?: string) => {});
+	public open = vi.fn<(port: number, host?: string) => Promise<void>>(async () => {});
 
-	public write: Connection['write'] = async (buffer) => buffer;
+	public write: Connection['write'] = async (buffer) => Promise.resolve(buffer);
 }
 
 describe('Client', () => {
 	it('should be defined', () => {
 		expect(Client).toBeDefined();
-		new Client();
+		expect(() => new Client()).not.toThrow();
 	});
 
 	describe('connect', () => {
@@ -65,13 +67,266 @@ describe('Client', () => {
 			conn.getState.mockReturnValue('open');
 			const c = new Client(undefined, conn);
 
-			try {
-				await c.connect();
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(ClientError);
-				expect(error.code).toBe(ClientErrorCode.ErrConnectionNotClosed);
-			}
+			const rejected = c.connect();
+
+			await expect(rejected).rejects.toBeInstanceOf(ClientError);
+			await expect(rejected).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionNotClosed);
+		});
+	});
+
+	describe('Symbol.asyncDispose', () => {
+		it('awaits a disconnect that is already in flight instead of queueing another', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const disconnecting = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			const settled = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+
+			await expect(Promise.race([settled, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await expect(disposed).resolves.toBeUndefined();
+			await disconnecting;
+			expect(conn.close).toHaveBeenCalledTimes(1);
+
+			conn.getState.mockReturnValueOnce('closed');
+			await c.connect();
+			await expect(c[Symbol.asyncDispose]()).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(2);
+		});
+
+		it('disconnects a connected client on scope exit once its queued requests settle', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+
+			const disposed = c[Symbol.asyncDispose]();
+
+			await setImmediate();
+			expect(conn.close).not.toHaveBeenCalled();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			await disposed;
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('rejects when its own disconnect fails', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockRejectedValueOnce(new Error('socket gone'));
+			const c = new Client(undefined, conn);
+
+			await expect(c[Symbol.asyncDispose]()).rejects.toThrow('socket gone');
+		});
+
+		it('follows a forced disconnect that supersedes the one disposal itself started', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+
+			const disposed = c[Symbol.asyncDispose]();
+			const forced = c.disconnect(true);
+
+			await setImmediate();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			const settledBeforeForcedClose = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+			await expect(Promise.race([settledBeforeForcedClose, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await forced;
+			await expect(disposed).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('follows two successive forced disconnects to the final close', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+			const first = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			const second = c.disconnect(true);
+			const third = c.disconnect(true);
+
+			await expect(first).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			await expect(second).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			await setImmediate();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			const settledBeforeFinalClose = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+			await expect(Promise.race([settledBeforeFinalClose, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await third;
+			await expect(disposed).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('rejects when the disconnect it follows fails without a successor', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const disconnecting = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			closing.reject(new Error('socket gone'));
+
+			await expect(disconnecting).rejects.toThrow('socket gone');
+			await expect(disposed).rejects.toThrow('socket gone');
+		});
+
+		it('reports a failed disconnect even when a later default disconnect succeeds', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockImplementationOnce(async () => {
+				conn.getState.mockReturnValue('closed');
+
+				return Promise.reject(new Error('socket gone'));
+			});
+			const c = new Client(undefined, conn);
+			const failing = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			const later = c.disconnect();
+
+			await expect(failing).rejects.toThrow('socket gone');
+			await expect(later).resolves.toBeUndefined();
+			await expect(disposed).rejects.toThrow('socket gone');
+		});
+
+		it('resolves when two default disconnects run back to back', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockImplementation(async () => {
+				conn.getState.mockReturnValue('closed');
+
+				return Promise.resolve();
+			});
+			const c = new Client(undefined, conn);
+			const first = c.disconnect();
+			const second = c.disconnect();
+
+			await expect(first).resolves.toBeUndefined();
+			await expect(second).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('resolves when the disconnect it follows is queued behind one that already closed', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockImplementation(async () => {
+				conn.getState.mockReturnValue('closed');
+
+				return Promise.resolve();
+			});
+			const c = new Client(undefined, conn);
+			const first = c.disconnect();
+			const second = c.disconnect(true);
+
+			const disposed = c[Symbol.asyncDispose]();
+
+			await expect(first).resolves.toBeUndefined();
+			await expect(second).resolves.toBeUndefined();
+			await expect(disposed).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('retries the disconnect after an earlier one rejected', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			conn.close.mockRejectedValueOnce(new Error('socket gone'));
+			const c = new Client(undefined, conn);
+
+			await expect(c.disconnect()).rejects.toThrow('socket gone');
+			await expect(c[Symbol.asyncDispose]()).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(2);
+		});
+
+		it('follows a forced disconnect that supersedes the one it started awaiting', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+			const older = c.disconnect();
+
+			const disposed = c[Symbol.asyncDispose]();
+			const newer = c.disconnect(true);
+
+			await expect(older).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			await setImmediate();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			const settled = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+			await expect(Promise.race([settled, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await newer;
+			await expect(disposed).resolves.toBeUndefined();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('awaits the newest disconnect after a forced one rejected an older one', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const closing = Promise.withResolvers<void>();
+			conn.close.mockReturnValueOnce(closing.promise);
+			const c = new Client(undefined, conn);
+			const pending = c.bury(1);
+			const older = c.disconnect();
+			const newer = c.disconnect(true);
+
+			await expect(older).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			const disposed = c[Symbol.asyncDispose]();
+			await setImmediate();
+			conn.emit('data', Buffer.from('BURIED\r\n'));
+			await pending;
+			const settledBeforeClose = (async () => {
+				await disposed;
+
+				return 'settled';
+			})();
+			await expect(Promise.race([settledBeforeClose, setImmediate('pending')])).resolves.toBe('pending');
+			closing.resolve();
+			await newer;
+			await disposed;
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('does nothing on a client that is not connected', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('closed');
+			const c = new Client(undefined, conn);
+
+			await expect(c[Symbol.asyncDispose]()).resolves.toBeUndefined();
+			expect(conn.close).not.toHaveBeenCalled();
 		});
 	});
 
@@ -92,13 +347,10 @@ describe('Client', () => {
 			conn.getState.mockReturnValue('opening');
 			const c = new Client(undefined, conn);
 
-			try {
-				await c.disconnect();
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(ClientError);
-				expect(error.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
-			}
+			const rejected = c.disconnect();
+
+			await expect(rejected).rejects.toBeInstanceOf(ClientError);
+			await expect(rejected).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionNotOpened);
 		});
 
 		it('force disconnect should clear current queue and reject all queued promises', async () => {
@@ -106,15 +358,11 @@ describe('Client', () => {
 			conn.getState.mockReturnValue('open');
 			const c = new Client(undefined, conn);
 
-			c.bury(123).catch(() => {});
-			const queued = [c.bury(123), c.bury(123)].map(async (promise) =>
-				promise.then(
-					() => {
-						throw new Error('not thrown!');
-					},
-					(error) => error,
-				),
-			);
+			const running = c.bury(123);
+			const rejections = [c.bury(123), c.bury(123)].map(async (promise) => {
+				await expect(promise).rejects.toBeInstanceOf(ClientError);
+				await expect(promise).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			});
 
 			expect(c.queueSize).toBe(3);
 			const disconnected = c.disconnect(true);
@@ -126,11 +374,8 @@ describe('Client', () => {
 
 			await disconnected;
 			expect(c.queueSize).toBe(0);
-			for (const rejection of queued) {
-				const e = await rejection;
-				expect(e).toBeInstanceOf(ClientError);
-				expect(e.code).toBe(ClientErrorCode.ErrDisconnecting);
-			}
+			await running;
+			await Promise.all(rejections);
 		});
 	});
 
@@ -174,7 +419,7 @@ describe('Client', () => {
 					}),
 			);
 
-			c.bury(123, 12);
+			void c.bury(123, 12);
 
 			expect(c.isWorking).toBe(true);
 		});
@@ -254,20 +499,15 @@ describe('Client', () => {
 				},
 			];
 
-			for (const test of tableTests) {
-				it(test.name, () => {
-					expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
-				});
-			}
+			it.each(tableTests)('$name', (test) => {
+				expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
+			});
 
 			it('should throw in case serialized payload buffer bigger that configured', () => {
-				try {
-					payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
-					throw new Error('not thrown!');
-				} catch (error: any) {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrPayloadTooBig);
-				}
+				const throwing = () => payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
+
+				expect(throwing).toThrow(ClientError);
+				expect(throwing).toThrow(expect.objectContaining({code: ClientErrorCode.ErrPayloadTooBig}));
 			});
 		});
 
@@ -294,38 +534,25 @@ describe('Client', () => {
 				},
 			];
 
-			for (const test of tableTests) {
-				it(test.name, () => {
-					expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
-				});
-			}
+			it.each(tableTests)('$name', (test) => {
+				expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
+			});
 
 			it('should throw in case non-string payload received', () => {
-				try {
-					payloadToBuffer(123);
-					throw new Error('not thrown!');
-				} catch (error: any) {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrInvalidPayload);
-				}
+				const throwingOnNumber = () => payloadToBuffer(123);
+				const throwingOnObject = () => payloadToBuffer({baz: ['bax', 123]});
 
-				try {
-					payloadToBuffer({baz: ['bax', 123]});
-					throw new Error('not thrown!');
-				} catch (error: any) {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrInvalidPayload);
-				}
+				expect(throwingOnNumber).toThrow(ClientError);
+				expect(throwingOnNumber).toThrow(expect.objectContaining({code: ClientErrorCode.ErrInvalidPayload}));
+				expect(throwingOnObject).toThrow(ClientError);
+				expect(throwingOnObject).toThrow(expect.objectContaining({code: ClientErrorCode.ErrInvalidPayload}));
 			});
 
 			it('should throw in case received payload buffer bigger that configured', () => {
-				try {
-					payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
-					throw new Error('not thrown!');
-				} catch (error: any) {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrPayloadTooBig);
-				}
+				const throwing = () => payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
+
+				expect(throwing).toThrow(ClientError);
+				expect(throwing).toThrow(expect.objectContaining({code: ClientErrorCode.ErrPayloadTooBig}));
 			});
 		});
 	});
@@ -335,6 +562,23 @@ describe('Client', () => {
 		const c = new Client({}, conn);
 
 		const readCommandResponse = c['readCommandResponse'].bind(c);
+
+		it('should reject, stop listening and force-disconnect when the body length is malformed', async () => {
+			const openConn = new ConnectionMock();
+			openConn.getState.mockReturnValue('open');
+			const openClient = new Client({}, openConn);
+			const reading = openClient.peek(1);
+			const queued = openClient.peek(2);
+
+			await setImmediate();
+			openConn.emit('data', Buffer.from('FOUND 1 100abc\r\n'));
+
+			await expect(reading).rejects.toBeInstanceOf(ResponseError);
+			await expect(queued).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			expect(openConn.listenerCount('data')).toBe(0);
+			await setImmediate();
+			expect(openConn.close).toHaveBeenCalledTimes(1);
+		});
 
 		it('should read header even if it came in chunks', async () => {
 			const response = readCommandResponse();
@@ -389,16 +633,18 @@ describe('Client', () => {
 			expectedStatus: [BeanstalkResponseStatus.BURIED],
 		});
 		const buildCommandBufferSpy = vi.spyOn(cmd, 'buildCommandBuffer');
-		const handleResponseOrig = cmd.handleResponse;
+		const handleResponseOrig = cmd.handleResponse.bind(cmd);
 		const handleResponseSpy = vi.spyOn(cmd, 'handleResponse');
 
 		beforeEach(() => {
 			readCommandResponseMock.mockReset();
-			readCommandResponseMock.mockImplementation(async () => ({
-				status: BeanstalkResponseStatus.BURIED,
-				headers: [],
-				data: undefined,
-			}));
+			readCommandResponseMock.mockImplementation(async () =>
+				Promise.resolve({
+					status: BeanstalkResponseStatus.BURIED,
+					headers: [],
+					data: undefined,
+				}),
+			);
 
 			buildCommandBufferSpy.mockReset();
 			handleResponseSpy.mockReset();
@@ -407,14 +653,10 @@ describe('Client', () => {
 
 		it('should throw in case of calling while connection is not opened', async () => {
 			conn.getState.mockReturnValueOnce('closed');
-			await dispatchCommand(cmd)
-				.then(() => {
-					throw new Error('not thrown!');
-				})
-				.catch((error) => {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
-				});
+			const rejected = dispatchCommand(cmd);
+
+			await expect(rejected).rejects.toBeInstanceOf(ClientError);
+			await expect(rejected).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionNotOpened);
 		});
 
 		it("should call command's buildCommandBuffer", async () => {
@@ -466,12 +708,12 @@ describe('Client', () => {
 
 		beforeEach(() => {
 			dispatchCommandMock.mockReset();
-			(validateTTR as any).mockReset();
-			(validatePriority as any).mockReset();
-			(validateDelay as any).mockReset();
-			(validateTimeout as any).mockReset();
-			(validateJobId as any).mockReset();
-			(validateTubeName as any).mockReset();
+			vi.mocked(validateTTR).mockReset();
+			vi.mocked(validatePriority).mockReset();
+			vi.mocked(validateDelay).mockReset();
+			vi.mocked(validateTimeout).mockReset();
+			vi.mocked(validateJobId).mockReset();
+			vi.mocked(validateTubeName).mockReset();
 		});
 
 		describe('put', () => {
@@ -531,6 +773,20 @@ describe('Client', () => {
 				});
 			});
 
+			it('should reject a job id header with trailing garbage', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: BeanstalkResponseStatus.INSERTED,
+						headers: ['100abc'],
+					}),
+				);
+
+				const putting = c.put('payload');
+
+				await expect(putting).rejects.toBeInstanceOf(ResponseError);
+				await expect(putting).rejects.toHaveProperty('code', ResponseErrorCode.ErrInvalidNumericHeader);
+			});
+
 			it('should use default ttr, priority and delay in case it is not defined', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
@@ -557,14 +813,7 @@ describe('Client', () => {
 					}),
 				);
 
-				await c
-					.put(undefined)
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toStrictEqual(new TypeError('payload has to be a non-undefined value'));
-					});
+				await expect(c.put(undefined)).rejects.toStrictEqual(new TypeError('payload has to be a non-undefined value'));
 			});
 
 			it('should throw in case of server error-ish responses', async () => {
@@ -575,42 +824,21 @@ describe('Client', () => {
 					}),
 				);
 
-				await c
-					.put('test')
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
 						status: BeanstalkResponseStatus.EXPECTED_CRLF,
 						headers: ['100500'],
 					}),
 				);
-				await c
-					.put('test')
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
 						status: BeanstalkResponseStatus.DRAINING,
 						headers: ['100500'],
 					}),
 				);
-				await c
-					.put('test')
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
 			});
 		});
 
@@ -645,14 +873,7 @@ describe('Client', () => {
 						headers: [],
 					}),
 				);
-				await c
-					.reserve()
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.reserve()).rejects.toBeInstanceOf(BeanstalkError);
 			});
 		});
 
@@ -706,14 +927,7 @@ describe('Client', () => {
 					}),
 				);
 
-				await c
-					.reserveWithTimeout(123)
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.reserveWithTimeout(123)).rejects.toBeInstanceOf(BeanstalkError);
 			});
 		});
 
@@ -963,7 +1177,7 @@ describe('Client', () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
 						status: BeanstalkResponseStatus.WATCHING,
-						headers: ['tube-name'],
+						headers: ['1'],
 					}),
 				);
 
@@ -990,7 +1204,7 @@ describe('Client', () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
 						status: BeanstalkResponseStatus.WATCHING,
-						headers: ['tube-name'],
+						headers: ['1'],
 					}),
 				);
 
@@ -998,6 +1212,17 @@ describe('Client', () => {
 
 				expect(validateTubeName).toHaveBeenCalledTimes(1);
 				expect(validateTubeName).toHaveBeenCalledWith('tube-name');
+			});
+
+			it('should reject a malformed WATCHING count', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: BeanstalkResponseStatus.WATCHING,
+						headers: ['100abc'],
+					}),
+				);
+
+				await expect(c.ignore('tube-name')).rejects.toHaveProperty('code', ResponseErrorCode.ErrInvalidNumericHeader);
 			});
 
 			it('should return ignore result of tubes watched', async () => {
@@ -1366,92 +1591,46 @@ describe('Client', () => {
 		// @ts-expect-error we're mocking private method so obviously TS is unhappy.
 		const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
-		let call = 5;
-		readCommandResponseMock.mockImplementation(
-			async () =>
-				new Promise((resolve) => {
-					setTimeout(
-						() => {
-							resolve({
-								status: BeanstalkResponseStatus.BURIED,
-								headers: ['100500'],
-							});
-						},
-						100 - call-- * 15,
-					);
-				}),
-		);
+		const buried: ICommandResponse = {status: BeanstalkResponseStatus.BURIED, headers: ['100500']};
+		const queueResponses = (): Array<PromiseWithResolvers<ICommandResponse>> => {
+			const responses = Array.from({length: 5}, () => Promise.withResolvers<ICommandResponse>());
 
-		// in this test, dispatchCommandMock implemented the way that first command waits the most so in
-		// case unordered execution it should occur in list the last
+			for (const {promise} of responses) {
+				readCommandResponseMock.mockImplementationOnce(async () => promise);
+			}
+
+			return responses;
+		};
 		let resolveOrder: number[] = [];
+		const track = async (id: number): Promise<void> => {
+			await c.bury(id);
+			resolveOrder.push(id);
+		};
 
-		await Promise.allSettled([
-			c.bury(10).then(() => {
-				resolveOrder.push(10);
-			}),
-			c.bury(20).then(() => {
-				resolveOrder.push(20);
-			}),
-			c.bury(30).then(() => {
-				resolveOrder.push(30);
-			}),
-			c.bury(40).then(() => {
-				resolveOrder.push(40);
-			}),
-			c.bury(50).then(() => {
-				resolveOrder.push(50);
-			}),
-		]);
+		// once dispatch has reached the first read, every response is settled last to first; concurrent dispatch
+		// would then list the commands in that order
+		let responses = queueResponses();
+		const tracked = [track(10), track(20), track(30), track(40), track(50)];
+		await setImmediate();
+		for (const {resolve} of responses.toReversed()) {
+			resolve(buried);
+		}
+
+		await Promise.allSettled(tracked);
 
 		expect(resolveOrder).toStrictEqual([10, 20, 30, 40, 50]);
 
-		// here were rejecting promise in the middle, it should not affect the queue advancing
-		call = 5;
-		readCommandResponseMock.mockImplementation(
-			async () =>
-				new Promise((resolve, reject) => {
-					const idx = call--;
-
-					setTimeout(
-						() => {
-							if (idx === 3) {
-								reject(new Error('some error'));
-								return;
-							}
-
-							resolve({
-								status: BeanstalkResponseStatus.BURIED,
-								headers: ['100500'],
-							});
-						},
-						100 - idx * 15,
-					);
-				}),
-		);
-
+		// a rejection in the middle must not stall the queue
 		resolveOrder = [];
+		responses = queueResponses();
+		const trackedWithFailure = [track(10), track(20), track(30), track(40), track(50)];
+		await setImmediate();
+		responses[2].reject(new Error('some error'));
+		for (const {resolve} of responses.toReversed()) {
+			resolve(buried);
+		}
 
-		await Promise.allSettled([
-			c.bury(10).then(() => {
-				resolveOrder.push(10);
-			}),
-			c.bury(20).then(() => {
-				resolveOrder.push(20);
-			}),
-			c
-				.bury(30)
-				.then(() => {
-					resolveOrder.push(30);
-				})
-				.catch(() => {}),
-			c.bury(40).then(() => {
-				resolveOrder.push(40);
-			}),
-			c.bury(50).then(() => {
-				resolveOrder.push(50);
-			}),
-		]);
+		await Promise.allSettled(trackedWithFailure);
 
 		expect(resolveOrder).toStrictEqual([10, 20, 40, 50]);
 	});

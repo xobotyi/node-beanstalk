@@ -1,37 +1,40 @@
 import EventEmitter from 'node:events';
+import {setTimeout as sleep} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockedClass} from 'vite-plus/test';
-import {PoolClient} from '../src/PoolClient.js';
+import {PoolClient} from '../src/pool-client.js';
 import {Pool} from '../src/index.js';
-import {PoolError} from '../src/error/PoolError.js';
+import {PoolError} from '../src/error/pool-error.js';
 
-vi.mock('../src/PoolClient');
+vi.mock('../src/pool-client');
 
 class PoolClientMock extends EventEmitter {
-	releaseClient = vi.fn((): void => {
+	releaseClient = vi.fn<() => void>(() => {
 		this.emit('release', this);
 	});
 
-	connect = vi.fn(async () => Promise.resolve());
+	connect = vi.fn<() => Promise<void>>(async () => {});
 
-	disconnect = vi.fn(async () => Promise.resolve());
+	disconnect = vi.fn<() => Promise<void>>(async () => {});
 }
 
 describe('Pool', () => {
 	const PC = PoolClient as MockedClass<typeof PoolClient>;
+	const asMock = (client: PoolClient): PoolClientMock => client as unknown as PoolClientMock;
 
 	beforeEach(() => {
 		PC.mockImplementation(function () {
-			return new PoolClientMock() as any;
+			// oxlint-disable-next-line typescript/strict-void-return -- vitest hands out the object a constructor mock returns
+			return new PoolClientMock();
 		});
 		PC.mockClear();
-		PC.mock.instances.forEach((i) => {
+		for (const i of PC.mock.instances) {
 			i.releaseClient();
-		});
+		}
 	});
 
 	it('should be defined', () => {
 		expect(Pool).toBeDefined();
-		new Pool();
+		expect(() => new Pool()).not.toThrow();
 	});
 
 	it('.capacity should return configured capacity of the pool', () => {
@@ -62,18 +65,18 @@ describe('Pool', () => {
 		it('should create clients on demand', () => {
 			const p = new Pool({capacity: 3});
 			expect(PC.mock.instances.length).toBe(0);
-			p.connect();
+			void p.connect();
 			expect(PC.mock.instances.length).toBe(1);
-			p.connect();
+			void p.connect();
 			expect(PC.mock.instances.length).toBe(2);
-			p.connect();
+			void p.connect();
 			expect(PC.mock.instances.length).toBe(3);
 		});
 
 		it('should connect created clients', async () => {
 			const p = new Pool({capacity: 2});
 
-			const client = await p.connect();
+			const client = asMock(await p.connect());
 
 			expect(client.connect).toHaveBeenCalledTimes(1);
 		});
@@ -82,46 +85,24 @@ describe('Pool', () => {
 			const p = new Pool({capacity: 2});
 
 			const arr: number[] = [];
-			let finish: () => void;
-			const finished = new Promise<void>((resolve) => {
-				finish = resolve;
-			});
+			const holdClient = async (mark: number, ms: number): Promise<void> => {
+				const c = await p.connect();
+				await sleep(ms);
+				arr.push(mark);
+				c.releaseClient();
+			};
 
-			p.connect().then((c) => {
-				setTimeout(() => {
-					arr.push(1);
-					c.releaseClient();
-				}, 300);
-			});
-			p.connect().then((c) => {
-				setTimeout(() => {
-					arr.push(2);
-					c.releaseClient();
-				}, 100);
-			});
+			const held = [holdClient(1, 300), holdClient(2, 100)];
 
 			expect(p.idleCount).toBe(0);
 			expect(p.waitingCount).toBe(0);
 
-			p.connect().then((c) => {
-				setTimeout(() => {
-					arr.push(3);
-					c.releaseClient();
-				}, 100);
-			});
-			p.connect().then((c) => {
-				setTimeout(() => {
-					arr.push(4);
-					c.releaseClient();
-
-					finish!();
-				}, 100);
-			});
+			held.push(holdClient(3, 100), holdClient(4, 100));
 
 			expect(p.idleCount).toBe(0);
 			expect(p.waitingCount).toBe(2);
 
-			await finished;
+			await Promise.all(held);
 			expect(arr).toStrictEqual([2, 3, 1, 4]);
 		});
 
@@ -130,14 +111,7 @@ describe('Pool', () => {
 
 			await p.disconnect();
 
-			await p
-				.connect()
-				.then(() => {
-					throw new Error('not thrown');
-				})
-				.catch((error) => {
-					expect(error).toBeInstanceOf(PoolError);
-				});
+			await expect(p.connect()).rejects.toBeInstanceOf(PoolError);
 		});
 	});
 
@@ -147,14 +121,7 @@ describe('Pool', () => {
 
 			await p.disconnect();
 
-			await p
-				.disconnect()
-				.then(() => {
-					throw new Error('not thrown');
-				})
-				.catch((error) => {
-					expect(error).toBeInstanceOf(PoolError);
-				});
+			await expect(p.disconnect()).rejects.toBeInstanceOf(PoolError);
 		});
 
 		it('should change disconnect state', async () => {
@@ -171,8 +138,8 @@ describe('Pool', () => {
 		it('should disconnect each client', async () => {
 			const p = new Pool({capacity: 2});
 
-			const c1 = await p.connect();
-			const c2 = await p.connect();
+			const c1 = asMock(await p.connect());
+			const c2 = asMock(await p.connect());
 
 			c1.releaseClient();
 			c2.releaseClient();
@@ -186,8 +153,8 @@ describe('Pool', () => {
 		it('should reject pending requests and force disconnect clients in case of force disconnect', async () => {
 			const p = new Pool({capacity: 2});
 
-			const c1 = await p.connect();
-			const c2 = await p.connect();
+			const c1 = asMock(await p.connect());
+			const c2 = asMock(await p.connect());
 			const c3 = p.connect();
 			const c4 = p.connect();
 
@@ -196,12 +163,8 @@ describe('Pool', () => {
 			expect(c1.disconnect).toHaveBeenCalledWith(true);
 			expect(c2.disconnect).toHaveBeenCalledWith(true);
 
-			expect(await c3.catch((error) => error)).toStrictEqual(
-				new PoolError('Unable to gain client, pool is disconnecting.'),
-			);
-			expect(await c4.catch((error) => error)).toStrictEqual(
-				new PoolError('Unable to gain client, pool is disconnecting.'),
-			);
+			await expect(c3).rejects.toStrictEqual(new PoolError('Unable to gain client, pool is disconnecting.'));
+			await expect(c4).rejects.toStrictEqual(new PoolError('Unable to gain client, pool is disconnecting.'));
 		});
 
 		it('should await queue resolve during non-forced disconnect', async () => {
@@ -211,17 +174,18 @@ describe('Pool', () => {
 
 			const c1 = await p.connect();
 			const c2 = await p.connect();
-			const p3 = p.connect().then((c) => {
-				arr.push(3);
+			const connectMarked = async (mark: number): Promise<PoolClient> => {
+				const c = await p.connect();
+				arr.push(mark);
 				return c;
-			});
-			const p4 = p.connect().then((c) => {
-				arr.push(4);
-				return c;
-			});
-			const p5 = p.disconnect().then(() => {
-				arr.push(5);
-			});
+			};
+			const disconnectMarked = async (mark: number): Promise<void> => {
+				await p.disconnect();
+				arr.push(mark);
+			};
+			const p3 = connectMarked(3);
+			const p4 = connectMarked(4);
+			const p5 = disconnectMarked(5);
 
 			c1.releaseClient();
 			c2.releaseClient();
@@ -239,7 +203,7 @@ describe('Pool', () => {
 	});
 
 	describe('.restore', () => {
-		it('should throw in case called on live pool', async () => {
+		it('should throw in case called on live pool', () => {
 			const p = new Pool({capacity: 2});
 
 			expect(() => {

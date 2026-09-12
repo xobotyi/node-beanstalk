@@ -1,5 +1,5 @@
 import {load} from 'js-yaml';
-import {CommandError, CommandErrorCode} from './error/CommandError.js';
+import {CommandError, CommandErrorCode} from './error/command-error.js';
 import {CRLF_BUFF} from './const.js';
 import {
 	BeanstalkCommand,
@@ -11,16 +11,16 @@ import {
 	type Serializer,
 } from './types.js';
 
-export interface ICommandCtorOptions<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> {
+export type ICommandCtorOptions<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> = {
 	payloadBody?: boolean;
 	yamlBody?: boolean;
 	expectedStatus?: readonly R[];
-}
+};
 
 export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> {
 	private readonly commandName: BeanstalkCommand;
 
-	private readonly opt: ICommandCtorOptions<R>;
+	private readonly opt: Required<ICommandCtorOptions<R>>;
 
 	constructor(commandName: BeanstalkCommand, opt: ICommandCtorOptions<R> = {}) {
 		if (!BeanstalkCommand[commandName]) {
@@ -68,27 +68,28 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 			);
 		}
 
-		if (!this.opt.expectedStatus?.includes(response.status as R)) {
+		if (!this.opt.expectedStatus.includes(response.status as R)) {
 			throw new CommandError(
 				CommandErrorCode.ErrUnexpectedResponseStatus,
 				`Unexpected status '${response.status}' received in response to '${this.commandName}' command`,
 			);
 		}
 
-		const res = {
+		const res: {status: BeanstalkResponseStatus; headers: string[]; data?: unknown} = {
 			status: response.status,
 			headers: response.headers,
-		} as any;
+		};
 
 		if (response.data) {
-			res.data = response.data.slice(0, response.data.length - CRLF_BUFF.length);
+			const data = response.data.subarray(0, response.data.length - CRLF_BUFF.length);
+			res.data = data;
 
 			if (this.opt.payloadBody) {
 				if (serializer) {
-					res.data = serializer.deserialize(res.data);
+					res.data = serializer.deserialize(data);
 				}
 			} else if (this.opt.yamlBody) {
-				res.data = load(res.data.toString());
+				res.data = load(data.toString());
 			}
 		}
 

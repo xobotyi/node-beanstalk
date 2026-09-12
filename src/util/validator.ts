@@ -66,6 +66,10 @@ export function validateJobId(jobId: number): void {
 		throw new TypeError(`job id should be a number, got ${typeof jobId}`);
 	}
 
+	if (!Number.isInteger(jobId)) {
+		throw new TypeError(`job id should be an integer, got ${jobId}`);
+	}
+
 	if (jobId < JOB_ID_MIN) {
 		throw new TypeError(`job id should be >= ${JOB_ID_MIN}`);
 	}

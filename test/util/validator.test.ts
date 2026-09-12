@@ -19,6 +19,23 @@ import {
 } from '../../src/const.js';
 
 describe('validator', () => {
+	function itValidates(
+		validate: (value: never) => void,
+		tableTests: Array<{name: string; in: unknown; out: Error | undefined}>,
+	): void {
+		it.each(tableTests.filter((test) => test.out === undefined))('$name', (test) => {
+			expect(() => {
+				validate(test.in as never);
+			}).not.toThrow();
+		});
+
+		it.each(tableTests.filter((test) => test.out instanceof Error))('$name', (test) => {
+			expect(() => {
+				validate(test.in as never);
+			}).toThrow(test.out);
+		});
+	}
+
 	describe('validateTubeName', () => {
 		const tableTests = [
 			{
@@ -51,21 +68,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTubeName(test.in);
-					}).toThrowError(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateTubeName(test.in)).toStrictEqual(test.out);
-				});
-			}
-		}
+		itValidates(validateTubeName, tableTests);
 	});
 
 	describe('validatePriority', () => {
@@ -102,21 +105,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validatePriority(test.in);
-					}).toThrowError(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validatePriority(test.in)).toStrictEqual(test.out);
-				});
-			}
-		}
+		itValidates(validatePriority, tableTests);
 	});
 
 	describe('validateDelay', () => {
@@ -153,21 +142,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateDelay(test.in);
-					}).toThrowError(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateDelay(test.in)).toStrictEqual(test.out);
-				});
-			}
-		}
+		itValidates(validateDelay, tableTests);
 	});
 
 	describe('validateTTR', () => {
@@ -204,21 +179,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTTR(test.in);
-					}).toThrowError(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateTTR(test.in)).toStrictEqual(test.out);
-				});
-			}
-		}
+		itValidates(validateTTR, tableTests);
 	});
 
 	describe('validateTimeout', () => {
@@ -245,21 +206,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTimeout(test.in);
-					}).toThrowError(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateTimeout(test.in)).toStrictEqual(test.out);
-				});
-			}
-		}
+		itValidates(validateTimeout, tableTests);
 	});
 
 	describe('validateJobId', () => {
@@ -280,26 +227,22 @@ describe('validator', () => {
 				out: new TypeError(`job id should be >= ${JOB_ID_MIN}`),
 			},
 			{
+				name: 'NaN job id',
+				in: Number.NaN,
+				out: new TypeError(`job id should be an integer, got NaN`),
+			},
+			{
+				name: 'fractional job id',
+				in: 1.5,
+				out: new TypeError(`job id should be an integer, got 1.5`),
+			},
+			{
 				name: 'non-number priority',
 				in: '123',
 				out: new TypeError(`job id should be a number, got string`),
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateJobId(test.in);
-					}).toThrowError(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateJobId(test.in)).toStrictEqual(test.out);
-				});
-			}
-		}
+		itValidates(validateJobId, tableTests);
 	});
 });

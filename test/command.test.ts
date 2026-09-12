@@ -1,10 +1,10 @@
 import {describe, expect, it} from 'vite-plus/test';
 import {Buffer} from 'node:buffer';
 import {dump} from 'js-yaml';
-import {Command} from '../src/Command.js';
+import {Command} from '../src/command.js';
 import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types.js';
-import {CommandError, CommandErrorCode} from '../src/error/CommandError.js';
-import {JsonSerializer} from '../src/serializer/JsonSerializer.js';
+import {CommandError, CommandErrorCode} from '../src/error/command-error.js';
+import {JsonSerializer} from '../src/serializer/json-serializer.js';
 
 describe('Command', () => {
 	it('should be defined', () => {
@@ -17,27 +17,22 @@ describe('Command', () => {
 		});
 
 		it('should throw on unknown command', () => {
-			try {
-				// @ts-expect-error testing incompatible command
-				new Command('totally unknown command');
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(CommandError);
-				expect(error.code).toBe(CommandErrorCode.ErrCommandUnknown);
-			}
+			// @ts-expect-error testing incompatible command
+			const construct = () => new Command('totally unknown command');
+
+			expect(construct).toThrow(CommandError);
+			expect(construct).toThrow(expect.objectContaining({code: CommandErrorCode.ErrCommandUnknown}));
 		});
 
 		it('should throw if unknown status expected', () => {
-			try {
+			const construct = () =>
 				new Command(BeanstalkCommand.bury, {
 					// @ts-expect-error testing incompatible status
 					expectedStatus: ['totally unknown status'],
 				});
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(CommandError);
-				expect(error.code).toBe(CommandErrorCode.ErrResponseStatusUnknown);
-			}
+
+			expect(construct).toThrow(CommandError);
+			expect(construct).toThrow(expect.objectContaining({code: CommandErrorCode.ErrResponseStatusUnknown}));
 		});
 	});
 
@@ -71,36 +66,28 @@ describe('Command', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			it(test.name, () => {
-				expect(cmd.buildCommandBuffer(...test.in)).toStrictEqual(test.out);
-			});
-		}
+		it.each(tableTests)('$name', (test) => {
+			expect(cmd.buildCommandBuffer(...test.in)).toStrictEqual(test.out);
+		});
 	});
 
 	describe('handleResponse', () => {
 		it('should throw in case of error response', () => {
 			const cmd = new Command(BeanstalkCommand.bury);
 
-			try {
-				cmd.handleResponse({status: BeanstalkResponseStatus.UNKNOWN_COMMAND, headers: []});
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(CommandError);
-				expect(error.code).toBe(CommandErrorCode.ErrErrorResponseStatus);
-			}
+			const throwing = () => cmd.handleResponse({status: BeanstalkResponseStatus.UNKNOWN_COMMAND, headers: []});
+
+			expect(throwing).toThrow(CommandError);
+			expect(throwing).toThrow(expect.objectContaining({code: CommandErrorCode.ErrErrorResponseStatus}));
 		});
 
 		it('should throw in case of unexpected response', () => {
 			const cmd = new Command(BeanstalkCommand.bury);
 
-			try {
-				cmd.handleResponse({status: BeanstalkResponseStatus.OK, headers: []});
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(CommandError);
-				expect(error.code).toBe(CommandErrorCode.ErrUnexpectedResponseStatus);
-			}
+			const throwing = () => cmd.handleResponse({status: BeanstalkResponseStatus.OK, headers: []});
+
+			expect(throwing).toThrow(CommandError);
+			expect(throwing).toThrow(expect.objectContaining({code: CommandErrorCode.ErrUnexpectedResponseStatus}));
 		});
 
 		it('should return status and headers', () => {
@@ -176,7 +163,7 @@ describe('Command', () => {
 			});
 		});
 
-		it('should parse json body with given serializer', () => {
+		it('should parse yaml body', () => {
 			const cmd = new Command(BeanstalkCommand.bury, {
 				expectedStatus: [BeanstalkResponseStatus.BURIED],
 				yamlBody: true,

@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vite-plus/test';
-import {getCommandInstance} from '../../src/util/getCommandInstance.js';
-import {CommandError, CommandErrorCode} from '../../src/error/CommandError.js';
+import {getCommandInstance} from '../../src/util/get-command-instance.js';
+import {CommandError, CommandErrorCode} from '../../src/error/command-error.js';
 import {BeanstalkCommand} from '../../src/types.js';
 
 describe('getCommandInstance', () => {
@@ -9,14 +9,11 @@ describe('getCommandInstance', () => {
 	});
 
 	it('should throw in case of unknown command', () => {
-		try {
-			// @ts-expect-error testing unknown command
-			getCommandInstance('DEFINITELY_UNKNOWN_COMMAND');
-			throw new Error('not thrown!');
-		} catch (error: any) {
-			expect(error).toBeInstanceOf(CommandError);
-			expect(error.code).toBe(CommandErrorCode.ErrCommandUnknown);
-		}
+		// @ts-expect-error testing unknown command
+		const throwing = () => getCommandInstance('DEFINITELY_UNKNOWN_COMMAND');
+
+		expect(throwing).toThrow(CommandError);
+		expect(throwing).toThrow(expect.objectContaining({code: CommandErrorCode.ErrCommandUnknown}));
 	});
 
 	it('should always return single instance for certain command', () => {
