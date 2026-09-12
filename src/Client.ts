@@ -32,11 +32,11 @@ import {type ILinkedListNode, LinkedList} from './util/LinkedList.js';
 const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 
 export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [never]> extends EventEmitter<Events> {
-	private readonly _conn: Connection;
+	readonly #conn: Connection;
 
-	private readonly _opt: Required<IClientCtorOptions>;
+	readonly #opt: Required<IClientCtorOptions>;
 
-	private readonly _queue = new LinkedList<{
+	readonly #queue = new LinkedList<{
 		resolve: () => void;
 		reject: (err?: Error) => void;
 	}>();
@@ -46,33 +46,33 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	constructor(options: IClientCtorOptions = {}, connection = new Connection()) {
 		super();
 
-		this._opt = {
+		this.#opt = {
 			...DEFAULT_CLIENT_OPTIONS,
 			...options,
 		};
 
-		this._conn = connection;
+		this.#conn = connection;
 	}
 
 	/**
 	 * Indicates whether client is waiting for server response.
 	 */
 	get isWorking(): boolean {
-		return this._queue.size > 0;
+		return this.#queue.size > 0;
 	}
 
 	/**
 	 * Amount of requests waiting in queue, including connect and disconnect.
 	 */
 	get queueSize(): number {
-		return this._queue.size;
+		return this.#queue.size;
 	}
 
 	/**
 	 * Indicates whether client is connected to the server.
 	 */
 	get isConnected(): boolean {
-		return this._conn.getState() === 'open';
+		return this.#conn.getState() === 'open';
 	}
 
 	/**
@@ -117,10 +117,10 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * @category Client
 	 */
 	public async connect(): Promise<void> {
-		if (this._conn.getState() !== 'closed') {
+		if (this.#conn.getState() !== 'closed') {
 			throw new ClientError(
 				ClientErrorCode.ErrConnectionNotClosed,
-				`Unable to open non-closed connection, current state: ${this._conn.getState()}`,
+				`Unable to open non-closed connection, current state: ${this.#conn.getState()}`,
 			);
 		}
 
@@ -129,7 +129,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		try {
 			await waitPromise;
 
-			await this._conn.open(this._opt.port, this._opt.host);
+			await this.#conn.open(this.#opt.port, this.#opt.host);
 		} finally {
 			moveQueue();
 		}
@@ -145,10 +145,10 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * @category Client
 	 */
 	public async disconnect(force = false): Promise<void> {
-		if (this._conn.getState() !== 'open') {
+		if (this.#conn.getState() !== 'open') {
 			throw new ClientError(
 				ClientErrorCode.ErrConnectionNotOpened,
-				`Unable to close non-opened connection, current state: ${this._conn.getState()}`,
+				`Unable to close non-opened connection, current state: ${this.#conn.getState()}`,
 			);
 		}
 
@@ -167,14 +167,14 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 			// The thing is to empty whole queue and return head node to the list.
 			// As head node representing currently running request we want to await it
 			// even if force disconnecting.
-			const {head} = this._queue;
+			const {head} = this.#queue;
 
-			for (const {reject} of this._queue.truncate()) {
+			for (const {reject} of this.#queue.truncate()) {
 				if (reject === head?.value.reject) continue;
 				reject(new ClientError(ClientErrorCode.ErrDisconnecting, 'Client is disconnecting'));
 			}
 
-			if (head) this._queue.pushNode(head);
+			if (head) this.#queue.pushNode(head);
 		}
 
 		const [waitPromise, moveQueue] = this.waitQueue();
@@ -182,9 +182,9 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		try {
 			await waitPromise;
 
-			if (this._conn.getState() !== 'open') return;
+			if (this.#conn.getState() !== 'open') return;
 
-			await this._conn.close();
+			await this.#conn.close();
 		} finally {
 			moveQueue();
 		}
@@ -232,9 +232,9 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 */
 	public async put(
 		payload: any,
-		ttr: number = this._opt.defaultTTR,
-		priority: number = this._opt.defaultPriority,
-		delay: number = this._opt.defaultDelay,
+		ttr: number = this.#opt.defaultTTR,
+		priority: number = this.#opt.defaultPriority,
+		delay: number = this.#opt.defaultDelay,
 	): Promise<{
 		id: number;
 		state: BeanstalkJobState.buried | BeanstalkJobState.ready | BeanstalkJobState.delayed;
@@ -408,8 +408,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 */
 	public async release(
 		jobId: number,
-		priority: number = this._opt.defaultPriority,
-		delay: number = this._opt.defaultDelay,
+		priority: number = this.#opt.defaultPriority,
+		delay: number = this.#opt.defaultDelay,
 	): Promise<null | BeanstalkJobState.buried | BeanstalkJobState.ready | BeanstalkJobState.delayed> {
 		validateJobId(jobId);
 		validatePriority(priority);
@@ -440,7 +440,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 *
 	 * @category Worker Commands
 	 */
-	public async bury(jobId: number, priority: number = this._opt.defaultPriority): Promise<boolean> {
+	public async bury(jobId: number, priority: number = this.#opt.defaultPriority): Promise<boolean> {
 		validateJobId(jobId);
 		validatePriority(priority);
 
@@ -759,9 +759,9 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		}>;
 
 		const promise = new Promise<void>((resolve, reject) => {
-			listNode = this._queue.push({resolve, reject});
+			listNode = this.#queue.push({resolve, reject});
 
-			if (this._queue.head === listNode) {
+			if (this.#queue.head === listNode) {
 				resolve();
 			}
 		});
@@ -770,10 +770,10 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 			promise,
 			() => {
 				// remove current node from list
-				this._queue.removeNode(listNode);
+				this.#queue.removeNode(listNode);
 
 				// resolve first promise waiting in queue if it exists
-				this._queue.head?.value.resolve();
+				this.#queue.head?.value.resolve();
 			},
 		];
 	}
@@ -790,7 +790,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	private payloadToBuffer(payload: any): Buffer | undefined {
 		if (payload === undefined) return undefined;
 
-		const {serializer, maxPayloadSize} = this._opt;
+		const {serializer, maxPayloadSize} = this.#opt;
 
 		if (typeof payload !== 'string' && !serializer) {
 			throw new ClientError(
@@ -834,7 +834,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	}
 
 	private async readCommandResponse(): Promise<ICommandResponse> {
-		const conn = this._conn;
+		const conn = this.#conn;
 		return new Promise((resolve, reject) => {
 			let response: Buffer = Buffer.alloc(0);
 			let headers: ICommandResponseHeaders | null = null;
@@ -864,10 +864,10 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 								reject(
 									new ClientError(
 										ClientErrorCode.ErrResponseRead,
-										`Failed to read response data after ${this._opt.dataReadTimeoutMs} ms`,
+										`Failed to read response data after ${this.#opt.dataReadTimeoutMs} ms`,
 									),
 								);
-							}, this._opt.dataReadTimeoutMs);
+							}, this.#opt.dataReadTimeoutMs);
 						}
 					}
 				}
@@ -914,7 +914,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		await waitPromise;
 		let response: ICommandResponse;
 		try {
-			const {_conn: conn} = this;
+			const conn = this.#conn;
 
 			if (conn.getState() !== 'open') {
 				throw new ClientError(
@@ -933,6 +933,6 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 			moveQueue();
 		}
 
-		return cmd.handleResponse(response, this._opt.serializer);
+		return cmd.handleResponse(response, this.#opt.serializer);
 	}
 }

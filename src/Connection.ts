@@ -12,16 +12,16 @@ export type IConnectionEvents = {
 export type ConnectionState = 'open' | 'opening' | 'closed' | 'closing';
 
 export class Connection extends EventEmitter<IConnectionEvents> {
-	private _socket?: Socket;
+	#socket?: Socket;
 
-	private _state: ConnectionState = 'closed';
+	#state: ConnectionState = 'closed';
 
 	getState(): ConnectionState {
-		return this._state;
+		return this.#state;
 	}
 
 	isChangingState(): boolean {
-		return this._state === 'opening' || this._state === 'closing';
+		return this.#state === 'opening' || this.#state === 'closing';
 	}
 
 	async open(port: number, host = 'localhost'): Promise<void> {
@@ -32,18 +32,18 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 			);
 		}
 
-		if (this._state === 'open') {
+		if (this.#state === 'open') {
 			throw new ConnectionError(
 				ConnectionErrorCode.ErrAlreadyOpened,
 				`Unable to open connection that is already opened`,
 			);
 		}
 
-		this._state = 'opening';
+		this.#state = 'opening';
 
 		return new Promise<void>((resolve, reject) => {
 			const socket = new Socket();
-			this._socket = socket;
+			this.#socket = socket;
 			socket
 				.setNoDelay(true)
 				.setKeepAlive(true)
@@ -55,14 +55,14 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 				.connect(port, host, () => {
 					socket.off('error', reject).on('error', (err: any) => {
 						// ignore disconnect errors during disconnect procedure
-						if (this._state === 'closing' && (err.code === 'ECONNRESET' || err.code === 'EPIPE')) {
+						if (this.#state === 'closing' && (err.code === 'ECONNRESET' || err.code === 'EPIPE')) {
 							return;
 						}
 
 						this.emit('error', err);
 					});
 
-					this._state = 'open';
+					this.#state = 'open';
 
 					this.emit('open', socket.remotePort!, socket.remoteAddress!);
 
@@ -79,16 +79,16 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 			);
 		}
 
-		if (this._state === 'closed') {
+		if (this.#state === 'closed') {
 			throw new ConnectionError(
 				ConnectionErrorCode.ErrAlreadyClosed,
 				`Unable to close connection that is already closed`,
 			);
 		}
 
-		this._state = 'closing';
+		this.#state = 'closing';
 
-		const sock = this._socket;
+		const sock = this.#socket;
 		if (sock) {
 			await new Promise<void>((resolve) => {
 				sock.end(resolve);
@@ -96,22 +96,22 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 			sock.destroy();
 		}
 
-		this._socket = undefined;
-		this._state = 'closed';
+		this.#socket = undefined;
+		this.#state = 'closed';
 	}
 
 	/**
 	 * Closes the connection if it is open, so `await using` releases the socket on scope exit.
 	 */
 	async [Symbol.asyncDispose](): Promise<void> {
-		if (this._state !== 'open') return;
+		if (this.#state !== 'open') return;
 
 		await this.close();
 	}
 
 	async write<T extends Buffer>(buffer: T): Promise<T> {
-		const sock = this._socket;
-		if (this._state !== 'open' || !sock) {
+		const sock = this.#socket;
+		if (this.#state !== 'open' || !sock) {
 			throw new ConnectionError(
 				ConnectionErrorCode.ErrNotOpened,
 				'Unable to write to connection that is not opened yet',
