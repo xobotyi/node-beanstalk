@@ -19,8 +19,15 @@
 	"files": [
 		"dist"
 	],
+	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
 	"scripts": {
 		"docs:build": "yarn typedoc && cpy .static/typedoc/style.css docs/assets/css/",
 		"build": "yarn build:cleanup && yarn build:tsc",
@@ -52,6 +59,9 @@
 		"typedoc": "^0.26.3",
 		"typescript": "^5.5.3",
 		"vite-plus": "^0.3.1"
+	},
+	"engines": {
+		"node": ">=24"
 	},
 	"packageManager": "yarn@4.18.0"
 }

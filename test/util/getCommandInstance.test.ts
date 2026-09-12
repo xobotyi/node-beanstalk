@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vite-plus/test';
-import {getCommandInstance} from '../../src/util/getCommandInstance';
-import {CommandError, CommandErrorCode} from '../../src/error/CommandError';
-import {BeanstalkCommand} from '../../src/types';
+import {getCommandInstance} from '../../src/util/getCommandInstance.js';
+import {CommandError, CommandErrorCode} from '../../src/error/CommandError.js';
+import {BeanstalkCommand} from '../../src/types.js';
 
 describe('getCommandInstance', () => {
 	it('should be defined', () => {

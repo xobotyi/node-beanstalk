@@ -1,6 +1,6 @@
 import {EventEmitter} from 'events';
 import {Socket} from 'net';
-import {ConnectionError, ConnectionErrorCode} from './error/ConnectionError';
+import {ConnectionError, ConnectionErrorCode} from './error/ConnectionError.js';
 
 export interface Connection {
 	emit: ((event: string, listener: (...args: any[]) => void) => boolean) &

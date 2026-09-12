@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vite-plus/test';
-import {LinkedList} from '../../src/util/LinkedList';
+import {LinkedList} from '../../src/util/LinkedList.js';
 
 describe('LinkedList', () => {
 	it('should be defined', () => {

@@ -1,12 +1,12 @@
 import {Buffer} from 'buffer';
 import {beforeEach, describe, expect, it, vi, type MockInstance} from 'vite-plus/test';
-import {BeanstalkError} from '../src/error/BeanstalkError';
-import {Connection, ConnectionState} from '../src/Connection';
-import {BeanstalkJobState, Client} from '../src';
-import {ClientError, ClientErrorCode} from '../src/error/ClientError';
-import {JsonSerializer} from '../src/serializer/JsonSerializer';
-import {Command} from '../src/Command';
-import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types';
+import {BeanstalkError} from '../src/error/BeanstalkError.js';
+import {Connection, type ConnectionState} from '../src/Connection.js';
+import {BeanstalkJobState, Client} from '../src/index.js';
+import {ClientError, ClientErrorCode} from '../src/error/ClientError.js';
+import {JsonSerializer} from '../src/serializer/JsonSerializer.js';
+import {Command} from '../src/Command.js';
+import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types.js';
 import {
 	validateDelay,
 	validateJobId,
@@ -14,7 +14,7 @@ import {
 	validateTimeout,
 	validateTTR,
 	validateTubeName,
-} from '../src/util/validator';
+} from '../src/util/validator.js';
 
 vi.mock('../src/util/validator');
 

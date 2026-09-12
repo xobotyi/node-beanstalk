@@ -1,20 +1,18 @@
 {
 	"compilerOptions": {
-		"lib": ["es2020"],
-		"moduleResolution": "Bundler",
-		"module": "ESNext",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
 		"target": "ESNext",
+		"lib": ["ESNext"],
 		"strict": true,
-		"strictFunctionTypes": true,
-		"esModuleInterop": true,
+		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
-		"allowSyntheticDefaultImports": true,
 		"sourceMap": true,
 		"declaration": true,
 		"outDir": "./dist",
 		"noEmit": true
 	},
 	"exclude": ["node_modules", "dist"],
-	"include": ["**.js", "**.ts", "**/*.js", "**/*.ts"]
+	"include": ["**/*.ts"]
 }

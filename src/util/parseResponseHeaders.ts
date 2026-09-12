@@ -1,6 +1,6 @@
-import {BeanstalkDataResponseStatus, BeanstalkResponseStatus, ICommandResponseHeaders} from '../types';
-import {CRLF_BUFF} from '../const';
-import {ResponseError, ResponseErrorCode} from '../error/ResponseError';
+import {BeanstalkDataResponseStatus, type BeanstalkResponseStatus, type ICommandResponseHeaders} from '../types.js';
+import {CRLF_BUFF} from '../const.js';
+import {ResponseError, ResponseErrorCode} from '../error/ResponseError.js';
 
 export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | null {
 	const firstCrlf = buff.indexOf(CRLF_BUFF);

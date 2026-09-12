@@ -1,10 +1,10 @@
 import {describe, expect, it} from 'vite-plus/test';
 import {Buffer} from 'buffer';
 import {dump} from 'js-yaml';
-import {Command} from '../src/Command';
-import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types';
-import {CommandError, CommandErrorCode} from '../src/error/CommandError';
-import {JsonSerializer} from '../src/serializer/JsonSerializer';
+import {Command} from '../src/Command.js';
+import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types.js';
+import {CommandError, CommandErrorCode} from '../src/error/CommandError.js';
+import {JsonSerializer} from '../src/serializer/JsonSerializer.js';
 
 describe('Command', () => {
 	it('should be defined', () => {

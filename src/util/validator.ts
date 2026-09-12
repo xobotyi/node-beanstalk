@@ -1,4 +1,4 @@
-import {DELAY_MAX, DELAY_MIN, JOB_ID_MIN, PRIORITY_MAX, PRIORITY_MIN, TIMEOUT_MIN, TTR_MAX, TTR_MIN} from '../const';
+import {DELAY_MAX, DELAY_MIN, JOB_ID_MIN, PRIORITY_MAX, PRIORITY_MIN, TIMEOUT_MIN, TTR_MAX, TTR_MIN} from '../const.js';
 
 const tubeNameValidateRE = /^[A-Za-z0-9\-+/;.$_()]{1,200}$/;
 

@@ -1,8 +1,8 @@
 import EventEmitter from 'events';
 import {beforeEach, describe, expect, it, vi, type MockedClass} from 'vite-plus/test';
-import {PoolClient} from '../src/PoolClient';
-import {Pool} from '../src';
-import {PoolError} from '../src/error/PoolError';
+import {PoolClient} from '../src/PoolClient.js';
+import {Pool} from '../src/index.js';
+import {PoolError} from '../src/error/PoolError.js';
 
 vi.mock('../src/PoolClient');
 

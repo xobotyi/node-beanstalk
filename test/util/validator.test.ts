@@ -6,7 +6,7 @@ import {
 	validateTimeout,
 	validateTTR,
 	validateTubeName,
-} from '../../src/util/validator';
+} from '../../src/util/validator.js';
 import {
 	DELAY_MAX,
 	DELAY_MIN,
@@ -16,7 +16,7 @@ import {
 	TIMEOUT_MIN,
 	TTR_MAX,
 	TTR_MIN,
-} from '../../src/const';
+} from '../../src/const.js';
 
 describe('validator', () => {
 	describe('validateTubeName', () => {

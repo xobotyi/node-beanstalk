@@ -22,6 +22,8 @@ npm i node-beanstalk
 yarn add node-beanstalk
 ```
 
+The package is published as ES modules only and requires Node.js 24 or newer.
+
 ## USAGE
 
 `node-beanstalk` fully supports

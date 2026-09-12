@@ -1,4 +1,4 @@
-import {ErrorWithCode} from './ErrorWithCode';
+import {ErrorWithCode} from './ErrorWithCode.js';
 
 export enum ResponseErrorCode {
 	ErrInvalidBodyLength = 'ErrInvalidBodyLength',

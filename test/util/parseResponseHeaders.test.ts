@@ -1,8 +1,8 @@
 import {describe, expect, it} from 'vite-plus/test';
 import {Buffer} from 'buffer';
-import {parseResponseHeaders} from '../../src/util/parseResponseHeaders';
-import {BeanstalkResponseStatus, ICommandResponseHeaders} from '../../src/types';
-import {ResponseError, ResponseErrorCode} from '../../src/error/ResponseError';
+import {parseResponseHeaders} from '../../src/util/parseResponseHeaders.js';
+import {BeanstalkResponseStatus, type ICommandResponseHeaders} from '../../src/types.js';
+import {type ResponseError, ResponseErrorCode} from '../../src/error/ResponseError.js';
 
 describe('parseResponseHeaders', () => {
 	it('should be defined', () => {

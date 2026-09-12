@@ -1,8 +1,8 @@
-import {IPoolCtorOptions} from './types';
-import {DEFAULT_POOL_OPTIONS} from './const';
-import {PoolClient} from './PoolClient';
-import {LinkedList} from './util/LinkedList';
-import {PoolError} from './error/PoolError';
+import {type IPoolCtorOptions} from './types.js';
+import {DEFAULT_POOL_OPTIONS} from './const.js';
+import {PoolClient} from './PoolClient.js';
+import {LinkedList} from './util/LinkedList.js';
+import {PoolError} from './error/PoolError.js';
 
 export type PoolState = 'live' | 'disconnected' | 'disconnecting';
 

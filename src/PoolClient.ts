@@ -1,4 +1,4 @@
-import {Client} from './Client';
+import {Client} from './Client.js';
 
 export interface PoolClient {
 	emit: ((event: string, listener: (...args: any[]) => void) => boolean) &

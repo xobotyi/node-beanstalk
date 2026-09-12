@@ -1,5 +1,5 @@
-import {Serializer} from '../types';
-import {SerializerError, SerializerErrorCode} from '../error/SerializerError';
+import {Serializer} from '../types.js';
+import {SerializerError, SerializerErrorCode} from '../error/SerializerError.js';
 
 export class JsonSerializer extends Serializer {
 	public serialize(data: any): Buffer {

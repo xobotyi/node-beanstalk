@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vite-plus/test';
-import {PoolClient} from '../src/PoolClient';
+import {PoolClient} from '../src/PoolClient.js';
 
 describe('PoolClient', () => {
 	describe('releaseClient', () => {

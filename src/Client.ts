@@ -3,21 +3,21 @@ import {
 	BeanstalkCommand,
 	BeanstalkJobState,
 	BeanstalkResponseStatus,
-	IBeanstalkJobStats,
-	IBeanstalkStats,
-	IBeanstalkTubeStats,
-	IClientCtorOptions,
-	IClientRawReservedJob,
-	ICommandHandledResponse,
-	ICommandResponse,
-	ICommandResponseHeaders,
-} from './types';
-import {Command} from './Command';
-import {ClientError, ClientErrorCode} from './error/ClientError';
-import {getCommandInstance} from './util/getCommandInstance';
-import {DEFAULT_CLIENT_OPTIONS} from './const';
-import {parseResponseHeaders} from './util/parseResponseHeaders';
-import {BeanstalkError} from './error/BeanstalkError';
+	type IBeanstalkJobStats,
+	type IBeanstalkStats,
+	type IBeanstalkTubeStats,
+	type IClientCtorOptions,
+	type IClientRawReservedJob,
+	type ICommandHandledResponse,
+	type ICommandResponse,
+	type ICommandResponseHeaders,
+} from './types.js';
+import {type Command} from './Command.js';
+import {ClientError, ClientErrorCode} from './error/ClientError.js';
+import {getCommandInstance} from './util/getCommandInstance.js';
+import {DEFAULT_CLIENT_OPTIONS} from './const.js';
+import {parseResponseHeaders} from './util/parseResponseHeaders.js';
+import {BeanstalkError} from './error/BeanstalkError.js';
 import {
 	validateDelay,
 	validateJobId,
@@ -25,9 +25,9 @@ import {
 	validateTimeout,
 	validateTTR,
 	validateTubeName,
-} from './util/validator';
-import {Connection} from './Connection';
-import {ILinkedListNode, LinkedList} from './util/LinkedList';
+} from './util/validator.js';
+import {Connection} from './Connection.js';
+import {type ILinkedListNode, LinkedList} from './util/LinkedList.js';
 
 export class Client extends EventEmitter {
 	private _conn: Connection;

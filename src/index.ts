@@ -1,15 +1,15 @@
-export {Client} from './Client';
-export {Pool} from './Pool';
+export {Client} from './Client.js';
+export {Pool} from './Pool.js';
 
-export {BeanstalkError} from './error/BeanstalkError';
-export {ClientError} from './error/ClientError';
-export {CommandError} from './error/CommandError';
-export {ConnectionError} from './error/ConnectionError';
-export {PoolError} from './error/PoolError';
-export {ResponseError} from './error/ResponseError';
-export {SerializerError} from './error/SerializerError';
+export {BeanstalkError} from './error/BeanstalkError.js';
+export {ClientError} from './error/ClientError.js';
+export {CommandError} from './error/CommandError.js';
+export {ConnectionError} from './error/ConnectionError.js';
+export {PoolError} from './error/PoolError.js';
+export {ResponseError} from './error/ResponseError.js';
+export {SerializerError} from './error/SerializerError.js';
 
-export {BeanstalkJobState, BeanstalkResponseStatus} from './types';
+export {BeanstalkJobState, BeanstalkResponseStatus} from './types.js';
 
 export type {
 	Serializer,
@@ -19,4 +19,4 @@ export type {
 	IBeanstalkStats,
 	IBeanstalkJobStats,
 	IBeanstalkTubeStats,
-} from './types';
+} from './types.js';

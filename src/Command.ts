@@ -1,15 +1,15 @@
 import {load} from 'js-yaml';
-import {CommandError, CommandErrorCode} from './error/CommandError';
-import {CRLF_BUFF} from './const';
+import {CommandError, CommandErrorCode} from './error/CommandError.js';
+import {CRLF_BUFF} from './const.js';
 import {
 	BeanstalkCommand,
 	BeanstalkErrorResponseStatus,
 	BeanstalkResponseStatus,
-	IBeanstalkErrorResponseStatus,
-	ICommandHandledResponse,
-	ICommandResponse,
-	Serializer,
-} from './types';
+	type IBeanstalkErrorResponseStatus,
+	type ICommandHandledResponse,
+	type ICommandResponse,
+	type Serializer,
+} from './types.js';
 
 export interface ICommandCtorOptions<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> {
 	payloadBody?: boolean;
