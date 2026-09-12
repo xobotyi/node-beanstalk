@@ -1,6 +1,6 @@
 import {EventEmitter} from 'node:events';
 import {Socket} from 'node:net';
-import {ConnectionError, ConnectionErrorCode} from './error/ConnectionError.js';
+import {ConnectionError, ConnectionErrorCode} from './error/connection-error.js';
 
 export type IConnectionEvents = {
 	close: [];

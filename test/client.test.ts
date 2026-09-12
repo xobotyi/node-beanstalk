@@ -1,13 +1,13 @@
 import {Buffer} from 'node:buffer';
 import {setImmediate} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockInstance} from 'vite-plus/test';
-import {BeanstalkError} from '../src/error/BeanstalkError.js';
-import {Connection, type ConnectionState} from '../src/Connection.js';
+import {BeanstalkError} from '../src/error/beanstalk-error.js';
+import {Connection, type ConnectionState} from '../src/connection.js';
 import {BeanstalkJobState, Client} from '../src/index.js';
-import {ClientError, ClientErrorCode} from '../src/error/ClientError.js';
-import {ResponseError, ResponseErrorCode} from '../src/error/ResponseError.js';
-import {JsonSerializer} from '../src/serializer/JsonSerializer.js';
-import {Command} from '../src/Command.js';
+import {ClientError, ClientErrorCode} from '../src/error/client-error.js';
+import {ResponseError, ResponseErrorCode} from '../src/error/response-error.js';
+import {JsonSerializer} from '../src/serializer/json-serializer.js';
+import {Command} from '../src/command.js';
 import {BeanstalkCommand, BeanstalkResponseStatus, type ICommandResponse} from '../src/types.js';
 import {
 	validateDelay,

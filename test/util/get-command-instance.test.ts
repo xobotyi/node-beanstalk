@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vite-plus/test';
-import {getCommandInstance} from '../../src/util/getCommandInstance.js';
-import {CommandError, CommandErrorCode} from '../../src/error/CommandError.js';
+import {getCommandInstance} from '../../src/util/get-command-instance.js';
+import {CommandError, CommandErrorCode} from '../../src/error/command-error.js';
 import {BeanstalkCommand} from '../../src/types.js';
 
 describe('getCommandInstance', () => {

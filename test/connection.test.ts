@@ -1,8 +1,8 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vite-plus/test';
 import {EventEmitter, once} from 'node:events';
 import {type AddressInfo, createServer} from 'node:net';
-import {Connection} from '../src/Connection.js';
-import {ConnectionError, ConnectionErrorCode} from '../src/error/ConnectionError.js';
+import {Connection} from '../src/connection.js';
+import {ConnectionError, ConnectionErrorCode} from '../src/error/connection-error.js';
 
 describe('Connection', () => {
 	const server = createServer();

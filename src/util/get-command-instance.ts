@@ -1,6 +1,6 @@
 import {BeanstalkCommand, BeanstalkResponseStatus} from '../types.js';
-import {Command, type ICommandCtorOptions} from '../Command.js';
-import {CommandError, CommandErrorCode} from '../error/CommandError.js';
+import {Command, type ICommandCtorOptions} from '../command.js';
+import {CommandError, CommandErrorCode} from '../error/command-error.js';
 
 const commandConfig = {
 	[BeanstalkCommand.put]: {

@@ -1,4 +1,4 @@
-import {ErrorWithCode} from './ErrorWithCode.js';
+import {ErrorWithCode} from './error-with-code.js';
 
 export enum SerializerErrorCode {
 	ErrSerializeError = 'ErrSerializeError',

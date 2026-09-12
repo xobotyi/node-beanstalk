@@ -1,6 +1,6 @@
 import {BeanstalkDataResponseStatus, type BeanstalkResponseStatus, type ICommandResponseHeaders} from '../types.js';
 import {CRLF_BUFF} from '../const.js';
-import {ResponseError, ResponseErrorCode} from '../error/ResponseError.js';
+import {ResponseError, ResponseErrorCode} from '../error/response-error.js';
 
 /**
  * Parses an unsigned decimal header token into a safe integer no greater than `max`. Any other input, the empty token

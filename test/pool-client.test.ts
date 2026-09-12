@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from 'vite-plus/test';
 import {once} from 'node:events';
-import {PoolClient} from '../src/PoolClient.js';
-import {Connection, type ConnectionState} from '../src/Connection.js';
+import {PoolClient} from '../src/pool-client.js';
+import {Connection, type ConnectionState} from '../src/connection.js';
 
 class OpenConnection extends Connection {
 	public getState = vi.fn<() => ConnectionState>(() => 'open');

@@ -28,7 +28,6 @@ export default defineConfig({
 			'typescript/no-unsafe-return': 'off',
 			'typescript/no-unsafe-type-assertion': 'off',
 			'typescript/prefer-readonly-parameter-types': 'off',
-			'unicorn/filename-case': 'off',
 			'unicorn/prefer-event-target': 'off',
 			// conflicts with require-await: an async function without await must return a promise
 			'unicorn/no-useless-promise-resolve-reject': 'off',
