@@ -1,4 +1,4 @@
-import EventEmitter from 'events';
+import EventEmitter from 'node:events';
 import {
 	BeanstalkCommand,
 	BeanstalkJobState,
@@ -30,14 +30,14 @@ import {Connection} from './Connection.js';
 import {type ILinkedListNode, LinkedList} from './util/LinkedList.js';
 
 export class Client extends EventEmitter {
-	private _conn: Connection;
+	private readonly _conn: Connection;
 
 	private readonly _opt: Required<IClientCtorOptions>;
 
-	private readonly _queue: LinkedList<{
+	private readonly _queue = new LinkedList<{
 		resolve: () => void;
 		reject: (err?: Error) => void;
-	}> = new LinkedList();
+	}>();
 
 	constructor(options: IClientCtorOptions = {}, connection = new Connection()) {
 		super();
@@ -54,7 +54,7 @@ export class Client extends EventEmitter {
 	 * Indicates whether client is waiting for server response.
 	 */
 	get isWorking(): boolean {
-		return !!this._queue.size;
+		return this._queue.size > 0;
 	}
 
 	/**
@@ -188,7 +188,7 @@ export class Client extends EventEmitter {
 		validatePriority(priority);
 		validateDelay(delay);
 
-		if (typeof payload === 'undefined') {
+		if (payload === undefined) {
 			throw new TypeError(`payload has to be a non-undefined value`);
 		}
 
@@ -208,10 +208,10 @@ export class Client extends EventEmitter {
 			throw new BeanstalkError(`Server is in 'drain mode' and no longer accepting new jobs.`, result.status);
 		}
 
-		const state = delay !== 0 ? BeanstalkJobState.delayed : BeanstalkJobState.ready;
+		const state = delay === 0 ? BeanstalkJobState.ready : BeanstalkJobState.delayed;
 
 		return {
-			id: parseInt(result.headers[0], 10),
+			id: Number.parseInt(result.headers[0], 10),
 			state: result.status === BeanstalkResponseStatus.BURIED ? BeanstalkJobState.buried : state,
 		};
 	}
@@ -256,7 +256,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: parseInt(result.headers[0], 10),
+			id: Number.parseInt(result.headers[0], 10),
 			payload: result.data,
 		};
 	}
@@ -290,7 +290,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: parseInt(result.headers[0], 10),
+			id: Number.parseInt(result.headers[0], 10),
 			payload: result.data,
 		};
 	}
@@ -314,7 +314,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: parseInt(result.headers[0], 10),
+			id: Number.parseInt(result.headers[0], 10),
 			payload: result.data,
 		};
 	}
@@ -370,7 +370,7 @@ export class Client extends EventEmitter {
 			return BeanstalkJobState.buried;
 		}
 
-		return delay !== 0 ? BeanstalkJobState.delayed : BeanstalkJobState.ready;
+		return delay === 0 ? BeanstalkJobState.ready : BeanstalkJobState.delayed;
 	}
 
 	/**
@@ -429,7 +429,7 @@ export class Client extends EventEmitter {
 
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
-		return parseInt(result.headers[0], 10);
+		return Number.parseInt(result.headers[0], 10);
 	}
 
 	/**
@@ -471,7 +471,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: parseInt(result.headers[0], 10),
+			id: Number.parseInt(result.headers[0], 10),
 			payload: result.data,
 		};
 	}
@@ -491,7 +491,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: parseInt(result.headers[0], 10),
+			id: Number.parseInt(result.headers[0], 10),
 			payload: result.data,
 		};
 	}
@@ -511,7 +511,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: parseInt(result.headers[0], 10),
+			id: Number.parseInt(result.headers[0], 10),
 			payload: result.data,
 		};
 	}
@@ -531,7 +531,7 @@ export class Client extends EventEmitter {
 		}
 
 		return {
-			id: parseInt(result.headers[0], 10),
+			id: Number.parseInt(result.headers[0], 10),
 			payload: result.data,
 		};
 	}
@@ -551,7 +551,7 @@ export class Client extends EventEmitter {
 
 		const result = await this.dispatchCommand(cmd, [`${bound}`]);
 
-		return parseInt(result.headers[0], 10);
+		return Number.parseInt(result.headers[0], 10);
 	}
 
 	/**
@@ -759,7 +759,7 @@ export class Client extends EventEmitter {
 	 *
 	 * @category Client
 	 */
-	private readCommandResponse(): Promise<ICommandResponse> {
+	private async readCommandResponse(): Promise<ICommandResponse> {
 		const conn = this._conn;
 		return new Promise((resolve, reject) => {
 			let response: Buffer = Buffer.alloc(0);

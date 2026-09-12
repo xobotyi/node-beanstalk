@@ -18,7 +18,7 @@ export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | nu
 
 	if (hasData) {
 		const lengthHeader = headers.pop();
-		dataLength = parseInt(lengthHeader as string, 10);
+		dataLength = Number.parseInt(lengthHeader as string, 10);
 
 		if (Number.isNaN(dataLength)) {
 			throw new ResponseError(
@@ -33,6 +33,6 @@ export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | nu
 		status,
 		headers,
 		hasData,
-		dataLength: dataLength && (dataLength as number) + CRLF_BUFF.length,
+		dataLength: dataLength && dataLength + CRLF_BUFF.length,
 	};
 }

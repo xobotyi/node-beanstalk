@@ -12,7 +12,7 @@ describe('JsonSerializer', () => {
 		expect(new JsonSerializer()).toBeInstanceOf(JsonSerializer);
 	});
 
-	it('should have serialize and deserialize methods ', () => {
+	it('should have serialize and deserialize methods', () => {
 		const s = new JsonSerializer();
 		expect(s.serialize).toBeInstanceOf(Function);
 		expect(s.deserialize).toBeInstanceOf(Function);
@@ -52,9 +52,9 @@ describe('JsonSerializer', () => {
 			try {
 				s.serialize(obj);
 				throw new Error('not thrown!');
-			} catch (e: any) {
-				expect(e).toBeInstanceOf(SerializerError);
-				expect(e.code).toBe(SerializerErrorCode.ErrSerializeError);
+			} catch (error: any) {
+				expect(error).toBeInstanceOf(SerializerError);
+				expect(error.code).toBe(SerializerErrorCode.ErrSerializeError);
 			}
 		});
 	});
@@ -90,9 +90,9 @@ describe('JsonSerializer', () => {
 			try {
 				s.deserialize(Buffer.from('{"invalid json'));
 				throw new Error('not thrown!');
-			} catch (e: any) {
-				expect(e).toBeInstanceOf(SerializerError);
-				expect(e.code).toBe(SerializerErrorCode.ErrDeserializeError);
+			} catch (error: any) {
+				expect(error).toBeInstanceOf(SerializerError);
+				expect(error.code).toBe(SerializerErrorCode.ErrDeserializeError);
 			}
 		});
 	});

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vite-plus/test';
-import {Buffer} from 'buffer';
+import {Buffer} from 'node:buffer';
 import {parseResponseHeaders} from '../../src/util/parseResponseHeaders.js';
 import {BeanstalkResponseStatus, type ICommandResponseHeaders} from '../../src/types.js';
 import {type ResponseError, ResponseErrorCode} from '../../src/error/ResponseError.js';
@@ -61,8 +61,8 @@ describe('parseResponseHeaders', () => {
 		try {
 			parseResponseHeaders(Buffer.from('OK heY!\r\n'));
 			throw new Error('not thrown!');
-		} catch (e: unknown) {
-			expect((e as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
+		} catch (error: unknown) {
+			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
 		}
 	});
 });

@@ -11,12 +11,12 @@ export class Pool {
 
 	private readonly _clients: PoolClient[] = [];
 
-	private readonly _idleClients: LinkedList<PoolClient> = new LinkedList();
+	private readonly _idleClients = new LinkedList<PoolClient>();
 
-	private readonly _pendingQueue: LinkedList<{
+	private readonly _pendingQueue = new LinkedList<{
 		resolve: (client: PoolClient) => void;
 		reject: (err: PoolError) => void;
-	}> = new LinkedList();
+	}>();
 
 	private _state: PoolState = 'live';
 
@@ -99,7 +99,7 @@ export class Pool {
 			throw new PoolError(`Unable to disconnect pool that is not live, current state: ${this._state}`);
 		}
 
-		if (this._pendingQueue.size) {
+		if (this._pendingQueue.size > 0) {
 			if (!force) {
 				// in case non-forced disconnect - we wait in queue
 				await this.createPendingPromise();
@@ -116,7 +116,7 @@ export class Pool {
 		this._idleClients.truncate();
 
 		// disconnect all existing clients
-		await Promise.allSettled(this._clients.splice(0, this._clients.length).map((client) => client.disconnect(force)));
+		await Promise.allSettled(this._clients.splice(0).map(async (client) => client.disconnect(force)));
 
 		this._state = 'disconnected';
 	}
@@ -132,13 +132,13 @@ export class Pool {
 		this._state = 'live';
 	}
 
-	private createPendingPromise(): Promise<PoolClient> {
+	private async createPendingPromise(): Promise<PoolClient> {
 		return new Promise((resolve, reject) => {
 			this._pendingQueue.push({resolve, reject});
 		});
 	}
 
-	private handleClientRelease = (client: PoolClient): void => {
+	private readonly handleClientRelease = (client: PoolClient): void => {
 		if (this._state !== 'live') return;
 
 		const pending = this._pendingQueue.unshift();

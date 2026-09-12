@@ -1,4 +1,4 @@
-import {Buffer} from 'buffer';
+import {Buffer} from 'node:buffer';
 import {beforeEach, describe, expect, it, vi, type MockInstance} from 'vite-plus/test';
 import {BeanstalkError} from '../src/error/BeanstalkError.js';
 import {Connection, type ConnectionState} from '../src/Connection.js';
@@ -68,9 +68,9 @@ describe('Client', () => {
 			try {
 				await c.connect();
 				throw new Error('not thrown!');
-			} catch (e: any) {
-				expect(e).toBeInstanceOf(ClientError);
-				expect(e.code).toBe(ClientErrorCode.ErrConnectionNotClosed);
+			} catch (error: any) {
+				expect(error).toBeInstanceOf(ClientError);
+				expect(error.code).toBe(ClientErrorCode.ErrConnectionNotClosed);
 			}
 		});
 	});
@@ -95,9 +95,9 @@ describe('Client', () => {
 			try {
 				await c.disconnect();
 				throw new Error('not thrown!');
-			} catch (e: any) {
-				expect(e).toBeInstanceOf(ClientError);
-				expect(e.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
+			} catch (error: any) {
+				expect(error).toBeInstanceOf(ClientError);
+				expect(error.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
 			}
 		});
 
@@ -107,12 +107,12 @@ describe('Client', () => {
 			const c = new Client(undefined, conn);
 
 			c.bury(123).catch(() => {});
-			const queued = [c.bury(123), c.bury(123)].map((promise) =>
+			const queued = [c.bury(123), c.bury(123)].map(async (promise) =>
 				promise.then(
 					() => {
 						throw new Error('not thrown!');
 					},
-					(e) => e,
+					(error) => error,
 				),
 			);
 
@@ -163,7 +163,7 @@ describe('Client', () => {
 			const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
 			readCommandResponseMock.mockImplementation(
-				() =>
+				async () =>
 					new Promise((resolve) => {
 						setTimeout(() => {
 							resolve({
@@ -192,7 +192,7 @@ describe('Client', () => {
 			const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
 			readCommandResponseMock.mockImplementation(
-				() =>
+				async () =>
 					new Promise((resolve) => {
 						setTimeout(() => {
 							resolve({
@@ -240,17 +240,17 @@ describe('Client', () => {
 				{
 					name: 'number',
 					in: [123],
-					out: Buffer.from(`${JSON.stringify(123)}`),
+					out: Buffer.from(JSON.stringify(123)),
 				},
 				{
 					name: 'string',
 					in: ['some value'],
-					out: Buffer.from(`${JSON.stringify('some value')}`),
+					out: Buffer.from(JSON.stringify('some value')),
 				},
 				{
 					name: 'mixed object',
 					in: [{baz: ['bax', 123]}],
-					out: Buffer.from(`${JSON.stringify({baz: ['bax', 123]})}`),
+					out: Buffer.from(JSON.stringify({baz: ['bax', 123]})),
 				},
 			];
 
@@ -264,9 +264,9 @@ describe('Client', () => {
 				try {
 					payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
 					throw new Error('not thrown!');
-				} catch (e: any) {
-					expect(e).toBeInstanceOf(ClientError);
-					expect(e.code).toBe(ClientErrorCode.ErrPayloadTooBig);
+				} catch (error: any) {
+					expect(error).toBeInstanceOf(ClientError);
+					expect(error.code).toBe(ClientErrorCode.ErrPayloadTooBig);
 				}
 			});
 		});
@@ -304,17 +304,17 @@ describe('Client', () => {
 				try {
 					payloadToBuffer(123);
 					throw new Error('not thrown!');
-				} catch (e: any) {
-					expect(e).toBeInstanceOf(ClientError);
-					expect(e.code).toBe(ClientErrorCode.ErrInvalidPayload);
+				} catch (error: any) {
+					expect(error).toBeInstanceOf(ClientError);
+					expect(error.code).toBe(ClientErrorCode.ErrInvalidPayload);
 				}
 
 				try {
 					payloadToBuffer({baz: ['bax', 123]});
 					throw new Error('not thrown!');
-				} catch (e: any) {
-					expect(e).toBeInstanceOf(ClientError);
-					expect(e.code).toBe(ClientErrorCode.ErrInvalidPayload);
+				} catch (error: any) {
+					expect(error).toBeInstanceOf(ClientError);
+					expect(error.code).toBe(ClientErrorCode.ErrInvalidPayload);
 				}
 			});
 
@@ -322,9 +322,9 @@ describe('Client', () => {
 				try {
 					payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
 					throw new Error('not thrown!');
-				} catch (e: any) {
-					expect(e).toBeInstanceOf(ClientError);
-					expect(e.code).toBe(ClientErrorCode.ErrPayloadTooBig);
+				} catch (error: any) {
+					expect(error).toBeInstanceOf(ClientError);
+					expect(error.code).toBe(ClientErrorCode.ErrPayloadTooBig);
 				}
 			});
 		});
@@ -411,9 +411,9 @@ describe('Client', () => {
 				.then(() => {
 					throw new Error('not thrown!');
 				})
-				.catch((e) => {
-					expect(e).toBeInstanceOf(ClientError);
-					expect(e.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
+				.catch((error) => {
+					expect(error).toBeInstanceOf(ClientError);
+					expect(error.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
 				});
 		});
 
@@ -502,7 +502,7 @@ describe('Client', () => {
 				);
 
 				expect(await c.put('payload', 1, 0, 0)).toStrictEqual({
-					id: 100500,
+					id: 100_500,
 					state: BeanstalkJobState.ready,
 				});
 
@@ -514,7 +514,7 @@ describe('Client', () => {
 				);
 
 				expect(await c.put('payload', 1, 2, 3)).toStrictEqual({
-					id: 100500,
+					id: 100_500,
 					state: BeanstalkJobState.delayed,
 				});
 
@@ -526,7 +526,7 @@ describe('Client', () => {
 				);
 
 				expect(await c.put('payload')).toStrictEqual({
-					id: 100500,
+					id: 100_500,
 					state: BeanstalkJobState.buried,
 				});
 			});
@@ -562,8 +562,8 @@ describe('Client', () => {
 					.then(() => {
 						throw new Error('not thrown');
 					})
-					.catch((e) => {
-						expect(e).toStrictEqual(new TypeError('payload has to be a non-undefined value'));
+					.catch((error) => {
+						expect(error).toStrictEqual(new TypeError('payload has to be a non-undefined value'));
 					});
 			});
 
@@ -580,8 +580,8 @@ describe('Client', () => {
 					.then(() => {
 						throw new Error('not thrown');
 					})
-					.catch((e) => {
-						expect(e).toBeInstanceOf(BeanstalkError);
+					.catch((error) => {
+						expect(error).toBeInstanceOf(BeanstalkError);
 					});
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
@@ -594,8 +594,8 @@ describe('Client', () => {
 					.then(() => {
 						throw new Error('not thrown');
 					})
-					.catch((e) => {
-						expect(e).toBeInstanceOf(BeanstalkError);
+					.catch((error) => {
+						expect(error).toBeInstanceOf(BeanstalkError);
 					});
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
@@ -608,8 +608,8 @@ describe('Client', () => {
 					.then(() => {
 						throw new Error('not thrown');
 					})
-					.catch((e) => {
-						expect(e).toBeInstanceOf(BeanstalkError);
+					.catch((error) => {
+						expect(error).toBeInstanceOf(BeanstalkError);
 					});
 			});
 		});
@@ -624,7 +624,7 @@ describe('Client', () => {
 					}),
 				);
 
-				expect(await c.reserve()).toStrictEqual({id: 100500, payload: 'hey there'});
+				expect(await c.reserve()).toStrictEqual({id: 100_500, payload: 'hey there'});
 			});
 
 			it('should return null in case no job available', async () => {
@@ -650,8 +650,8 @@ describe('Client', () => {
 					.then(() => {
 						throw new Error('not thrown');
 					})
-					.catch((e) => {
-						expect(e).toBeInstanceOf(BeanstalkError);
+					.catch((error) => {
+						expect(error).toBeInstanceOf(BeanstalkError);
 					});
 			});
 		});
@@ -682,7 +682,7 @@ describe('Client', () => {
 				);
 
 				expect(await c.reserveWithTimeout(123)).toStrictEqual({
-					id: 100500,
+					id: 100_500,
 					payload: 'hey there',
 				});
 			});
@@ -711,8 +711,8 @@ describe('Client', () => {
 					.then(() => {
 						throw new Error('not thrown');
 					})
-					.catch((e) => {
-						expect(e).toBeInstanceOf(BeanstalkError);
+					.catch((error) => {
+						expect(error).toBeInstanceOf(BeanstalkError);
 					});
 			});
 		});
@@ -1029,10 +1029,10 @@ describe('Client', () => {
 					}),
 				);
 
-				await c.peek(100500);
+				await c.peek(100_500);
 
 				expect(validateJobId).toHaveBeenCalledTimes(1);
-				expect(validateJobId).toHaveBeenCalledWith(100500);
+				expect(validateJobId).toHaveBeenCalledWith(100_500);
 			});
 
 			it('should return job id and payload', async () => {
@@ -1043,8 +1043,8 @@ describe('Client', () => {
 						data: 'some job payload',
 					}),
 				);
-				expect(await c.peek(100500)).toStrictEqual({
-					id: 100500,
+				expect(await c.peek(100_500)).toStrictEqual({
+					id: 100_500,
 					payload: 'some job payload',
 				});
 			});
@@ -1056,7 +1056,7 @@ describe('Client', () => {
 						headers: [],
 					}),
 				);
-				expect(await c.peek(100500)).toBe(null);
+				expect(await c.peek(100_500)).toBe(null);
 			});
 		});
 
@@ -1070,7 +1070,7 @@ describe('Client', () => {
 					}),
 				);
 				expect(await c.peekReady()).toStrictEqual({
-					id: 100500,
+					id: 100_500,
 					payload: 'some job payload',
 				});
 			});
@@ -1096,7 +1096,7 @@ describe('Client', () => {
 					}),
 				);
 				expect(await c.peekDelayed()).toStrictEqual({
-					id: 100500,
+					id: 100_500,
 					payload: 'some job payload',
 				});
 			});
@@ -1122,7 +1122,7 @@ describe('Client', () => {
 					}),
 				);
 				expect(await c.peekBuried()).toStrictEqual({
-					id: 100500,
+					id: 100_500,
 					payload: 'some job payload',
 				});
 			});
@@ -1146,7 +1146,7 @@ describe('Client', () => {
 						headers: ['100500'],
 					}),
 				);
-				expect(await c.kick(50)).toBe(100500);
+				expect(await c.kick(50)).toBe(100_500);
 			});
 		});
 
@@ -1160,10 +1160,10 @@ describe('Client', () => {
 					}),
 				);
 
-				await c.kickJob(100500);
+				await c.kickJob(100_500);
 
 				expect(validateJobId).toHaveBeenCalledTimes(1);
-				expect(validateJobId).toHaveBeenCalledWith(100500);
+				expect(validateJobId).toHaveBeenCalledWith(100_500);
 			});
 
 			it('should return boolean representing kick result', async () => {
@@ -1173,7 +1173,7 @@ describe('Client', () => {
 						headers: ['100500'],
 					}),
 				);
-				expect(await c.kickJob(100500)).toBe(true);
+				expect(await c.kickJob(100_500)).toBe(true);
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
@@ -1181,7 +1181,7 @@ describe('Client', () => {
 						headers: ['100500'],
 					}),
 				);
-				expect(await c.kickJob(100500)).toBe(false);
+				expect(await c.kickJob(100_500)).toBe(false);
 			});
 		});
 
@@ -1246,10 +1246,10 @@ describe('Client', () => {
 					}),
 				);
 
-				await c.statsJob(12345);
+				await c.statsJob(12_345);
 
 				expect(validateJobId).toHaveBeenCalledTimes(1);
-				expect(validateJobId).toHaveBeenCalledWith(12345);
+				expect(validateJobId).toHaveBeenCalledWith(12_345);
 			});
 
 			it('should return provided data', async () => {
@@ -1260,7 +1260,7 @@ describe('Client', () => {
 						data: 'this is some data',
 					}),
 				);
-				expect(await c.statsJob(12345)).toBe('this is some data');
+				expect(await c.statsJob(12_345)).toBe('this is some data');
 			});
 
 			it('should return null in case job not found', async () => {
@@ -1270,7 +1270,7 @@ describe('Client', () => {
 						headers: [],
 					}),
 				);
-				expect(await c.statsJob(12345)).toBe(null);
+				expect(await c.statsJob(12_345)).toBe(null);
 			});
 		});
 
@@ -1368,7 +1368,7 @@ describe('Client', () => {
 
 		let call = 5;
 		readCommandResponseMock.mockImplementation(
-			() =>
+			async () =>
 				new Promise((resolve) => {
 					setTimeout(
 						() => {
@@ -1409,7 +1409,7 @@ describe('Client', () => {
 		// here were rejecting promise in the middle, it should not affect the queue advancing
 		call = 5;
 		readCommandResponseMock.mockImplementation(
-			() =>
+			async () =>
 				new Promise((resolve, reject) => {
 					const idx = call--;
 

@@ -1,4 +1,4 @@
-import EventEmitter from 'events';
+import EventEmitter from 'node:events';
 import {beforeEach, describe, expect, it, vi, type MockedClass} from 'vite-plus/test';
 import {PoolClient} from '../src/PoolClient.js';
 import {Pool} from '../src/index.js';
@@ -11,9 +11,9 @@ class PoolClientMock extends EventEmitter {
 		this.emit('release', this);
 	});
 
-	connect = vi.fn(() => Promise.resolve());
+	connect = vi.fn(async () => Promise.resolve());
 
-	disconnect = vi.fn(() => Promise.resolve());
+	disconnect = vi.fn(async () => Promise.resolve());
 }
 
 describe('Pool', () => {
@@ -24,7 +24,9 @@ describe('Pool', () => {
 			return new PoolClientMock() as any;
 		});
 		PC.mockClear();
-		PC.mock.instances.forEach((i) => i.releaseClient());
+		PC.mock.instances.forEach((i) => {
+			i.releaseClient();
+		});
 	});
 
 	it('should be defined', () => {
@@ -133,8 +135,8 @@ describe('Pool', () => {
 				.then(() => {
 					throw new Error('not thrown');
 				})
-				.catch((err) => {
-					expect(err).toBeInstanceOf(PoolError);
+				.catch((error) => {
+					expect(error).toBeInstanceOf(PoolError);
 				});
 		});
 	});
@@ -150,8 +152,8 @@ describe('Pool', () => {
 				.then(() => {
 					throw new Error('not thrown');
 				})
-				.catch((err) => {
-					expect(err).toBeInstanceOf(PoolError);
+				.catch((error) => {
+					expect(error).toBeInstanceOf(PoolError);
 				});
 		});
 
@@ -194,8 +196,12 @@ describe('Pool', () => {
 			expect(c1.disconnect).toHaveBeenCalledWith(true);
 			expect(c2.disconnect).toHaveBeenCalledWith(true);
 
-			expect(await c3.catch((e) => e)).toStrictEqual(new PoolError('Unable to gain client, pool is disconnecting.'));
-			expect(await c4.catch((e) => e)).toStrictEqual(new PoolError('Unable to gain client, pool is disconnecting.'));
+			expect(await c3.catch((error) => error)).toStrictEqual(
+				new PoolError('Unable to gain client, pool is disconnecting.'),
+			);
+			expect(await c4.catch((error) => error)).toStrictEqual(
+				new PoolError('Unable to gain client, pool is disconnecting.'),
+			);
 		});
 
 		it('should await queue resolve during non-forced disconnect', async () => {
@@ -236,7 +242,9 @@ describe('Pool', () => {
 		it('should throw in case called on live pool', async () => {
 			const p = new Pool({capacity: 2});
 
-			expect(() => p.restore()).toThrow(PoolError);
+			expect(() => {
+				p.restore();
+			}).toThrow(PoolError);
 		});
 
 		it('should restore disconnected pool back to live', async () => {

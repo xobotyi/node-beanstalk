@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vite-plus/test';
-import {Buffer} from 'buffer';
+import {Buffer} from 'node:buffer';
 import {dump} from 'js-yaml';
 import {Command} from '../src/Command.js';
 import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types.js';
@@ -21,9 +21,9 @@ describe('Command', () => {
 				// @ts-expect-error testing incompatible command
 				new Command('totally unknown command');
 				throw new Error('not thrown!');
-			} catch (e: any) {
-				expect(e).toBeInstanceOf(CommandError);
-				expect(e.code).toBe(CommandErrorCode.ErrCommandUnknown);
+			} catch (error: any) {
+				expect(error).toBeInstanceOf(CommandError);
+				expect(error.code).toBe(CommandErrorCode.ErrCommandUnknown);
 			}
 		});
 
@@ -34,9 +34,9 @@ describe('Command', () => {
 					expectedStatus: ['totally unknown status'],
 				});
 				throw new Error('not thrown!');
-			} catch (e: any) {
-				expect(e).toBeInstanceOf(CommandError);
-				expect(e.code).toBe(CommandErrorCode.ErrResponseStatusUnknown);
+			} catch (error: any) {
+				expect(error).toBeInstanceOf(CommandError);
+				expect(error.code).toBe(CommandErrorCode.ErrResponseStatusUnknown);
 			}
 		});
 	});
@@ -85,9 +85,9 @@ describe('Command', () => {
 			try {
 				cmd.handleResponse({status: BeanstalkResponseStatus.UNKNOWN_COMMAND, headers: []});
 				throw new Error('not thrown!');
-			} catch (e: any) {
-				expect(e).toBeInstanceOf(CommandError);
-				expect(e.code).toBe(CommandErrorCode.ErrErrorResponseStatus);
+			} catch (error: any) {
+				expect(error).toBeInstanceOf(CommandError);
+				expect(error.code).toBe(CommandErrorCode.ErrErrorResponseStatus);
 			}
 		});
 
@@ -97,9 +97,9 @@ describe('Command', () => {
 			try {
 				cmd.handleResponse({status: BeanstalkResponseStatus.OK, headers: []});
 				throw new Error('not thrown!');
-			} catch (e: any) {
-				expect(e).toBeInstanceOf(CommandError);
-				expect(e.code).toBe(CommandErrorCode.ErrUnexpectedResponseStatus);
+			} catch (error: any) {
+				expect(error).toBeInstanceOf(CommandError);
+				expect(error.code).toBe(CommandErrorCode.ErrUnexpectedResponseStatus);
 			}
 		});
 

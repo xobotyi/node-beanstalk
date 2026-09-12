@@ -1,6 +1,6 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vite-plus/test';
-import {EventEmitter} from 'events';
-import {type AddressInfo, createServer} from 'net';
+import {EventEmitter} from 'node:events';
+import {type AddressInfo, createServer} from 'node:net';
 import {Connection} from '../src/Connection.js';
 import {ConnectionError} from '../src/error/ConnectionError.js';
 
@@ -64,9 +64,9 @@ describe('Connection', () => {
 				.then(() => {
 					throw new Error('not thrown!');
 				})
-				.catch((err: ConnectionError) => {
-					expect(err).toBeInstanceOf(ConnectionError);
-					expect(err.code).toBe('ErrAlreadyOpened');
+				.catch((error: ConnectionError) => {
+					expect(error).toBeInstanceOf(ConnectionError);
+					expect(error.code).toBe('ErrAlreadyOpened');
 				});
 		});
 
@@ -78,9 +78,9 @@ describe('Connection', () => {
 				.then(() => {
 					throw new Error('not thrown!');
 				})
-				.catch((err: ConnectionError) => {
-					expect(err).toBeInstanceOf(ConnectionError);
-					expect(err.code).toBe('ErrChangingState');
+				.catch((error: ConnectionError) => {
+					expect(error).toBeInstanceOf(ConnectionError);
+					expect(error.code).toBe('ErrChangingState');
 				});
 		});
 	});
@@ -104,9 +104,9 @@ describe('Connection', () => {
 				.then(() => {
 					throw new Error('not thrown!');
 				})
-				.catch((err: ConnectionError) => {
-					expect(err).toBeInstanceOf(ConnectionError);
-					expect(err.code).toBe('ErrAlreadyClosed');
+				.catch((error: ConnectionError) => {
+					expect(error).toBeInstanceOf(ConnectionError);
+					expect(error.code).toBe('ErrAlreadyClosed');
 				});
 		});
 
@@ -118,9 +118,9 @@ describe('Connection', () => {
 				.then(() => {
 					throw new Error('not thrown!');
 				})
-				.catch((err: ConnectionError) => {
-					expect(err).toBeInstanceOf(ConnectionError);
-					expect(err.code).toBe('ErrChangingState');
+				.catch((error: ConnectionError) => {
+					expect(error).toBeInstanceOf(ConnectionError);
+					expect(error.code).toBe('ErrChangingState');
 				});
 		});
 	});
@@ -134,9 +134,9 @@ describe('Connection', () => {
 				.then(() => {
 					throw new Error('not thrown!');
 				})
-				.catch((err: ConnectionError) => {
-					expect(err).toBeInstanceOf(ConnectionError);
-					expect(err.code).toBe('ErrNotOpened');
+				.catch((error: ConnectionError) => {
+					expect(error).toBeInstanceOf(ConnectionError);
+					expect(error.code).toBe('ErrNotOpened');
 				});
 		});
 
@@ -155,7 +155,11 @@ describe('Connection', () => {
 	describe('events', () => {
 		it('should emit `open` event on connection opened', async () => {
 			const conn = getNewConnection();
-			const opened = new Promise<unknown[]>((resolve) => conn.on('open', (...args) => resolve(args)));
+			const opened = new Promise<unknown[]>((resolve) =>
+				conn.on('open', (...args) => {
+					resolve(args);
+				}),
+			);
 
 			await conn.open(address.port, address.address);
 

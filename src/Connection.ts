@@ -1,5 +1,5 @@
-import {EventEmitter} from 'events';
-import {Socket} from 'net';
+import {EventEmitter} from 'node:events';
+import {Socket} from 'node:net';
 import {ConnectionError, ConnectionErrorCode} from './error/ConnectionError.js';
 
 export interface Connection {
@@ -73,7 +73,9 @@ export class Connection extends EventEmitter {
 				.setNoDelay(true)
 				.setKeepAlive(true)
 				.on('close', () => this.emit('close'))
-				.on('error', (err) => reject(err))
+				.on('error', (err) => {
+					reject(err);
+				})
 				.on('data', (data) => this.emit('data', data))
 				.connect(port, host, () => {
 					socket.off('error', reject).on('error', (err: any) => {

@@ -19,7 +19,7 @@ export const JOB_ID_MIN = 1;
 
 export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
 	host: '127.0.0.1',
-	port: 11300,
+	port: 11_300,
 	defaultPriority: 1024,
 	defaultDelay: 0,
 	defaultTTR: 30,
