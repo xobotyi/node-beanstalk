@@ -68,15 +68,5 @@
       "@commitlint/config-conventional"
     ]
   },
-  "release": {
-    "plugins": [
-      "@semantic-release/commit-analyzer",
-      "@semantic-release/release-notes-generator",
-      "@semantic-release/changelog",
-      "@semantic-release/npm",
-      "@semantic-release/git",
-      "@semantic-release/github"
-    ]
-  },
   "packageManager": "yarn@4.1.0"
 }
