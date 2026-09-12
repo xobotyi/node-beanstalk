@@ -52,7 +52,6 @@ export default defineConfig({
 			'typescript/await-thenable': 'off',
 			'typescript/class-literal-property-style': 'off',
 			'typescript/consistent-type-assertions': 'off',
-			'typescript/consistent-type-definitions': 'off',
 			'typescript/dot-notation': 'off',
 			'typescript/no-confusing-void-expression': 'off',
 			'typescript/no-deprecated': 'off',
