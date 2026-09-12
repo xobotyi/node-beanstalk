@@ -59,6 +59,39 @@ describe('LinkedList', () => {
 		expect(list.size).toBe(0);
 	});
 
+	it('list.removeNode should ignore a node that already left the list', () => {
+		const list = new LinkedList();
+		const stale = list.push('abc');
+
+		list.truncate();
+		const live = list.push('def');
+
+		expect(list.removeNode(stale)).toBeUndefined();
+		expect(list.size).toBe(1);
+		expect(list.head).toBe(live);
+		expect(list.tail).toBe(live);
+		expect(live.list).toBe(list);
+	});
+
+	it('list.removeNode should ignore a node that belongs to another list', () => {
+		const list = new LinkedList();
+		const other = new LinkedList();
+		const mine = list.push('abc');
+		const first = other.push('def');
+		const middle = other.push('ghi');
+		const last = other.push('jkl');
+
+		expect(list.removeNode(middle)).toBeUndefined();
+		expect(list.size).toBe(1);
+		expect(list.head).toBe(mine);
+		expect(other.size).toBe(3);
+		expect(first.next).toBe(middle);
+		expect(middle.prev).toBe(first);
+		expect(middle.next).toBe(last);
+		expect(last.prev).toBe(middle);
+		expect(middle.list).toBe(other);
+	});
+
 	it('list.truncate should empty list and dereference its nodes', () => {
 		const list = new LinkedList();
 
