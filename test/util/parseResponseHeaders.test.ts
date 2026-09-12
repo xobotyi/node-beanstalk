@@ -3,7 +3,7 @@ import {Buffer} from 'node:buffer';
 import {parseResponseHeaders} from '../../src/util/parseResponseHeaders.js';
 import {BeanstalkResponseStatus, type ICommandResponseHeaders} from '../../src/types.js';
 import {CRLF_BUFF} from '../../src/const.js';
-import {type ResponseError, ResponseErrorCode} from '../../src/error/ResponseError.js';
+import {ResponseErrorCode} from '../../src/error/ResponseError.js';
 
 describe('parseResponseHeaders', () => {
 	it('should be defined', () => {
@@ -52,28 +52,20 @@ describe('parseResponseHeaders', () => {
 		},
 	];
 
-	for (const test of tableTests) {
-		it(test.name, () => {
-			expect(parseResponseHeaders(test.in)).toStrictEqual(test.out);
-		});
-	}
+	it.each(tableTests)('$name', (test) => {
+		expect(parseResponseHeaders(test.in)).toStrictEqual(test.out);
+	});
 
 	it('should throw in case data length is malformed', () => {
-		try {
-			parseResponseHeaders(Buffer.from('OK heY!\r\n'));
-			throw new Error('not thrown!');
-		} catch (error: unknown) {
-			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
-		}
+		const throwing = () => parseResponseHeaders(Buffer.from('OK heY!\r\n'));
+
+		expect(throwing).toThrow(expect.objectContaining({code: ResponseErrorCode.ErrInvalidBodyLength}));
 	});
 
 	it('should throw in case data length has trailing garbage', () => {
-		try {
-			parseResponseHeaders(Buffer.from('OK 100abc\r\n'));
-			throw new Error('not thrown!');
-		} catch (error: unknown) {
-			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
-		}
+		expect(() => parseResponseHeaders(Buffer.from('OK 100abc\r\n'))).toThrow(
+			expect.objectContaining({code: ResponseErrorCode.ErrInvalidBodyLength}),
+		);
 	});
 
 	it('should accept the largest data length whose sum with CRLF is a safe integer', () => {
@@ -89,20 +81,14 @@ describe('parseResponseHeaders', () => {
 	});
 
 	it('should throw in case data length plus CRLF is not a safe integer', () => {
-		try {
-			parseResponseHeaders(Buffer.from(`OK ${Number.MAX_SAFE_INTEGER}\r\n`));
-			throw new Error('not thrown!');
-		} catch (error: unknown) {
-			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
-		}
+		expect(() => parseResponseHeaders(Buffer.from(`OK ${Number.MAX_SAFE_INTEGER}\r\n`))).toThrow(
+			expect.objectContaining({code: ResponseErrorCode.ErrInvalidBodyLength}),
+		);
 	});
 
 	it('should throw in case data length is empty', () => {
-		try {
-			parseResponseHeaders(Buffer.from('OK \r\n'));
-			throw new Error('not thrown!');
-		} catch (error: unknown) {
-			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
-		}
+		expect(() => parseResponseHeaders(Buffer.from('OK \r\n'))).toThrow(
+			expect.objectContaining({code: ResponseErrorCode.ErrInvalidBodyLength}),
+		);
 	});
 });

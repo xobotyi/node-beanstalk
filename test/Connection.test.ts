@@ -2,7 +2,7 @@ import {afterAll, beforeAll, describe, expect, it} from 'vite-plus/test';
 import {EventEmitter, once} from 'node:events';
 import {type AddressInfo, createServer} from 'node:net';
 import {Connection} from '../src/Connection.js';
-import {ConnectionError} from '../src/error/ConnectionError.js';
+import {ConnectionError, ConnectionErrorCode} from '../src/error/ConnectionError.js';
 
 describe('Connection', () => {
 	const server = createServer();
@@ -67,29 +67,19 @@ describe('Connection', () => {
 			await conn.open(address.port, address.address);
 			expect(conn.getState()).toBe('open');
 
-			await conn
-				.open(address.port, address.address)
-				.then(() => {
-					throw new Error('not thrown!');
-				})
-				.catch((error: ConnectionError) => {
-					expect(error).toBeInstanceOf(ConnectionError);
-					expect(error.code).toBe('ErrAlreadyOpened');
-				});
+			const rejected = conn.open(address.port, address.address);
+
+			await expect(rejected).rejects.toBeInstanceOf(ConnectionError);
+			await expect(rejected).rejects.toHaveProperty('code', ConnectionErrorCode.ErrAlreadyOpened);
 		});
 
 		it('should throw on attempt to connect while opening or closing connection', async () => {
 			const conn = getNewConnection();
-			conn.open(address.port, address.address);
-			await conn
-				.open(address.port, address.address)
-				.then(() => {
-					throw new Error('not thrown!');
-				})
-				.catch((error: ConnectionError) => {
-					expect(error).toBeInstanceOf(ConnectionError);
-					expect(error.code).toBe('ErrChangingState');
-				});
+			void conn.open(address.port, address.address);
+			const rejected = conn.open(address.port, address.address);
+
+			await expect(rejected).rejects.toBeInstanceOf(ConnectionError);
+			await expect(rejected).rejects.toHaveProperty('code', ConnectionErrorCode.ErrChangingState);
 		});
 	});
 
@@ -107,29 +97,19 @@ describe('Connection', () => {
 			await conn.close();
 			expect(conn.getState()).toBe('closed');
 
-			await conn
-				.close()
-				.then(() => {
-					throw new Error('not thrown!');
-				})
-				.catch((error: ConnectionError) => {
-					expect(error).toBeInstanceOf(ConnectionError);
-					expect(error.code).toBe('ErrAlreadyClosed');
-				});
+			const rejected = conn.close();
+
+			await expect(rejected).rejects.toBeInstanceOf(ConnectionError);
+			await expect(rejected).rejects.toHaveProperty('code', ConnectionErrorCode.ErrAlreadyClosed);
 		});
 
 		it('should throw on attempt to connect while opening or closing connection', async () => {
 			const conn = getNewConnection();
-			conn.open(address.port, address.address);
-			await conn
-				.close()
-				.then(() => {
-					throw new Error('not thrown!');
-				})
-				.catch((error: ConnectionError) => {
-					expect(error).toBeInstanceOf(ConnectionError);
-					expect(error.code).toBe('ErrChangingState');
-				});
+			void conn.open(address.port, address.address);
+			const rejected = conn.close();
+
+			await expect(rejected).rejects.toBeInstanceOf(ConnectionError);
+			await expect(rejected).rejects.toHaveProperty('code', ConnectionErrorCode.ErrChangingState);
 		});
 	});
 
@@ -137,15 +117,10 @@ describe('Connection', () => {
 		it('should throw in case of calling on unopened connection', async () => {
 			const conn = getNewConnection();
 
-			await conn
-				.write(Buffer.from('hey!'))
-				.then(() => {
-					throw new Error('not thrown!');
-				})
-				.catch((error: ConnectionError) => {
-					expect(error).toBeInstanceOf(ConnectionError);
-					expect(error.code).toBe('ErrNotOpened');
-				});
+			const rejected = conn.write(Buffer.from('hey!'));
+
+			await expect(rejected).rejects.toBeInstanceOf(ConnectionError);
+			await expect(rejected).rejects.toHaveProperty('code', ConnectionErrorCode.ErrNotOpened);
 		});
 
 		it('should write given buffer to underlying socket', async () => {
@@ -245,7 +220,7 @@ describe('Connection', () => {
 			await conn.open(address.port, address.address);
 			await conn.close();
 
-			await closed;
+			await expect(closed).resolves.toStrictEqual([]);
 		});
 	});
 });

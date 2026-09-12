@@ -66,11 +66,9 @@ describe('Command', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			it(test.name, () => {
-				expect(cmd.buildCommandBuffer(...test.in)).toStrictEqual(test.out);
-			});
-		}
+		it.each(tableTests)('$name', (test) => {
+			expect(cmd.buildCommandBuffer(...test.in)).toStrictEqual(test.out);
+		});
 	});
 
 	describe('handleResponse', () => {
@@ -171,7 +169,7 @@ describe('Command', () => {
 			});
 		});
 
-		it('should parse json body with given serializer', () => {
+		it('should parse yaml body', () => {
 			const cmd = new Command(BeanstalkCommand.bury, {
 				expectedStatus: [BeanstalkResponseStatus.BURIED],
 				yamlBody: true,
