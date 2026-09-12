@@ -11,11 +11,11 @@ import {
 	type Serializer,
 } from './types.js';
 
-export interface ICommandCtorOptions<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> {
+export type ICommandCtorOptions<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> = {
 	payloadBody?: boolean;
 	yamlBody?: boolean;
 	expectedStatus?: readonly R[];
-}
+};
 
 export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> {
 	private readonly commandName: BeanstalkCommand;

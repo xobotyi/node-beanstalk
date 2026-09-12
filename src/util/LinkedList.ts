@@ -1,10 +1,10 @@
-export interface ILinkedListNode<V = any> {
+export type ILinkedListNode<V = any> = {
 	readonly value: V;
 
 	list: LinkedList | undefined;
 	next: ILinkedListNode | undefined;
 	prev: ILinkedListNode | undefined;
-}
+};
 
 export class LinkedList<V = any> {
 	head: ILinkedListNode<V> | undefined;
