@@ -35,11 +35,12 @@ export type IClientCtorOptions = {
 	defaultTTR?: number;
 
 	/**
-	 * Serializer that will process job data
+	 * Serializer that will process job data. Pass `undefined` explicitly to disable serialization: outgoing payloads
+	 * must then be strings, and received payloads stay raw buffers.
 	 *
 	 * @default JsonSerializer
 	 */
-	serializer?: Serializer;
+	serializer?: Serializer | undefined;
 
 	/**
 	 * Maximal payload size in bytes

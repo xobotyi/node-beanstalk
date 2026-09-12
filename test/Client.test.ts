@@ -35,7 +35,7 @@ class ConnectionMock extends Connection {
 describe('Client', () => {
 	it('should be defined', () => {
 		expect(Client).toBeDefined();
-		new Client();
+		expect(() => new Client()).not.toThrow();
 	});
 
 	describe('connect', () => {
@@ -384,8 +384,7 @@ describe('Client', () => {
 
 			await disconnected;
 			expect(c.queueSize).toBe(0);
-			for (const rejection of queued) {
-				const e = await rejection;
+			for (const e of await Promise.all(queued)) {
 				expect(e).toBeInstanceOf(ClientError);
 				expect(e.code).toBe(ClientErrorCode.ErrDisconnecting);
 			}

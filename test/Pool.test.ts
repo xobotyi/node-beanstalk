@@ -21,7 +21,8 @@ describe('Pool', () => {
 
 	beforeEach(() => {
 		PC.mockImplementation(function () {
-			return new PoolClientMock() as any;
+			// oxlint-disable-next-line typescript/strict-void-return -- vitest hands out the object a constructor mock returns
+			return new PoolClientMock();
 		});
 		PC.mockClear();
 		for (const i of PC.mock.instances) {
@@ -31,7 +32,7 @@ describe('Pool', () => {
 
 	it('should be defined', () => {
 		expect(Pool).toBeDefined();
-		new Pool();
+		expect(() => new Pool()).not.toThrow();
 	});
 
 	it('.capacity should return configured capacity of the pool', () => {

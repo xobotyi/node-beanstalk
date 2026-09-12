@@ -8,6 +8,7 @@ import {
 	type IBeanstalkTubeStats,
 	type IClientCtorOptions,
 	type IClientRawReservedJob,
+	type Serializer,
 	type ICommandHandledResponse,
 	type ICommandResponse,
 	type ICommandResponseHeaders,
@@ -34,7 +35,7 @@ const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [never]> extends EventEmitter<Events> {
 	readonly #conn: Connection;
 
-	readonly #opt: Required<IClientCtorOptions>;
+	readonly #opt: Omit<Required<IClientCtorOptions>, 'serializer'> & {serializer: Serializer | undefined};
 
 	readonly #queue = new LinkedList<{
 		resolve: () => void;
@@ -855,7 +856,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 					}
 
 					if (headers) {
-						response = response.slice(headers.headersLineLen);
+						response = response.subarray(headers.headersLineLen);
 
 						if (headers.hasData && response.length < headers.dataLength) {
 							// if response data not read - start read timeout
@@ -881,7 +882,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 							resolve({
 								status: headers.status,
 								headers: headers.headers,
-								data: response.slice(0, headers.dataLength),
+								data: response.subarray(0, headers.dataLength),
 							});
 						}
 					} else {

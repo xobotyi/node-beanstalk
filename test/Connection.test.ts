@@ -1,5 +1,5 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vite-plus/test';
-import {EventEmitter} from 'node:events';
+import {EventEmitter, once} from 'node:events';
 import {type AddressInfo, createServer} from 'node:net';
 import {Connection} from '../src/Connection.js';
 import {ConnectionError} from '../src/error/ConnectionError.js';
@@ -10,12 +10,17 @@ describe('Connection', () => {
 	const inbound = new EventEmitter();
 
 	beforeAll(async () => {
-		await new Promise<void>((resolve) => server.listen(resolve));
+		server.listen();
+		await once(server, 'listening');
 		address = server.address() as AddressInfo;
 
 		server.on('connection', (sock) => {
-			sock.on('data', (data) => inbound.emit('data', data));
-			sock.on('close', () => inbound.emit('close'));
+			sock.on('data', (data) => {
+				inbound.emit('data', data);
+			});
+			sock.on('close', () => {
+				inbound.emit('close');
+			});
 		});
 	});
 
@@ -31,9 +36,11 @@ describe('Connection', () => {
 	afterAll(async () => {
 		server.close();
 
-		for (const connection of connections) {
-			if (connection.getState() !== 'closed' && connection.getState() !== 'closing') await connection.close();
-		}
+		await Promise.all(
+			connections
+				.filter((connection) => connection.getState() !== 'closed' && connection.getState() !== 'closing')
+				.map(async (connection) => connection.close()),
+		);
 	});
 
 	it('should be defined', () => {
@@ -144,12 +151,12 @@ describe('Connection', () => {
 		it('should write given buffer to underlying socket', async () => {
 			const conn = getNewConnection();
 			await conn.open(address.port, address.address);
-			const received = new Promise((resolve) => inbound.once('data', resolve));
+			const received = once(inbound, 'data');
 			const sendBuffer = Buffer.from('hey!');
 
 			await conn.write(sendBuffer);
 
-			await expect(received).resolves.toStrictEqual(sendBuffer);
+			await expect(received).resolves.toStrictEqual([sendBuffer]);
 		});
 	});
 
@@ -221,11 +228,7 @@ describe('Connection', () => {
 	describe('events', () => {
 		it('should emit `open` event on connection opened', async () => {
 			const conn = getNewConnection();
-			const opened = new Promise<unknown[]>((resolve) =>
-				conn.on('open', (...args) => {
-					resolve(args);
-				}),
-			);
+			const opened = once(conn, 'open');
 
 			await conn.open(address.port, address.address);
 
@@ -237,7 +240,7 @@ describe('Connection', () => {
 
 		it('should emit `close` event on connection close', async () => {
 			const conn = getNewConnection();
-			const closed = new Promise<void>((resolve) => conn.on('close', resolve));
+			const closed = once(conn, 'close');
 
 			await conn.open(address.port, address.address);
 			await conn.close();
