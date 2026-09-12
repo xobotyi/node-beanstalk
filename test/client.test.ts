@@ -708,12 +708,12 @@ describe('Client', () => {
 
 		beforeEach(() => {
 			dispatchCommandMock.mockReset();
-			(validateTTR as any).mockReset();
-			(validatePriority as any).mockReset();
-			(validateDelay as any).mockReset();
-			(validateTimeout as any).mockReset();
-			(validateJobId as any).mockReset();
-			(validateTubeName as any).mockReset();
+			vi.mocked(validateTTR).mockReset();
+			vi.mocked(validatePriority).mockReset();
+			vi.mocked(validateDelay).mockReset();
+			vi.mocked(validateTimeout).mockReset();
+			vi.mocked(validateJobId).mockReset();
+			vi.mocked(validateTubeName).mockReset();
 		});
 
 		describe('put', () => {

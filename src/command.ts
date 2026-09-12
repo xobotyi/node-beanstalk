@@ -75,20 +75,21 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 			);
 		}
 
-		const res = {
+		const res: {status: BeanstalkResponseStatus; headers: string[]; data?: unknown} = {
 			status: response.status,
 			headers: response.headers,
-		} as any;
+		};
 
 		if (response.data) {
-			res.data = response.data.subarray(0, response.data.length - CRLF_BUFF.length);
+			const data = response.data.subarray(0, response.data.length - CRLF_BUFF.length);
+			res.data = data;
 
 			if (this.opt.payloadBody) {
 				if (serializer) {
-					res.data = serializer.deserialize(res.data);
+					res.data = serializer.deserialize(data);
 				}
 			} else if (this.opt.yamlBody) {
-				res.data = load(res.data.toString());
+				res.data = load(data.toString());
 			}
 		}
 

@@ -1,12 +1,12 @@
-export type ILinkedListNode<V = any> = {
+export type ILinkedListNode<V = unknown> = {
 	readonly value: V;
 
-	list: LinkedList | undefined;
-	next: ILinkedListNode | undefined;
-	prev: ILinkedListNode | undefined;
+	list: LinkedList<V> | undefined;
+	next: ILinkedListNode<V> | undefined;
+	prev: ILinkedListNode<V> | undefined;
 };
 
-export class LinkedList<V = any> {
+export class LinkedList<V = unknown> {
 	head: ILinkedListNode<V> | undefined;
 
 	tail: ILinkedListNode<V> | undefined;
@@ -16,7 +16,7 @@ export class LinkedList<V = any> {
 	/**
 	 * Remove node from chain and nullish it. A node that is not in this list is left unchanged and yields undefined.
 	 */
-	removeNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> | undefined {
+	removeNode(node: ILinkedListNode<V>): ILinkedListNode<V> | undefined {
 		if (node.list !== this) return undefined;
 
 		const {next, prev} = node;
@@ -39,7 +39,7 @@ export class LinkedList<V = any> {
 	/**
 	 * Push existing list node to list's endings
 	 */
-	pushNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> {
+	pushNode(node: ILinkedListNode<V>): ILinkedListNode<V> {
 		node.list = this;
 		node.prev = this.tail;
 
@@ -58,7 +58,7 @@ export class LinkedList<V = any> {
 	/**
 	 * Add {value} to the tail of the list.
 	 */
-	push<T extends V>(value: T): ILinkedListNode<T> {
+	push(value: V): ILinkedListNode<V> {
 		return this.pushNode({
 			list: this,
 			value,
