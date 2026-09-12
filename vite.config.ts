@@ -67,7 +67,6 @@ export default defineConfig({
 			'typescript/use-unknown-in-catch-callback-variable': 'off',
 			'unicorn/filename-case': 'off',
 			'unicorn/prefer-event-target': 'off',
-			'unicorn/prefer-number-coercion': 'off',
 			// conflicts with require-await: an async function without await must return a promise
 			'unicorn/no-useless-promise-resolve-reject': 'off',
 		},

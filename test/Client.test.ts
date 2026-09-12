@@ -5,6 +5,7 @@ import {BeanstalkError} from '../src/error/BeanstalkError.js';
 import {Connection, type ConnectionState} from '../src/Connection.js';
 import {BeanstalkJobState, Client} from '../src/index.js';
 import {ClientError, ClientErrorCode} from '../src/error/ClientError.js';
+import {ResponseError, ResponseErrorCode} from '../src/error/ResponseError.js';
 import {JsonSerializer} from '../src/serializer/JsonSerializer.js';
 import {Command} from '../src/Command.js';
 import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types.js';
@@ -593,6 +594,23 @@ describe('Client', () => {
 
 		const readCommandResponse = c['readCommandResponse'].bind(c);
 
+		it('should reject, stop listening and force-disconnect when the body length is malformed', async () => {
+			const openConn = new ConnectionMock();
+			openConn.getState.mockReturnValue('open');
+			const openClient = new Client({}, openConn);
+			const reading = openClient.peek(1);
+			const queued = openClient.peek(2);
+
+			await setImmediate();
+			openConn.emit('data', Buffer.from('FOUND 1 100abc\r\n'));
+
+			await expect(reading).rejects.toBeInstanceOf(ResponseError);
+			await expect(queued).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			expect(openConn.listenerCount('data')).toBe(0);
+			await setImmediate();
+			expect(openConn.close).toHaveBeenCalledTimes(1);
+		});
+
 		it('should read header even if it came in chunks', async () => {
 			const response = readCommandResponse();
 
@@ -788,6 +806,20 @@ describe('Client', () => {
 					id: 100_500,
 					state: BeanstalkJobState.buried,
 				});
+			});
+
+			it('should reject a job id header with trailing garbage', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: BeanstalkResponseStatus.INSERTED,
+						headers: ['100abc'],
+					}),
+				);
+
+				const putting = c.put('payload');
+
+				await expect(putting).rejects.toBeInstanceOf(ResponseError);
+				await expect(putting).rejects.toHaveProperty('code', ResponseErrorCode.ErrInvalidNumericHeader);
 			});
 
 			it('should use default ttr, priority and delay in case it is not defined', async () => {
@@ -1222,7 +1254,7 @@ describe('Client', () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
 						status: BeanstalkResponseStatus.WATCHING,
-						headers: ['tube-name'],
+						headers: ['1'],
 					}),
 				);
 
@@ -1249,7 +1281,7 @@ describe('Client', () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
 						status: BeanstalkResponseStatus.WATCHING,
-						headers: ['tube-name'],
+						headers: ['1'],
 					}),
 				);
 
@@ -1257,6 +1289,17 @@ describe('Client', () => {
 
 				expect(validateTubeName).toHaveBeenCalledTimes(1);
 				expect(validateTubeName).toHaveBeenCalledWith('tube-name');
+			});
+
+			it('should reject a malformed WATCHING count', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: BeanstalkResponseStatus.WATCHING,
+						headers: ['100abc'],
+					}),
+				);
+
+				await expect(c.ignore('tube-name')).rejects.toHaveProperty('code', ResponseErrorCode.ErrInvalidNumericHeader);
 			});
 
 			it('should return ignore result of tubes watched', async () => {

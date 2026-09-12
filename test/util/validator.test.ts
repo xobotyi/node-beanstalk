@@ -280,6 +280,16 @@ describe('validator', () => {
 				out: new TypeError(`job id should be >= ${JOB_ID_MIN}`),
 			},
 			{
+				name: 'NaN job id',
+				in: Number.NaN,
+				out: new TypeError(`job id should be an integer, got NaN`),
+			},
+			{
+				name: 'fractional job id',
+				in: 1.5,
+				out: new TypeError(`job id should be an integer, got 1.5`),
+			},
+			{
 				name: 'non-number priority',
 				in: '123',
 				out: new TypeError(`job id should be a number, got string`),
