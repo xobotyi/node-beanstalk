@@ -1,14 +1,14 @@
-import { ErrorWithCode } from './ErrorWithCode';
+import {ErrorWithCode} from './ErrorWithCode.js';
 
 export enum ClientErrorCode {
-  ErrInvalidPayload = 'ErrInvalidPayload',
-  ErrPayloadTooBig = 'ErrPayloadTooBig',
-  ErrResponseRead = 'ErrResponseRead',
-  ErrConnectionNotOpened = 'ErrConnectionNotOpened',
-  ErrConnectionNotClosed = 'ErrConnectionNotClosed',
-  ErrDisconnecting = 'ErrDisconnecting',
+	ErrInvalidPayload = 'ErrInvalidPayload',
+	ErrPayloadTooBig = 'ErrPayloadTooBig',
+	ErrResponseRead = 'ErrResponseRead',
+	ErrConnectionNotOpened = 'ErrConnectionNotOpened',
+	ErrConnectionNotClosed = 'ErrConnectionNotClosed',
+	ErrDisconnecting = 'ErrDisconnecting',
 }
 
 export class ClientError extends ErrorWithCode {
-  name = 'ClientError';
+	name = 'ClientError';
 }

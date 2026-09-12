@@ -5,13 +5,9 @@
 [![NPM Version](https://flat.badgen.net/npm/v/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
 [![NPM Downloads](https://flat.badgen.net/npm/dm/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
 [![NPM Dependents](https://flat.badgen.net/npm/dependents/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
-[![Build](https://img.shields.io/github/actions/workflow/status/xobotyi/node-beanstalk/ci-cd.yml?branch=master&style=flat-square)](https://github.com/xobotyi/node-beanstalk/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/xobotyi/node-beanstalk/ci.yml?branch=master&style=flat-square)](https://github.com/xobotyi/node-beanstalk/actions)
 [![Coverage](https://flat.badgen.net/codecov/c/github/xobotyi/node-beanstalk)](https://app.codecov.io/gh/xobotyi/node-beanstalk)
 [![Types](https://flat.badgen.net/npm/types/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
-
-  <p>
-    <strong><a href="https://xobotyi.github.io/node-beanstalk/">API Docs</a></strong>
-  </p>
 </div>
 
 ## INSTALL
@@ -21,6 +17,8 @@ npm i node-beanstalk
 # or
 yarn add node-beanstalk
 ```
+
+The package is published as ES modules only and requires Node.js 24 or newer.
 
 ## USAGE
 
@@ -34,25 +32,25 @@ Each client gives you full access to functionality of beanstalk queue manager, w
 separation to emitter and worker.
 
 ```ts
-import { Client, BeanstalkJobState } from "node-beanstalk";
+import {Client, BeanstalkJobState} from 'node-beanstalk';
 
 const c = new Client();
 
 // connect to beasntalkd server
 await c.connect();
 // use our own tube
-await c.use("my-own-tube");
+await c.use('my-own-tube');
 
 // put our very important job
-const putJob = await c.put({ foo: "My awsome payload", bar: ["baz", "qux"] }, 40);
+const putJob = await c.put({foo: 'My awsome payload', bar: ['baz', 'qux']}, 40);
 if (putJob.state !== BeanstalkJobState.ready) {
-  // as a result of put command job can done in `buried` state,
-  // or `delayed` in case delay or client's default delay been specified
-  throw new Error("job is not in ready state");
+	// as a result of put command job can done in `buried` state,
+	// or `delayed` in case delay or client's default delay been specified
+	throw new Error('job is not in ready state');
 }
 
 // watch our tube to be able to reserve from it
-await c.watch("my-own-tube");
+await c.watch('my-own-tube');
 
 // acquire new job (ideally the one we've just put)
 const job = await c.reserveWithTimeout(10);
@@ -69,7 +67,7 @@ will wait for the end of previous one. So below code will be executed consecutiv
 fact of being asyncronous.
 
 ```ts
-import { Client, BeanstalkJobState } from "node-beanstalk";
+import {Client, BeanstalkJobState} from 'node-beanstalk';
 
 const c = new Client();
 await c.connect();
@@ -82,9 +80,7 @@ c.reserve();
 ```
 
 Above code will reserve 5 jobs one by one, in asyncronous way (each next promise will be resolved
-one by one).  
-To see all the Client methods and properties see
-[Client API docs](https://xobotyi.github.io/node-beanstalk/classes/client.html)
+one by one).
 
 #### Disconnect
 
@@ -100,8 +96,7 @@ after currently running request.
 As in most cases our job payloads are complex objets - they somehow must be serialized to Buffer. In
 general, serialized payload can be any bytes sequence, but by default, payload is serialized via
 JSON and casted to buffer, but you can specify your own serializer by passing corresponding
-parameter to client constructor options. Required serializer interface can be found in
-[API docs](https://xobotyi.github.io/node-beanstalk/classes/serializer.html).
+parameter to client constructor options. The required interface is the exported `Serializer` type.
 
 ### Pooling
 
@@ -123,19 +118,19 @@ the pool.
 #### Checkout, use, and return
 
 ```ts
-import { Pool } from "node-beanstalk";
+import {Pool} from 'node-beanstalk';
 
-const p = new Pool({ capacity: 5 });
+const p = new Pool({capacity: 5});
 
 // acquire our very own client
 const client = await p.connect();
 
 try {
-  // do some work
-  await client.statsTube("my-own-tube");
+	// do some work
+	await client.statsTube('my-own-tube');
 } finally {
-  // return client back to the pool
-  client.releaseClient();
+	// return client back to the pool
+	client.releaseClient();
 }
 ```
 

@@ -1,251 +1,259 @@
-/* eslint-disable import/first */
+import EventEmitter from 'node:events';
+import {beforeEach, describe, expect, it, vi, type MockedClass} from 'vite-plus/test';
+import {PoolClient} from '../src/PoolClient.js';
+import {Pool} from '../src/index.js';
+import {PoolError} from '../src/error/PoolError.js';
 
-import EventEmitter from 'events';
-import { PoolClient } from '../src/PoolClient';
-import { Pool } from '../src';
-import { PoolError } from '../src/error/PoolError';
-
-jest.mock('../src/PoolClient');
+vi.mock('../src/PoolClient');
 
 class PoolClientMock extends EventEmitter {
-  releaseClient = jest.fn((): void => {
-    this.emit('release', this);
-  });
+	releaseClient = vi.fn((): void => {
+		this.emit('release', this);
+	});
 
-  connect = jest.fn(() => Promise.resolve());
+	connect = vi.fn(async () => Promise.resolve());
 
-  disconnect = jest.fn(() => Promise.resolve());
+	disconnect = vi.fn(async () => Promise.resolve());
 }
 
 describe('Pool', () => {
-  const PC = PoolClient as jest.MockedClass<typeof PoolClient>;
+	const PC = PoolClient as MockedClass<typeof PoolClient>;
 
-  beforeEach(() => {
-    PC.mockImplementation(() => new PoolClientMock() as any);
-    PC.mockClear();
-    PC.mock.instances.forEach((i) => i.releaseClient());
-  });
+	beforeEach(() => {
+		PC.mockImplementation(function () {
+			return new PoolClientMock() as any;
+		});
+		PC.mockClear();
+		PC.mock.instances.forEach((i) => {
+			i.releaseClient();
+		});
+	});
 
-  it('should be defined', () => {
-    expect(Pool).toBeDefined();
-    // eslint-disable-next-line no-new
-    new Pool();
-  });
+	it('should be defined', () => {
+		expect(Pool).toBeDefined();
+		new Pool();
+	});
 
-  it('.capacity should return configured capacity of the pool', () => {
-    let p = new Pool();
-    expect(p.capacity).toBe(10);
+	it('.capacity should return configured capacity of the pool', () => {
+		let p = new Pool();
+		expect(p.capacity).toBe(10);
 
-    p = new Pool({ capacity: 2 });
-    expect(p.capacity).toBe(2);
-  });
+		p = new Pool({capacity: 2});
+		expect(p.capacity).toBe(2);
+	});
 
-  it('.getState should return actual state of the pool', (done) => {
-    const p = new Pool();
-    expect(p.getState()).toBe('live');
+	it('.getState should return actual state of the pool', async () => {
+		const p = new Pool();
+		expect(p.getState()).toBe('live');
 
-    p.disconnect().then(() => {
-      expect(p.getState()).toBe('disconnected');
-      done();
-    });
-    expect(p.getState()).toBe('disconnecting');
-  });
+		const disconnected = p.disconnect();
+		expect(p.getState()).toBe('disconnecting');
 
-  describe('.connect', () => {
-    it('should return PoolClient instance', async () => {
-      const p = new Pool({ capacity: 2 });
-      expect(await p.connect()).toBeInstanceOf(PoolClientMock);
-    });
+		await disconnected;
+		expect(p.getState()).toBe('disconnected');
+	});
 
-    it('should create clients on demand', () => {
-      const p = new Pool({ capacity: 3 });
-      expect(PC.mock.instances.length).toBe(0);
-      p.connect();
-      expect(PC.mock.instances.length).toBe(1);
-      p.connect();
-      expect(PC.mock.instances.length).toBe(2);
-      p.connect();
-      expect(PC.mock.instances.length).toBe(3);
-    });
+	describe('.connect', () => {
+		it('should return PoolClient instance', async () => {
+			const p = new Pool({capacity: 2});
+			expect(await p.connect()).toBeInstanceOf(PoolClientMock);
+		});
 
-    it('should connect created clients', async () => {
-      const p = new Pool({ capacity: 2 });
+		it('should create clients on demand', () => {
+			const p = new Pool({capacity: 3});
+			expect(PC.mock.instances.length).toBe(0);
+			p.connect();
+			expect(PC.mock.instances.length).toBe(1);
+			p.connect();
+			expect(PC.mock.instances.length).toBe(2);
+			p.connect();
+			expect(PC.mock.instances.length).toBe(3);
+		});
 
-      const client = await p.connect();
+		it('should connect created clients', async () => {
+			const p = new Pool({capacity: 2});
 
-      expect(client.connect).toHaveBeenCalledTimes(1);
-    });
+			const client = await p.connect();
 
-    it('should put connect requests to fifo queue', (done) => {
-      const p = new Pool({ capacity: 2 });
+			expect(client.connect).toHaveBeenCalledTimes(1);
+		});
 
-      const arr: number[] = [];
+		it('should put connect requests to fifo queue', async () => {
+			const p = new Pool({capacity: 2});
 
-      p.connect().then((c) => {
-        setTimeout(() => {
-          arr.push(1);
-          c.releaseClient();
-        }, 300);
-      });
-      p.connect().then((c) => {
-        setTimeout(() => {
-          arr.push(2);
-          c.releaseClient();
-        }, 100);
-      });
+			const arr: number[] = [];
+			let finish: () => void;
+			const finished = new Promise<void>((resolve) => {
+				finish = resolve;
+			});
 
-      expect(p.idleCount).toBe(0);
-      expect(p.waitingCount).toBe(0);
+			p.connect().then((c) => {
+				setTimeout(() => {
+					arr.push(1);
+					c.releaseClient();
+				}, 300);
+			});
+			p.connect().then((c) => {
+				setTimeout(() => {
+					arr.push(2);
+					c.releaseClient();
+				}, 100);
+			});
 
-      p.connect().then((c) => {
-        setTimeout(() => {
-          arr.push(3);
-          c.releaseClient();
-        }, 100);
-      });
-      p.connect().then((c) => {
-        setTimeout(() => {
-          arr.push(4);
-          c.releaseClient();
+			expect(p.idleCount).toBe(0);
+			expect(p.waitingCount).toBe(0);
 
-          expect(arr).toStrictEqual([2, 3, 1, 4]);
+			p.connect().then((c) => {
+				setTimeout(() => {
+					arr.push(3);
+					c.releaseClient();
+				}, 100);
+			});
+			p.connect().then((c) => {
+				setTimeout(() => {
+					arr.push(4);
+					c.releaseClient();
 
-          done();
-        }, 100);
-      });
+					finish!();
+				}, 100);
+			});
 
-      expect(p.idleCount).toBe(0);
-      expect(p.waitingCount).toBe(2);
-    });
+			expect(p.idleCount).toBe(0);
+			expect(p.waitingCount).toBe(2);
 
-    it('should throw in case called on disconnected pool', async () => {
-      const p = new Pool({ capacity: 2 });
+			await finished;
+			expect(arr).toStrictEqual([2, 3, 1, 4]);
+		});
 
-      await p.disconnect();
+		it('should throw in case called on disconnected pool', async () => {
+			const p = new Pool({capacity: 2});
 
-      await p
-        .connect()
-        .then(() => {
-          throw new Error('not thrown');
-        })
-        .catch((err) => {
-          expect(err).toBeInstanceOf(PoolError);
-        });
-    });
-  });
+			await p.disconnect();
 
-  describe('.disconnect', () => {
-    it('should throw in case called on disconnected pool', async () => {
-      const p = new Pool({ capacity: 2 });
+			await p
+				.connect()
+				.then(() => {
+					throw new Error('not thrown');
+				})
+				.catch((error) => {
+					expect(error).toBeInstanceOf(PoolError);
+				});
+		});
+	});
 
-      await p.disconnect();
+	describe('.disconnect', () => {
+		it('should throw in case called on disconnected pool', async () => {
+			const p = new Pool({capacity: 2});
 
-      await p
-        .disconnect()
-        .then(() => {
-          throw new Error('not thrown');
-        })
-        .catch((err) => {
-          expect(err).toBeInstanceOf(PoolError);
-        });
-    });
+			await p.disconnect();
 
-    it('should change disconnect state', (done) => {
-      const p = new Pool({ capacity: 2 });
+			await p
+				.disconnect()
+				.then(() => {
+					throw new Error('not thrown');
+				})
+				.catch((error) => {
+					expect(error).toBeInstanceOf(PoolError);
+				});
+		});
 
-      expect(p.getState()).toBe('live');
-      p.disconnect().then(() => {
-        expect(p.getState()).toBe('disconnected');
-        done();
-      });
+		it('should change disconnect state', async () => {
+			const p = new Pool({capacity: 2});
 
-      expect(p.getState()).toBe('disconnecting');
-    });
+			expect(p.getState()).toBe('live');
+			const disconnected = p.disconnect();
+			expect(p.getState()).toBe('disconnecting');
 
-    it('should disconnect each client', async () => {
-      const p = new Pool({ capacity: 2 });
+			await disconnected;
+			expect(p.getState()).toBe('disconnected');
+		});
 
-      const c1 = await p.connect();
-      const c2 = await p.connect();
+		it('should disconnect each client', async () => {
+			const p = new Pool({capacity: 2});
 
-      c1.releaseClient();
-      c2.releaseClient();
+			const c1 = await p.connect();
+			const c2 = await p.connect();
 
-      await p.disconnect();
+			c1.releaseClient();
+			c2.releaseClient();
 
-      expect(c1.disconnect).toHaveBeenCalledTimes(1);
-      expect(c2.disconnect).toHaveBeenCalledTimes(1);
-    });
+			await p.disconnect();
 
-    it('should reject pending requests and force disconnect clients in case of force disconnect', async () => {
-      const p = new Pool({ capacity: 2 });
+			expect(c1.disconnect).toHaveBeenCalledTimes(1);
+			expect(c2.disconnect).toHaveBeenCalledTimes(1);
+		});
 
-      const c1 = await p.connect();
-      const c2 = await p.connect();
-      const c3 = p.connect();
-      const c4 = p.connect();
+		it('should reject pending requests and force disconnect clients in case of force disconnect', async () => {
+			const p = new Pool({capacity: 2});
 
-      await p.disconnect(true);
+			const c1 = await p.connect();
+			const c2 = await p.connect();
+			const c3 = p.connect();
+			const c4 = p.connect();
 
-      expect(c1.disconnect).toHaveBeenCalledWith(true);
-      expect(c2.disconnect).toHaveBeenCalledWith(true);
+			await p.disconnect(true);
 
-      expect(await c3.catch((e) => e)).toStrictEqual(
-        new PoolError('Unable to gain client, pool is disconnecting.')
-      );
-      expect(await c4.catch((e) => e)).toStrictEqual(
-        new PoolError('Unable to gain client, pool is disconnecting.')
-      );
-    });
+			expect(c1.disconnect).toHaveBeenCalledWith(true);
+			expect(c2.disconnect).toHaveBeenCalledWith(true);
 
-    it('should await queue resolve during non-forced disconnect', async () => {
-      const p = new Pool({ capacity: 2 });
+			expect(await c3.catch((error) => error)).toStrictEqual(
+				new PoolError('Unable to gain client, pool is disconnecting.'),
+			);
+			expect(await c4.catch((error) => error)).toStrictEqual(
+				new PoolError('Unable to gain client, pool is disconnecting.'),
+			);
+		});
 
-      const arr: number[] = [];
+		it('should await queue resolve during non-forced disconnect', async () => {
+			const p = new Pool({capacity: 2});
 
-      const c1 = await p.connect();
-      const c2 = await p.connect();
-      const p3 = p.connect().then((c) => {
-        arr.push(3);
-        return c;
-      });
-      const p4 = p.connect().then((c) => {
-        arr.push(4);
-        return c;
-      });
-      const p5 = p.disconnect().then(() => {
-        arr.push(5);
-      });
+			const arr: number[] = [];
 
-      c1.releaseClient();
-      c2.releaseClient();
+			const c1 = await p.connect();
+			const c2 = await p.connect();
+			const p3 = p.connect().then((c) => {
+				arr.push(3);
+				return c;
+			});
+			const p4 = p.connect().then((c) => {
+				arr.push(4);
+				return c;
+			});
+			const p5 = p.disconnect().then(() => {
+				arr.push(5);
+			});
 
-      const c3 = await p3;
-      const c4 = await p4;
+			c1.releaseClient();
+			c2.releaseClient();
 
-      c3.releaseClient();
-      c4.releaseClient();
+			const c3 = await p3;
+			const c4 = await p4;
 
-      await p5;
+			c3.releaseClient();
+			c4.releaseClient();
 
-      expect(arr).toStrictEqual([3, 4, 5]);
-    });
-  });
+			await p5;
 
-  describe('.restore', () => {
-    it('should throw in case called on live pool', async () => {
-      const p = new Pool({ capacity: 2 });
+			expect(arr).toStrictEqual([3, 4, 5]);
+		});
+	});
 
-      expect(() => p.restore()).toThrow(PoolError);
-    });
+	describe('.restore', () => {
+		it('should throw in case called on live pool', async () => {
+			const p = new Pool({capacity: 2});
 
-    it('should restore disconnected pool back to live', async () => {
-      const p = new Pool({ capacity: 2 });
-      await p.disconnect();
-      expect(p.getState()).toBe('disconnected');
-      p.restore();
+			expect(() => {
+				p.restore();
+			}).toThrow(PoolError);
+		});
 
-      expect(p.getState()).toBe('live');
-    });
-  });
+		it('should restore disconnected pool back to live', async () => {
+			const p = new Pool({capacity: 2});
+			await p.disconnect();
+			expect(p.getState()).toBe('disconnected');
+			p.restore();
+
+			expect(p.getState()).toBe('live');
+		});
+	});
 });

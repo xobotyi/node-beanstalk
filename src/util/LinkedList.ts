@@ -1,106 +1,105 @@
-/* eslint-disable no-param-reassign */
 export interface ILinkedListNode<V = any> {
-  readonly value: V;
+	readonly value: V;
 
-  list: LinkedList | undefined;
-  next: ILinkedListNode | undefined;
-  prev: ILinkedListNode | undefined;
+	list: LinkedList | undefined;
+	next: ILinkedListNode | undefined;
+	prev: ILinkedListNode | undefined;
 }
 
 export class LinkedList<V = any> {
-  head: ILinkedListNode<V> | undefined;
+	head: ILinkedListNode<V> | undefined;
 
-  tail: ILinkedListNode<V> | undefined;
+	tail: ILinkedListNode<V> | undefined;
 
-  size = 0;
+	size = 0;
 
-  /**
-   * Remove node from chain and nullish it.
-   */
-  removeNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> | undefined {
-    const { next, prev } = node;
+	/**
+	 * Remove node from chain and nullish it.
+	 */
+	removeNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> | undefined {
+		const {next, prev} = node;
 
-    if (prev) prev.next = next;
-    if (next) next.prev = prev;
+		if (prev) prev.next = next;
+		if (next) next.prev = prev;
 
-    if (node === this.head) this.head = next;
-    if (node === this.tail) this.tail = prev;
+		if (node === this.head) this.head = next;
+		if (node === this.tail) this.tail = prev;
 
-    node.next = undefined;
-    node.prev = undefined;
-    node.list = undefined;
+		node.next = undefined;
+		node.prev = undefined;
+		node.list = undefined;
 
-    this.size--;
+		this.size--;
 
-    return next;
-  }
+		return next;
+	}
 
-  /**
-   * Push existing list node to list's endings
-   */
-  pushNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> {
-    node.list = this;
-    node.prev = this.tail;
+	/**
+	 * Push existing list node to list's endings
+	 */
+	pushNode<T extends V>(node: ILinkedListNode<T>): ILinkedListNode<T> {
+		node.list = this;
+		node.prev = this.tail;
 
-    if (this.tail) {
-      this.tail.next = node;
-    }
+		if (this.tail) {
+			this.tail.next = node;
+		}
 
-    this.tail = node;
-    if (!this.head) {
-      this.head = node;
-    }
+		this.tail = node;
+		if (!this.head) {
+			this.head = node;
+		}
 
-    this.size++;
+		this.size++;
 
-    return node;
-  }
+		return node;
+	}
 
-  /**
-   * Add {value} to the tail of the list.
-   */
-  push<T extends V>(value: T): ILinkedListNode<T> {
-    return this.pushNode({
-      list: this,
-      value,
-      next: undefined,
-      prev: undefined,
-    });
-  }
+	/**
+	 * Add {value} to the tail of the list.
+	 */
+	push<T extends V>(value: T): ILinkedListNode<T> {
+		return this.pushNode({
+			list: this,
+			value,
+			next: undefined,
+			prev: undefined,
+		});
+	}
 
-  /**
-   * Remove {count} elements from the head of the list.
-   *
-   * @return Array containing removed values.
-   */
-  unshift(): V | undefined {
-    if (!this.head) return undefined;
+	/**
+	 * Remove {count} elements from the head of the list.
+	 *
+	 * @return Array containing removed values.
+	 */
+	unshift(): V | undefined {
+		if (!this.head) return undefined;
 
-    const val = this.head.value;
+		const val = this.head.value;
 
-    this.removeNode(this.head);
+		this.removeNode(this.head);
 
-    return val;
-  }
+		return val;
+	}
 
-  /**
-   * Remove all items from list.
-   * Also dereferences existing list nodes.
-   */
-  truncate(): V[] {
-    let item = this.head;
+	/**
+	 * Remove all items from list.
+	 * Also dereferences existing list nodes.
+	 */
+	truncate(): V[] {
+		let item = this.head;
 
-    const items: V[] = [];
+		const items: V[] = [];
 
-    while (item) {
-      const { next } = item;
+		while (item) {
+			const {next} = item;
 
-      this.removeNode(item);
+			this.removeNode(item);
 
-      items.push(item.value);
-      item = next;
-    }
+			items.push(item.value);
+			item = next;
+		}
 
-    return items;
-  }
+		return items;
+	}
 }

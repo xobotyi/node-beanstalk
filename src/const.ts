@@ -1,5 +1,5 @@
-import { IClientCtorOptions, IPoolCtorOptions } from './types';
-import { JsonSerializer } from './serializer/JsonSerializer';
+import {type IClientCtorOptions, type IPoolCtorOptions} from './types.js';
+import {JsonSerializer} from './serializer/JsonSerializer.js';
 
 export const CRLF = '\r\n';
 export const CRLF_BUFF = Buffer.from(CRLF);
@@ -18,17 +18,17 @@ export const TIMEOUT_MIN = 0;
 export const JOB_ID_MIN = 1;
 
 export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
-  host: '127.0.0.1',
-  port: 11300,
-  defaultPriority: 1024,
-  defaultDelay: 0,
-  defaultTTR: 30,
-  serializer: new JsonSerializer(),
-  maxPayloadSize: 65_536,
-  dataReadTimeoutMs: 1000,
+	host: '127.0.0.1',
+	port: 11_300,
+	defaultPriority: 1024,
+	defaultDelay: 0,
+	defaultTTR: 30,
+	serializer: new JsonSerializer(),
+	maxPayloadSize: 65_536,
+	dataReadTimeoutMs: 1000,
 };
 
 export const DEFAULT_POOL_OPTIONS: Required<IPoolCtorOptions> = {
-  clientOptions: {},
-  capacity: 10,
+	clientOptions: {},
+	capacity: 10,
 };

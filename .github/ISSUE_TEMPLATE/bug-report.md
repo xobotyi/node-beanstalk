@@ -32,5 +32,5 @@ What should `node-beanstalk` be doing?
 
 _`node-beanstalk` version:_
 _NodeJS version:_
-_OS:_ 
+_OS:_
 _Did this work in previous versions?_
