@@ -39,7 +39,7 @@ export default defineConfig({
 				],
 			},
 		],
-		ignorePatterns: ['dist/**', 'docs/**', 'coverage/**'],
+		ignorePatterns: ['dist/**', 'coverage/**'],
 		rules: {
 			'eslint/no-await-in-loop': 'off',
 			'eslint/no-new': 'off',

@@ -8,10 +8,6 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/xobotyi/node-beanstalk/ci-cd.yml?branch=master&style=flat-square)](https://github.com/xobotyi/node-beanstalk/actions)
 [![Coverage](https://flat.badgen.net/codecov/c/github/xobotyi/node-beanstalk)](https://app.codecov.io/gh/xobotyi/node-beanstalk)
 [![Types](https://flat.badgen.net/npm/types/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
-
-  <p>
-    <strong><a href="https://xobotyi.github.io/node-beanstalk/">API Docs</a></strong>
-  </p>
 </div>
 
 ## INSTALL
@@ -84,9 +80,7 @@ c.reserve();
 ```
 
 Above code will reserve 5 jobs one by one, in asyncronous way (each next promise will be resolved
-one by one).  
-To see all the Client methods and properties see
-[Client API docs](https://xobotyi.github.io/node-beanstalk/classes/client.html)
+one by one).
 
 #### Disconnect
 
@@ -102,8 +96,7 @@ after currently running request.
 As in most cases our job payloads are complex objets - they somehow must be serialized to Buffer. In
 general, serialized payload can be any bytes sequence, but by default, payload is serialized via
 JSON and casted to buffer, but you can specify your own serializer by passing corresponding
-parameter to client constructor options. Required serializer interface can be found in
-[API docs](https://xobotyi.github.io/node-beanstalk/classes/serializer.html).
+parameter to client constructor options. The required interface is the exported `Serializer` type.
 
 ### Pooling
 
