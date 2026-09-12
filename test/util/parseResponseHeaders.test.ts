@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vite-plus/test';
 import { Buffer } from 'buffer';
 import { parseResponseHeaders } from '../../src/util/parseResponseHeaders';
 import { BeanstalkResponseStatus, ICommandResponseHeaders } from '../../src/types';
@@ -50,9 +51,7 @@ describe('parseResponseHeaders', () => {
     },
   ];
 
-  // eslint-disable-next-line no-restricted-syntax
   for (const test of tableTests) {
-    // eslint-disable-next-line @typescript-eslint/no-loop-func
     it(test.name, () => {
       expect(parseResponseHeaders(test.in)).toStrictEqual(test.out);
     });

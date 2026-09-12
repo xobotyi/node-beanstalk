@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-loop-func,no-restricted-syntax */
+import { describe, expect, it } from 'vite-plus/test';
 import {
   validateDelay,
   validateJobId,

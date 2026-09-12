@@ -1,20 +1,20 @@
-import { AddressInfo, createServer, Socket } from 'net';
+import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { EventEmitter } from 'events';
+import { AddressInfo, createServer } from 'net';
 import { Connection } from '../src/Connection';
 import { ConnectionError } from '../src/error/ConnectionError';
 
 describe('Connection', () => {
   const server = createServer();
   let address: AddressInfo;
-  let serverSocket: Socket;
+  const inbound = new EventEmitter();
 
-  beforeAll((done) => {
-    server.listen(() => {
-      address = server.address() as AddressInfo;
+  beforeAll(async () => {
+    await new Promise<void>((resolve) => server.listen(resolve));
+    address = server.address() as AddressInfo;
 
-      server.on('connection', (sock) => {
-        serverSocket = sock;
-      });
-      done();
+    server.on('connection', (sock) => {
+      sock.on('data', (data) => inbound.emit('data', data));
     });
   });
 
@@ -30,7 +30,6 @@ describe('Connection', () => {
   afterAll(async () => {
     server.close();
 
-    // eslint-disable-next-line no-restricted-syntax
     for await (const connection of connections) {
       if (connection.getState() !== 'closed' && connection.getState() !== 'closing')
         await connection.close();
@@ -142,43 +141,39 @@ describe('Connection', () => {
         });
     });
 
-    if (process.env.CI === undefined) {
-      // somewhy this test fails on CI
-      // ToDo: investigate later
-      it('should write given buffer to underlying socket', (done) => {
-        const conn = getNewConnection();
-        conn.open(address.port, address.address).then(() => {
-          const sendBuffer = Buffer.from('hey!');
+    it('should write given buffer to underlying socket', async () => {
+      const conn = getNewConnection();
+      await conn.open(address.port, address.address);
+      const received = new Promise((resolve) => inbound.once('data', resolve));
+      const sendBuffer = Buffer.from('hey!');
 
-          serverSocket.on('data', async (data) => {
-            expect(data).toStrictEqual(sendBuffer);
-            done();
-          });
+      await conn.write(sendBuffer);
 
-          conn.write(sendBuffer);
-        });
-      });
-    }
+      await expect(received).resolves.toStrictEqual(sendBuffer);
+    });
   });
 
   describe('events', () => {
-    it('should emit `open` event on connection opened', (done) => {
+    it('should emit `open` event on connection opened', async () => {
       const conn = getNewConnection();
-      conn.on('open', async (port, host) => {
-        expect(typeof port).toBe('number');
-        expect(typeof host).toBe('string');
-        await conn.close();
-        done();
-      });
-      conn.open(address.port, address.address);
+      const opened = new Promise<unknown[]>((resolve) => conn.on('open', (...args) => resolve(args)));
+
+      await conn.open(address.port, address.address);
+
+      const [port, host] = await opened;
+      expect(typeof port).toBe('number');
+      expect(typeof host).toBe('string');
+      await conn.close();
     });
 
-    it('should emit `close` event on connection close', (done) => {
+    it('should emit `close` event on connection close', async () => {
       const conn = getNewConnection();
-      conn.on('close', () => {
-        done();
-      });
-      conn.open(address.port, address.address).then(() => conn.close());
+      const closed = new Promise<void>((resolve) => conn.on('close', resolve));
+
+      await conn.open(address.port, address.address);
+      await conn.close();
+
+      await closed;
     });
   });
 });

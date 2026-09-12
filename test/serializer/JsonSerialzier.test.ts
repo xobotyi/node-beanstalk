@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vite-plus/test';
 import { JsonSerializer } from '../../src/serializer/JsonSerializer';
 import { SerializerError } from '../../src';
 import { SerializerErrorCode } from '../../src/error/SerializerError';
@@ -38,9 +39,7 @@ describe('JsonSerializer', () => {
 
     const s = new JsonSerializer();
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const test of tableTests) {
-      // eslint-disable-next-line @typescript-eslint/no-loop-func
       it(test.name, () => {
         expect(s.serialize(test.in)).toStrictEqual(test.out);
       });
@@ -81,9 +80,7 @@ describe('JsonSerializer', () => {
 
     const s = new JsonSerializer();
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const test of tableTests) {
-      // eslint-disable-next-line @typescript-eslint/no-loop-func
       it(test.name, () => {
         expect(s.deserialize(test.in)).toStrictEqual(test.out);
       });

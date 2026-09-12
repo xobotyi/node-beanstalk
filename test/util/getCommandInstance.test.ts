@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vite-plus/test';
 import { getCommandInstance } from '../../src/util/getCommandInstance';
 import { CommandError, CommandErrorCode } from '../../src/error/CommandError';
 import { BeanstalkCommand } from '../../src/types';

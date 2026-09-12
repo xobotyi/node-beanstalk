@@ -9,45 +9,40 @@ on:
       - master
   workflow_dispatch:
 
-env:
-  HUSKY: 0
-
 jobs:
-  lint:
-    name: "Lint"
+  check:
+    name: "Check"
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: "Enable corepack"
-        run: corepack enable
-      - uses: actions/setup-node@v4
+      - name: "Setup Vite+"
+        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
         with:
-          node-version: 20
-          cache: "yarn"
+          node-version: "lts"
+          cache: true
       - name: "Install dependencies"
-        run: yarn --immutable
-      - name: "Lint"
-        run: yarn lint -f @react-hookz/gha
+        run: vp install --frozen-lockfile
+      - name: "Check"
+        run: vp check
+      - name: "Typecheck"
+        run: yarn typecheck
 
   build:
     name: "Build"
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "Setup Vite+"
+        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
         with:
-          fetch-depth: 0
-      - name: "Enable corepack"
-        run: corepack enable
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "yarn"
+          node-version: "lts"
+          cache: true
       - name: "Install dependencies"
-        run: yarn --immutable
+        run: vp install --frozen-lockfile
       - name: "Build"
         run: yarn build
 
@@ -56,19 +51,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "Setup Vite+"
+        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
         with:
-          fetch-depth: 0
-      - name: "Enable corepack"
-        run: corepack enable
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "yarn"
+          node-version: "lts"
+          cache: true
       - name: "Install dependencies"
-        run: yarn --immutable
+        run: vp install --frozen-lockfile
       - name: "Test"
-        run: yarn test:coverage --testLocationInResults --reporters=default --reporters=@jamesacarr/jest-reporter-github-actions
+        run: vp test --coverage --reporter=default --reporter=github-actions
       - name: "Upload coverage to Codecov"
         uses: codecov/codecov-action@v4
         with:
@@ -82,7 +74,7 @@ jobs:
     permissions:
       pull-requests: write
       contents: write
-    needs: [ "test", "build", "lint" ]
+    needs: [ "check", "test", "build" ]
     if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
     steps:
       - uses: fastify/github-action-merge-dependabot@v3
@@ -93,23 +85,22 @@ jobs:
   semantic-release:
     name: "Release"
     runs-on: ubuntu-latest
-    needs: [ "test", "build", "lint" ]
+    needs: [ "check", "test", "build" ]
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     outputs:
       new-release-published: ${{ steps.release.outputs.new-release-published }}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: "Enable corepack"
-        run: corepack enable
-      - uses: actions/setup-node@v4
+      - name: "Setup Vite+"
+        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
         with:
-          node-version: 20
-          cache: "yarn"
+          node-version: "lts"
+          cache: true
       - name: "Install dependencies"
-        run: yarn --immutable
+        run: vp install --frozen-lockfile
       - name: "Release"
         id: "release"
         uses: codfish/semantic-release-action@v3.4.1
@@ -124,17 +115,16 @@ jobs:
     if: needs.semantic-release.outputs.new-release-published == 'true' || github.event_name == 'workflow_dispatch'
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: "Enable corepack"
-        run: corepack enable
-      - uses: actions/setup-node@v4
+      - name: "Setup Vite+"
+        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
         with:
-          node-version: 20
-          cache: "yarn"
+          node-version: "lts"
+          cache: true
       - name: "Install dependencies"
-        run: yarn --immutable
+        run: vp install --frozen-lockfile
       - name: "Build docs"
         run: yarn docs:build
       - name: "Deploy"

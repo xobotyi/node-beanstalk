@@ -1,4 +1,3 @@
-/* eslint-disable class-methods-use-this */
 import { Serializer } from '../types';
 import { SerializerError, SerializerErrorCode } from '../error/SerializerError';
 

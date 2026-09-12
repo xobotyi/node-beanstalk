@@ -1,4 +1,3 @@
-/* eslint-disable no-param-reassign */
 export interface ILinkedListNode<V = any> {
   readonly value: V;
 

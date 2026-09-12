@@ -3,7 +3,7 @@
     "lib": [
       "es2020"
     ],
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "module": "ESNext",
     "target": "ESNext",
     "strict": true,

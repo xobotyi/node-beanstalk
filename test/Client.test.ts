@@ -1,7 +1,5 @@
-/* eslint-disable import/first */
-jest.mock('../src/util/validator');
-
 import { Buffer } from 'buffer';
+import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vite-plus/test';
 import { BeanstalkError } from '../src/error/BeanstalkError';
 import { Connection, ConnectionState } from '../src/Connection';
 import { BeanstalkJobState, Client } from '../src';
@@ -17,25 +15,24 @@ import {
   validateTTR,
   validateTubeName,
 } from '../src/util/validator';
-import SpyInstance = jest.SpyInstance;
+
+vi.mock('../src/util/validator');
 
 class ConnectionMock extends Connection {
-  public getState = jest.fn((): ConnectionState => 'closed');
+  public getState = vi.fn((): ConnectionState => 'closed');
 
-  public close = jest.fn(async () => {});
+  public close = vi.fn(async () => {});
 
-  public isChangingState = jest.fn(() => false);
+  public isChangingState = vi.fn(() => false);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public open = jest.fn(async (port: number, host?: string) => {});
+  public open = vi.fn(async (port: number, host?: string) => {});
 
-  public write = jest.fn(async <T extends Buffer>(buffer: T): Promise<T> => buffer);
+  public write: Connection['write'] = async (buffer) => buffer;
 }
 
 describe('Client', () => {
   it('should be defined', () => {
     expect(Client).toBeDefined();
-    // eslint-disable-next-line no-new
     new Client();
   });
 
@@ -51,18 +48,16 @@ describe('Client', () => {
       expect(conn.open).toHaveBeenCalledWith(1234, 'example.com');
     });
 
-    it('should create queue item', (done) => {
+    it('should create queue item', async () => {
       const conn = new ConnectionMock();
       conn.getState.mockReturnValue('closed');
       const c = new Client(undefined, conn);
 
-      c.connect().then(() => {
-        expect(c.queueSize).toBe(0);
-
-        done();
-      });
-
+      const connected = c.connect();
       expect(c.queueSize).toBe(1);
+
+      await connected;
+      expect(c.queueSize).toBe(0);
     });
 
     it('should throw in case of calling while connection is not closed', async () => {
@@ -106,41 +101,36 @@ describe('Client', () => {
       }
     });
 
-    it('force disconnect should clear current queue and reject all queued promises', (done) => {
+    it('force disconnect should clear current queue and reject all queued promises', async () => {
       const conn = new ConnectionMock();
       conn.getState.mockReturnValue('open');
       const c = new Client(undefined, conn);
 
-      c.bury(123);
-
-      c.bury(123)
-        .then(() => {
-          throw new Error('not thrown!');
-        })
-        .catch((e) => {
-          expect(e).toBeInstanceOf(ClientError);
-          expect(e.code).toBe(ClientErrorCode.ErrDisconnecting);
-        });
-      c.bury(123)
-        .then(() => {
-          throw new Error('not thrown!');
-        })
-        .catch((e) => {
-          expect(e).toBeInstanceOf(ClientError);
-          expect(e.code).toBe(ClientErrorCode.ErrDisconnecting);
-        });
+      c.bury(123).catch(() => {});
+      const queued = [c.bury(123), c.bury(123)].map((promise) =>
+        promise.then(
+          () => {
+            throw new Error('not thrown!');
+          },
+          (e) => e,
+        ),
+      );
 
       expect(c.queueSize).toBe(3);
-      c.disconnect(true).then(() => {
-        expect(c.queueSize).toBe(0);
-        done();
-      });
-
+      const disconnected = c.disconnect(true);
       expect(c.queueSize).toBe(2);
 
       setTimeout(() => {
         conn.emit('data', Buffer.from('BURIED\r\n'));
       }, 20);
+
+      await disconnected;
+      expect(c.queueSize).toBe(0);
+      for (const rejection of queued) {
+        const e = await rejection;
+        expect(e).toBeInstanceOf(ClientError);
+        expect(e.code).toBe(ClientErrorCode.ErrDisconnecting);
+      }
     });
   });
 
@@ -170,10 +160,7 @@ describe('Client', () => {
       expect(c.isWorking).toBe(false);
 
       // @ts-expect-error we're mocking private method so obviously TS is unhappy.
-      const readCommandResponseMock = jest.spyOn(c, 'readCommandResponse') as SpyInstance<
-        ReturnType<Client['readCommandResponse']>,
-        Parameters<Client['readCommandResponse']>
-      >;
+      const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
       readCommandResponseMock.mockImplementation(
         () =>
@@ -194,7 +181,7 @@ describe('Client', () => {
   });
 
   describe('queueSize', () => {
-    it('should return amount of waiting requests', (done) => {
+    it('should return amount of waiting requests', async () => {
       const conn = new ConnectionMock();
       conn.getState.mockReturnValueOnce('open');
       const c = new Client({}, conn);
@@ -202,10 +189,7 @@ describe('Client', () => {
       expect(c.queueSize).toBe(0);
 
       // @ts-expect-error we're mocking private method so obviously TS is unhappy.
-      const readCommandResponseMock = jest.spyOn(c, 'readCommandResponse') as SpyInstance<
-        ReturnType<Client['readCommandResponse']>,
-        Parameters<Client['readCommandResponse']>
-      >;
+      const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
       readCommandResponseMock.mockImplementation(
         () =>
@@ -219,11 +203,11 @@ describe('Client', () => {
           })
       );
 
-      Promise.allSettled([c.bury(123), c.bury(123), c.bury(123), c.bury(123)]).then(() => {
-        expect(c.queueSize).toBe(0);
-        done();
-      });
+      const settled = Promise.allSettled([c.bury(123), c.bury(123), c.bury(123), c.bury(123)]);
       expect(c.queueSize).toBe(4);
+
+      await settled;
+      expect(c.queueSize).toBe(0);
     });
   });
 
@@ -234,9 +218,8 @@ describe('Client', () => {
       const serializer = new JsonSerializer();
       const c = new Client({ serializer, maxPayloadSize: 20 }, conn);
 
-      const serializeSpy = jest.spyOn(serializer, 'serialize');
+      const serializeSpy = vi.spyOn(serializer, 'serialize');
 
-      // eslint-disable-next-line @typescript-eslint/dot-notation,prefer-destructuring
       const payloadToBuffer = c['payloadToBuffer'].bind(c);
 
       it('should use serializer defined on client construct', () => {
@@ -271,9 +254,7 @@ describe('Client', () => {
         },
       ];
 
-      // eslint-disable-next-line no-restricted-syntax
       for (const test of tableTests) {
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
         it(test.name, () => {
           expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
         });
@@ -294,7 +275,6 @@ describe('Client', () => {
       const conn = new ConnectionMock();
       const c = new Client({ serializer: undefined, maxPayloadSize: 20 }, conn);
 
-      // eslint-disable-next-line @typescript-eslint/dot-notation,prefer-destructuring
       const payloadToBuffer = c['payloadToBuffer'].bind(c);
 
       const tableTests: Array<{
@@ -314,9 +294,7 @@ describe('Client', () => {
         },
       ];
 
-      // eslint-disable-next-line no-restricted-syntax
       for (const test of tableTests) {
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
         it(test.name, () => {
           expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
         });
@@ -356,45 +334,43 @@ describe('Client', () => {
     const conn = new ConnectionMock();
     const c = new Client({}, conn);
 
-    // eslint-disable-next-line @typescript-eslint/dot-notation,prefer-destructuring
     const readCommandResponse = c['readCommandResponse'].bind(c);
 
-    it('should read header even if it came in chunks', (done) => {
-      readCommandResponse().then((res) => {
-        expect(res.status).toBe('WATCHING');
-        expect(res.headers).toStrictEqual(['23']);
-        expect(res.data).toBeUndefined();
-        done();
-      });
+    it('should read header even if it came in chunks', async () => {
+      const response = readCommandResponse();
 
       conn.emit('data', Buffer.from('WATCH'));
       conn.emit('data', Buffer.from('ING 23'));
       conn.emit('data', Buffer.from('\r\n'));
+
+      const res = await response;
+      expect(res.status).toBe('WATCHING');
+      expect(res.headers).toStrictEqual(['23']);
+      expect(res.data).toBeUndefined();
     });
 
-    it('should read data for data responses', (done) => {
+    it('should read data for data responses', async () => {
       const dataBuffer = Buffer.from('node-beanstalk is awesome');
       const dataBufferWithNl = Buffer.concat([dataBuffer, Buffer.from('\r\n')]);
 
-      readCommandResponse().then((res) => {
-        expect(res.status).toBe('OK');
-        expect(res.headers).toStrictEqual([]);
-        expect(res.data).toStrictEqual(dataBufferWithNl);
-        done();
-      });
+      const response = readCommandResponse();
 
       conn.emit('data', Buffer.from(`OK ${dataBuffer.length}\r\n`));
       conn.emit('data', dataBufferWithNl);
+
+      const res = await response;
+      expect(res.status).toBe('OK');
+      expect(res.headers).toStrictEqual([]);
+      expect(res.data).toStrictEqual(dataBufferWithNl);
     });
 
-    it('should throw in case response data not received during configured timeout', (done) => {
-      readCommandResponse().catch((e) => {
-        expect(e).toBeInstanceOf(ClientError);
-        expect(e.code).toBe(ClientErrorCode.ErrResponseRead);
-        done();
-      });
+    it('should throw in case response data not received during configured timeout', async () => {
+      const response = readCommandResponse();
 
       conn.emit('data', Buffer.from(`OK 100500\r\n`));
+
+      await expect(response).rejects.toBeInstanceOf(ClientError);
+      await expect(response).rejects.toMatchObject({ code: ClientErrorCode.ErrResponseRead });
     });
   });
 
@@ -406,19 +382,15 @@ describe('Client', () => {
     const c = new Client({ serializer }, conn);
 
     // @ts-expect-error we're mocking private method so obviously TS is unhappy.
-    const readCommandResponseMock = jest.spyOn(c, 'readCommandResponse') as SpyInstance<
-      ReturnType<Client['readCommandResponse']>,
-      Parameters<Client['readCommandResponse']>
-    >;
-    // eslint-disable-next-line @typescript-eslint/dot-notation,prefer-destructuring
+    const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
     const dispatchCommand = c['dispatchCommand'].bind(c);
 
     const cmd = new Command(BeanstalkCommand.bury, {
       expectedStatus: [BeanstalkResponseStatus.BURIED],
     });
-    const buildCommandBufferSpy = jest.spyOn(cmd, 'buildCommandBuffer');
+    const buildCommandBufferSpy = vi.spyOn(cmd, 'buildCommandBuffer');
     const handleResponseOrig = cmd.handleResponse;
-    const handleResponseSpy = jest.spyOn(cmd, 'handleResponse');
+    const handleResponseSpy = vi.spyOn(cmd, 'handleResponse');
 
     beforeEach(() => {
       readCommandResponseMock.mockReset();
@@ -490,10 +462,7 @@ describe('Client', () => {
     );
 
     // @ts-expect-error we're mocking private method so obviously TS is unhappy.
-    const dispatchCommandMock = jest.spyOn(c, 'dispatchCommand') as SpyInstance<
-      ReturnType<Client['dispatchCommand']>,
-      Parameters<Client['dispatchCommand']>
-    >;
+    const dispatchCommandMock = vi.spyOn(c, 'dispatchCommand') as MockInstance<Client['dispatchCommand']>;
 
     beforeEach(() => {
       dispatchCommandMock.mockReset();
@@ -1395,10 +1364,7 @@ describe('Client', () => {
     );
 
     // @ts-expect-error we're mocking private method so obviously TS is unhappy.
-    const readCommandResponseMock = jest.spyOn(c, 'readCommandResponse') as SpyInstance<
-      ReturnType<Client['readCommandResponse']>,
-      Parameters<Client['readCommandResponse']>
-    >;
+    const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
     let call = 5;
     readCommandResponseMock.mockImplementation(

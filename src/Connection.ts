@@ -87,7 +87,6 @@ export class Connection extends EventEmitter {
 
           this._state = 'open';
 
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           this.emit('open', socket.remotePort!, socket.remoteAddress!);
 
           resolve();

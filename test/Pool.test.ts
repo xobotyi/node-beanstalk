@@ -1,34 +1,34 @@
-/* eslint-disable import/first */
-
 import EventEmitter from 'events';
+import { beforeEach, describe, expect, it, vi, type MockedClass } from 'vite-plus/test';
 import { PoolClient } from '../src/PoolClient';
 import { Pool } from '../src';
 import { PoolError } from '../src/error/PoolError';
 
-jest.mock('../src/PoolClient');
+vi.mock('../src/PoolClient');
 
 class PoolClientMock extends EventEmitter {
-  releaseClient = jest.fn((): void => {
+  releaseClient = vi.fn((): void => {
     this.emit('release', this);
   });
 
-  connect = jest.fn(() => Promise.resolve());
+  connect = vi.fn(() => Promise.resolve());
 
-  disconnect = jest.fn(() => Promise.resolve());
+  disconnect = vi.fn(() => Promise.resolve());
 }
 
 describe('Pool', () => {
-  const PC = PoolClient as jest.MockedClass<typeof PoolClient>;
+  const PC = PoolClient as MockedClass<typeof PoolClient>;
 
   beforeEach(() => {
-    PC.mockImplementation(() => new PoolClientMock() as any);
+    PC.mockImplementation(function () {
+      return new PoolClientMock() as any;
+    });
     PC.mockClear();
     PC.mock.instances.forEach((i) => i.releaseClient());
   });
 
   it('should be defined', () => {
     expect(Pool).toBeDefined();
-    // eslint-disable-next-line no-new
     new Pool();
   });
 
@@ -40,15 +40,15 @@ describe('Pool', () => {
     expect(p.capacity).toBe(2);
   });
 
-  it('.getState should return actual state of the pool', (done) => {
+  it('.getState should return actual state of the pool', async () => {
     const p = new Pool();
     expect(p.getState()).toBe('live');
 
-    p.disconnect().then(() => {
-      expect(p.getState()).toBe('disconnected');
-      done();
-    });
+    const disconnected = p.disconnect();
     expect(p.getState()).toBe('disconnecting');
+
+    await disconnected;
+    expect(p.getState()).toBe('disconnected');
   });
 
   describe('.connect', () => {
@@ -76,10 +76,14 @@ describe('Pool', () => {
       expect(client.connect).toHaveBeenCalledTimes(1);
     });
 
-    it('should put connect requests to fifo queue', (done) => {
+    it('should put connect requests to fifo queue', async () => {
       const p = new Pool({ capacity: 2 });
 
       const arr: number[] = [];
+      let finish: () => void;
+      const finished = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
 
       p.connect().then((c) => {
         setTimeout(() => {
@@ -108,14 +112,15 @@ describe('Pool', () => {
           arr.push(4);
           c.releaseClient();
 
-          expect(arr).toStrictEqual([2, 3, 1, 4]);
-
-          done();
+          finish!();
         }, 100);
       });
 
       expect(p.idleCount).toBe(0);
       expect(p.waitingCount).toBe(2);
+
+      await finished;
+      expect(arr).toStrictEqual([2, 3, 1, 4]);
     });
 
     it('should throw in case called on disconnected pool', async () => {
@@ -150,16 +155,15 @@ describe('Pool', () => {
         });
     });
 
-    it('should change disconnect state', (done) => {
+    it('should change disconnect state', async () => {
       const p = new Pool({ capacity: 2 });
 
       expect(p.getState()).toBe('live');
-      p.disconnect().then(() => {
-        expect(p.getState()).toBe('disconnected');
-        done();
-      });
-
+      const disconnected = p.disconnect();
       expect(p.getState()).toBe('disconnecting');
+
+      await disconnected;
+      expect(p.getState()).toBe('disconnected');
     });
 
     it('should disconnect each client', async () => {

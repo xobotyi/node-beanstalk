@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vite-plus/test';
 import { Buffer } from 'buffer';
 import { dump } from 'js-yaml';
 import { Command } from '../src/Command';
@@ -18,7 +19,6 @@ describe('Command', () => {
     it('should throw on unknown command', () => {
       try {
         // @ts-expect-error testing incompatible command
-        // eslint-disable-next-line no-new
         new Command('totally unknown command');
         throw new Error('not thrown!');
       } catch (e: any) {
@@ -29,7 +29,6 @@ describe('Command', () => {
 
     it('should throw if unknown status expected', () => {
       try {
-        // eslint-disable-next-line no-new
         new Command(BeanstalkCommand.bury, {
           // @ts-expect-error testing incompatible status
           expectedStatus: ['totally unknown status'],
@@ -72,9 +71,7 @@ describe('Command', () => {
       },
     ];
 
-    // eslint-disable-next-line no-restricted-syntax
     for (const test of tableTests) {
-      // eslint-disable-next-line @typescript-eslint/no-loop-func
       it(test.name, () => {
         expect(cmd.buildCommandBuffer(...test.in)).toStrictEqual(test.out);
       });

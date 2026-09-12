@@ -111,7 +111,6 @@ export class Pool {
     this._state = 'disconnecting';
 
     // reject all pending queue
-    // eslint-disable-next-line no-restricted-syntax
     for (const { reject } of this._pendingQueue.truncate()) {
       reject(new PoolError('Unable to gain client, pool is disconnecting.'));
     }
