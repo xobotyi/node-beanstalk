@@ -14,8 +14,8 @@ describe('JsonSerializer', () => {
 
 	it('should have serialize and deserialize methods', () => {
 		const s = new JsonSerializer();
-		expect(s.serialize).toBeInstanceOf(Function);
-		expect(s.deserialize).toBeInstanceOf(Function);
+		expect(typeof s.serialize).toBe('function');
+		expect(typeof s.deserialize).toBe('function');
 	});
 
 	describe('JsonSerializer.serialize', () => {

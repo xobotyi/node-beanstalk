@@ -75,25 +75,19 @@ describe('Command', () => {
 		it('should throw in case of error response', () => {
 			const cmd = new Command(BeanstalkCommand.bury);
 
-			try {
-				cmd.handleResponse({status: BeanstalkResponseStatus.UNKNOWN_COMMAND, headers: []});
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(CommandError);
-				expect(error.code).toBe(CommandErrorCode.ErrErrorResponseStatus);
-			}
+			const throwing = () => cmd.handleResponse({status: BeanstalkResponseStatus.UNKNOWN_COMMAND, headers: []});
+
+			expect(throwing).toThrow(CommandError);
+			expect(throwing).toThrow(expect.objectContaining({code: CommandErrorCode.ErrErrorResponseStatus}));
 		});
 
 		it('should throw in case of unexpected response', () => {
 			const cmd = new Command(BeanstalkCommand.bury);
 
-			try {
-				cmd.handleResponse({status: BeanstalkResponseStatus.OK, headers: []});
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(CommandError);
-				expect(error.code).toBe(CommandErrorCode.ErrUnexpectedResponseStatus);
-			}
+			const throwing = () => cmd.handleResponse({status: BeanstalkResponseStatus.OK, headers: []});
+
+			expect(throwing).toThrow(CommandError);
+			expect(throwing).toThrow(expect.objectContaining({code: CommandErrorCode.ErrUnexpectedResponseStatus}));
 		});
 
 		it('should return status and headers', () => {

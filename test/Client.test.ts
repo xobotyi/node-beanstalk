@@ -8,7 +8,7 @@ import {ClientError, ClientErrorCode} from '../src/error/ClientError.js';
 import {ResponseError, ResponseErrorCode} from '../src/error/ResponseError.js';
 import {JsonSerializer} from '../src/serializer/JsonSerializer.js';
 import {Command} from '../src/Command.js';
-import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types.js';
+import {BeanstalkCommand, BeanstalkResponseStatus, type ICommandResponse} from '../src/types.js';
 import {
 	validateDelay,
 	validateJobId,
@@ -21,13 +21,13 @@ import {
 vi.mock('../src/util/validator');
 
 class ConnectionMock extends Connection {
-	public getState = vi.fn((): ConnectionState => 'closed');
+	public getState = vi.fn<() => ConnectionState>(() => 'closed');
 
-	public close = vi.fn(async () => {});
+	public close = vi.fn<() => Promise<void>>(async () => {});
 
-	public isChangingState = vi.fn(() => false);
+	public isChangingState = vi.fn<() => boolean>(() => false);
 
-	public open = vi.fn(async (_port: number, _host?: string) => {});
+	public open = vi.fn<(port: number, host?: string) => Promise<void>>(async () => {});
 
 	public write: Connection['write'] = async (buffer) => Promise.resolve(buffer);
 }
@@ -67,13 +67,10 @@ describe('Client', () => {
 			conn.getState.mockReturnValue('open');
 			const c = new Client(undefined, conn);
 
-			try {
-				await c.connect();
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(ClientError);
-				expect(error.code).toBe(ClientErrorCode.ErrConnectionNotClosed);
-			}
+			const rejected = c.connect();
+
+			await expect(rejected).rejects.toBeInstanceOf(ClientError);
+			await expect(rejected).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionNotClosed);
 		});
 	});
 
@@ -350,13 +347,10 @@ describe('Client', () => {
 			conn.getState.mockReturnValue('opening');
 			const c = new Client(undefined, conn);
 
-			try {
-				await c.disconnect();
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(ClientError);
-				expect(error.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
-			}
+			const rejected = c.disconnect();
+
+			await expect(rejected).rejects.toBeInstanceOf(ClientError);
+			await expect(rejected).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionNotOpened);
 		});
 
 		it('force disconnect should clear current queue and reject all queued promises', async () => {
@@ -364,15 +358,11 @@ describe('Client', () => {
 			conn.getState.mockReturnValue('open');
 			const c = new Client(undefined, conn);
 
-			c.bury(123).catch(() => {});
-			const queued = [c.bury(123), c.bury(123)].map(async (promise) =>
-				promise.then(
-					() => {
-						throw new Error('not thrown!');
-					},
-					(error) => error,
-				),
-			);
+			const running = c.bury(123);
+			const rejections = [c.bury(123), c.bury(123)].map(async (promise) => {
+				await expect(promise).rejects.toBeInstanceOf(ClientError);
+				await expect(promise).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			});
 
 			expect(c.queueSize).toBe(3);
 			const disconnected = c.disconnect(true);
@@ -384,10 +374,8 @@ describe('Client', () => {
 
 			await disconnected;
 			expect(c.queueSize).toBe(0);
-			for (const e of await Promise.all(queued)) {
-				expect(e).toBeInstanceOf(ClientError);
-				expect(e.code).toBe(ClientErrorCode.ErrDisconnecting);
-			}
+			await running;
+			await Promise.all(rejections);
 		});
 	});
 
@@ -431,7 +419,7 @@ describe('Client', () => {
 					}),
 			);
 
-			c.bury(123, 12);
+			void c.bury(123, 12);
 
 			expect(c.isWorking).toBe(true);
 		});
@@ -511,20 +499,15 @@ describe('Client', () => {
 				},
 			];
 
-			for (const test of tableTests) {
-				it(test.name, () => {
-					expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
-				});
-			}
+			it.each(tableTests)('$name', (test) => {
+				expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
+			});
 
 			it('should throw in case serialized payload buffer bigger that configured', () => {
-				try {
-					payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
-					throw new Error('not thrown!');
-				} catch (error: any) {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrPayloadTooBig);
-				}
+				const throwing = () => payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
+
+				expect(throwing).toThrow(ClientError);
+				expect(throwing).toThrow(expect.objectContaining({code: ClientErrorCode.ErrPayloadTooBig}));
 			});
 		});
 
@@ -551,38 +534,25 @@ describe('Client', () => {
 				},
 			];
 
-			for (const test of tableTests) {
-				it(test.name, () => {
-					expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
-				});
-			}
+			it.each(tableTests)('$name', (test) => {
+				expect(payloadToBuffer(...test.in)).toStrictEqual(test.out);
+			});
 
 			it('should throw in case non-string payload received', () => {
-				try {
-					payloadToBuffer(123);
-					throw new Error('not thrown!');
-				} catch (error: any) {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrInvalidPayload);
-				}
+				const throwingOnNumber = () => payloadToBuffer(123);
+				const throwingOnObject = () => payloadToBuffer({baz: ['bax', 123]});
 
-				try {
-					payloadToBuffer({baz: ['bax', 123]});
-					throw new Error('not thrown!');
-				} catch (error: any) {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrInvalidPayload);
-				}
+				expect(throwingOnNumber).toThrow(ClientError);
+				expect(throwingOnNumber).toThrow(expect.objectContaining({code: ClientErrorCode.ErrInvalidPayload}));
+				expect(throwingOnObject).toThrow(ClientError);
+				expect(throwingOnObject).toThrow(expect.objectContaining({code: ClientErrorCode.ErrInvalidPayload}));
 			});
 
 			it('should throw in case received payload buffer bigger that configured', () => {
-				try {
-					payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
-					throw new Error('not thrown!');
-				} catch (error: any) {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrPayloadTooBig);
-				}
+				const throwing = () => payloadToBuffer('abcsfkdfjhasdkjfhaskjdhfksajhfd');
+
+				expect(throwing).toThrow(ClientError);
+				expect(throwing).toThrow(expect.objectContaining({code: ClientErrorCode.ErrPayloadTooBig}));
 			});
 		});
 	});
@@ -663,7 +633,7 @@ describe('Client', () => {
 			expectedStatus: [BeanstalkResponseStatus.BURIED],
 		});
 		const buildCommandBufferSpy = vi.spyOn(cmd, 'buildCommandBuffer');
-		const handleResponseOrig = cmd.handleResponse;
+		const handleResponseOrig = cmd.handleResponse.bind(cmd);
 		const handleResponseSpy = vi.spyOn(cmd, 'handleResponse');
 
 		beforeEach(() => {
@@ -683,14 +653,10 @@ describe('Client', () => {
 
 		it('should throw in case of calling while connection is not opened', async () => {
 			conn.getState.mockReturnValueOnce('closed');
-			await dispatchCommand(cmd)
-				.then(() => {
-					throw new Error('not thrown!');
-				})
-				.catch((error) => {
-					expect(error).toBeInstanceOf(ClientError);
-					expect(error.code).toBe(ClientErrorCode.ErrConnectionNotOpened);
-				});
+			const rejected = dispatchCommand(cmd);
+
+			await expect(rejected).rejects.toBeInstanceOf(ClientError);
+			await expect(rejected).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionNotOpened);
 		});
 
 		it("should call command's buildCommandBuffer", async () => {
@@ -847,14 +813,7 @@ describe('Client', () => {
 					}),
 				);
 
-				await c
-					.put(undefined)
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toStrictEqual(new TypeError('payload has to be a non-undefined value'));
-					});
+				await expect(c.put(undefined)).rejects.toStrictEqual(new TypeError('payload has to be a non-undefined value'));
 			});
 
 			it('should throw in case of server error-ish responses', async () => {
@@ -865,42 +824,21 @@ describe('Client', () => {
 					}),
 				);
 
-				await c
-					.put('test')
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
 						status: BeanstalkResponseStatus.EXPECTED_CRLF,
 						headers: ['100500'],
 					}),
 				);
-				await c
-					.put('test')
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
 						status: BeanstalkResponseStatus.DRAINING,
 						headers: ['100500'],
 					}),
 				);
-				await c
-					.put('test')
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
 			});
 		});
 
@@ -935,14 +873,7 @@ describe('Client', () => {
 						headers: [],
 					}),
 				);
-				await c
-					.reserve()
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.reserve()).rejects.toBeInstanceOf(BeanstalkError);
 			});
 		});
 
@@ -996,14 +927,7 @@ describe('Client', () => {
 					}),
 				);
 
-				await c
-					.reserveWithTimeout(123)
-					.then(() => {
-						throw new Error('not thrown');
-					})
-					.catch((error) => {
-						expect(error).toBeInstanceOf(BeanstalkError);
-					});
+				await expect(c.reserveWithTimeout(123)).rejects.toBeInstanceOf(BeanstalkError);
 			});
 		});
 
@@ -1667,92 +1591,46 @@ describe('Client', () => {
 		// @ts-expect-error we're mocking private method so obviously TS is unhappy.
 		const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
-		let call = 5;
-		readCommandResponseMock.mockImplementation(
-			async () =>
-				new Promise((resolve) => {
-					setTimeout(
-						() => {
-							resolve({
-								status: BeanstalkResponseStatus.BURIED,
-								headers: ['100500'],
-							});
-						},
-						100 - call-- * 15,
-					);
-				}),
-		);
+		const buried: ICommandResponse = {status: BeanstalkResponseStatus.BURIED, headers: ['100500']};
+		const queueResponses = (): Array<PromiseWithResolvers<ICommandResponse>> => {
+			const responses = Array.from({length: 5}, () => Promise.withResolvers<ICommandResponse>());
 
-		// in this test, dispatchCommandMock implemented the way that first command waits the most so in
-		// case unordered execution it should occur in list the last
+			for (const {promise} of responses) {
+				readCommandResponseMock.mockImplementationOnce(async () => promise);
+			}
+
+			return responses;
+		};
 		let resolveOrder: number[] = [];
+		const track = async (id: number): Promise<void> => {
+			await c.bury(id);
+			resolveOrder.push(id);
+		};
 
-		await Promise.allSettled([
-			c.bury(10).then(() => {
-				resolveOrder.push(10);
-			}),
-			c.bury(20).then(() => {
-				resolveOrder.push(20);
-			}),
-			c.bury(30).then(() => {
-				resolveOrder.push(30);
-			}),
-			c.bury(40).then(() => {
-				resolveOrder.push(40);
-			}),
-			c.bury(50).then(() => {
-				resolveOrder.push(50);
-			}),
-		]);
+		// once dispatch has reached the first read, every response is settled last to first; concurrent dispatch
+		// would then list the commands in that order
+		let responses = queueResponses();
+		const tracked = [track(10), track(20), track(30), track(40), track(50)];
+		await setImmediate();
+		for (const {resolve} of responses.toReversed()) {
+			resolve(buried);
+		}
+
+		await Promise.allSettled(tracked);
 
 		expect(resolveOrder).toStrictEqual([10, 20, 30, 40, 50]);
 
-		// here were rejecting promise in the middle, it should not affect the queue advancing
-		call = 5;
-		readCommandResponseMock.mockImplementation(
-			async () =>
-				new Promise((resolve, reject) => {
-					const idx = call--;
-
-					setTimeout(
-						() => {
-							if (idx === 3) {
-								reject(new Error('some error'));
-								return;
-							}
-
-							resolve({
-								status: BeanstalkResponseStatus.BURIED,
-								headers: ['100500'],
-							});
-						},
-						100 - idx * 15,
-					);
-				}),
-		);
-
+		// a rejection in the middle must not stall the queue
 		resolveOrder = [];
+		responses = queueResponses();
+		const trackedWithFailure = [track(10), track(20), track(30), track(40), track(50)];
+		await setImmediate();
+		responses[2].reject(new Error('some error'));
+		for (const {resolve} of responses.toReversed()) {
+			resolve(buried);
+		}
 
-		await Promise.allSettled([
-			c.bury(10).then(() => {
-				resolveOrder.push(10);
-			}),
-			c.bury(20).then(() => {
-				resolveOrder.push(20);
-			}),
-			c
-				.bury(30)
-				.then(() => {
-					resolveOrder.push(30);
-				})
-				.catch(() => {}),
-			c.bury(40).then(() => {
-				resolveOrder.push(40);
-			}),
-			c.bury(50).then(() => {
-				resolveOrder.push(50);
-			}),
-		]);
+		await Promise.allSettled(trackedWithFailure);
 
 		expect(resolveOrder).toStrictEqual([10, 20, 40, 50]);
 	});

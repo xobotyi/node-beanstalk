@@ -15,38 +15,11 @@ export default defineConfig({
 		bracketSpacing: false,
 	},
 	lint: {
-		extends: [
-			javascript,
-			typescript,
-			node,
-			vitest,
-			{
-				overrides: [
-					{
-						files: ['**/*.test.*'],
-						plugins: ['vitest'],
-						rules: {
-							'vitest/expect-expect': 'off',
-							'vitest/no-conditional-expect': 'off',
-							'vitest/no-conditional-in-test': 'off',
-							'vitest/no-conditional-tests': 'off',
-							'vitest/no-identical-title': 'off',
-							'vitest/require-mock-type-parameters': 'off',
-							'vitest/valid-title': 'off',
-						},
-					},
-				],
-			},
-		],
+		extends: [javascript, typescript, node, vitest],
 		ignorePatterns: ['dist/**', 'coverage/**'],
 		rules: {
-			'eslint/no-redeclare': 'off',
-			'promise/always-return': 'off',
-			'promise/catch-or-return': 'off',
-			'promise/prefer-await-to-then': 'off',
 			// tests reach private methods through `c['method']`; dot notation would be a compile error
 			'typescript/dot-notation': 'off',
-			'typescript/no-floating-promises': 'off',
 			'typescript/no-restricted-types': 'off',
 			'typescript/no-unsafe-argument': 'off',
 			'typescript/no-unsafe-assignment': 'off',
@@ -55,8 +28,6 @@ export default defineConfig({
 			'typescript/no-unsafe-return': 'off',
 			'typescript/no-unsafe-type-assertion': 'off',
 			'typescript/prefer-readonly-parameter-types': 'off',
-			'typescript/unbound-method': 'off',
-			'typescript/use-unknown-in-catch-callback-variable': 'off',
 			'unicorn/filename-case': 'off',
 			'unicorn/prefer-event-target': 'off',
 			// conflicts with require-await: an async function without await must return a promise
