@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vite-plus/test';
 import {Buffer} from 'node:buffer';
 import {parseResponseHeaders} from '../../src/util/parseResponseHeaders.js';
 import {BeanstalkResponseStatus, type ICommandResponseHeaders} from '../../src/types.js';
+import {CRLF_BUFF} from '../../src/const.js';
 import {type ResponseError, ResponseErrorCode} from '../../src/error/ResponseError.js';
 
 describe('parseResponseHeaders', () => {
@@ -60,6 +61,45 @@ describe('parseResponseHeaders', () => {
 	it('should throw in case data length is malformed', () => {
 		try {
 			parseResponseHeaders(Buffer.from('OK heY!\r\n'));
+			throw new Error('not thrown!');
+		} catch (error: unknown) {
+			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
+		}
+	});
+
+	it('should throw in case data length has trailing garbage', () => {
+		try {
+			parseResponseHeaders(Buffer.from('OK 100abc\r\n'));
+			throw new Error('not thrown!');
+		} catch (error: unknown) {
+			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
+		}
+	});
+
+	it('should accept the largest data length whose sum with CRLF is a safe integer', () => {
+		const headersLine = `OK ${Number.MAX_SAFE_INTEGER - CRLF_BUFF.length}`;
+
+		expect(parseResponseHeaders(Buffer.from(`${headersLine}\r\n`))).toStrictEqual({
+			status: BeanstalkResponseStatus.OK,
+			headers: [],
+			hasData: true,
+			dataLength: Number.MAX_SAFE_INTEGER,
+			headersLineLen: headersLine.length + CRLF_BUFF.length,
+		});
+	});
+
+	it('should throw in case data length plus CRLF is not a safe integer', () => {
+		try {
+			parseResponseHeaders(Buffer.from(`OK ${Number.MAX_SAFE_INTEGER}\r\n`));
+			throw new Error('not thrown!');
+		} catch (error: unknown) {
+			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);
+		}
+	});
+
+	it('should throw in case data length is empty', () => {
+		try {
+			parseResponseHeaders(Buffer.from('OK \r\n'));
 			throw new Error('not thrown!');
 		} catch (error: unknown) {
 			expect((error as ResponseError).code).toBe(ResponseErrorCode.ErrInvalidBodyLength);

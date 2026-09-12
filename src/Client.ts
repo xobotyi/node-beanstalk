@@ -16,7 +16,7 @@ import {type Command} from './Command.js';
 import {ClientError, ClientErrorCode} from './error/ClientError.js';
 import {getCommandInstance} from './util/getCommandInstance.js';
 import {DEFAULT_CLIENT_OPTIONS} from './const.js';
-import {parseResponseHeaders} from './util/parseResponseHeaders.js';
+import {parseNumericHeader, parseResponseHeaders} from './util/parseResponseHeaders.js';
 import {BeanstalkError} from './error/BeanstalkError.js';
 import {
 	validateDelay,
@@ -266,7 +266,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		const state = delay === 0 ? BeanstalkJobState.ready : BeanstalkJobState.delayed;
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			state: result.status === BeanstalkResponseStatus.BURIED ? BeanstalkJobState.buried : state,
 		};
 	}
@@ -311,7 +311,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -345,7 +345,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -355,6 +355,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * the client has limited time to run (TTR) the job before the job times out.
 	 * When the job times out, the server will put the job back into the ready queue.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Worker Commands
 	 */
 	public async reserveJob(jobId: number): Promise<null | IClientRawReservedJob> {
@@ -369,7 +370,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -380,6 +381,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * delete jobs that it has reserved, ready jobs, delayed jobs, and jobs that are
 	 * buried.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Worker Commands
 	 */
 	public async delete(jobId: number): Promise<boolean> {
@@ -397,7 +399,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * its state as "ready") to be run by any client. It is normally used when the job
 	 * fails because of a transitory error.
 	 *
-	 * @param jobId - job id to release.
+	 * @param jobId - integer id of the job to release.
 	 * @param priority - a new priority to assign to the job.
 	 * @param delay - integer number of seconds to wait before putting the job in
 	 * the ready queue. The job will be in the "delayed" state during this time.
@@ -433,7 +435,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * FIFO linked list and will not be touched by the server again until a client
 	 * kicks them with the [[Client.kick]] command
 	 *
-	 * @param jobId - job id to bury.
+	 * @param jobId - integer id of the job to bury.
 	 * @param priority - a new priority to assign to the job.
 	 *
 	 * @category Worker Commands
@@ -457,6 +459,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * (e.g. it may do this on DEADLINE_SOON). The command postpones the auto
 	 * release of a reserved job until TTR seconds from when the command is issued
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Worker Commands
 	 */
 	public async touch(jobId: number): Promise<boolean> {
@@ -484,7 +487,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
-		return Number.parseInt(result.headers[0], 10);
+		return parseNumericHeader(result.headers[0]);
 	}
 
 	/**
@@ -503,6 +506,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
 		if (result.status === BeanstalkResponseStatus.WATCHING) {
+			parseNumericHeader(result.headers[0]);
+
 			return true;
 		}
 
@@ -512,6 +517,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	/**
 	 * Inspect a job with given ID without reserving it.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Other Commands
 	 */
 	public async peek(jobId: number): Promise<null | IClientRawReservedJob> {
@@ -526,7 +532,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -546,7 +552,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -566,7 +572,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -586,7 +592,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		}
 
 		return {
-			id: Number.parseInt(result.headers[0], 10),
+			id: parseNumericHeader(result.headers[0]),
 			payload: result.data,
 		};
 	}
@@ -606,7 +612,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 
 		const result = await this.dispatchCommand(cmd, [`${bound}`]);
 
-		return Number.parseInt(result.headers[0], 10);
+		return parseNumericHeader(result.headers[0]);
 	}
 
 	/**
@@ -615,6 +621,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * delayed state, it will be moved to the ready queue of the the same tube where it
 	 * currently belongs.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Other Commands
 	 */
 	public async kickJob(jobId: number): Promise<boolean> {
@@ -664,6 +671,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 * The stats-job command gives statistical information about the specified job if
 	 * it exists.
 	 *
+	 * @param jobId - integer id of the job.
 	 * @category Other Commands
 	 */
 	public async statsJob(jobId: number): Promise<IBeanstalkJobStats | null> {
@@ -814,6 +822,17 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 *
 	 * @category Client
 	 */
+	/**
+	 * Force-disconnects after response framing is lost, so no later command reads a stale body as its own headers.
+	 */
+	private async abandonConnection(): Promise<void> {
+		try {
+			await this.disconnect(true);
+		} catch {
+			// the connection is already closing or closed; the rejection that triggered the teardown carries the cause
+		}
+	}
+
 	private async readCommandResponse(): Promise<ICommandResponse> {
 		const conn = this._conn;
 		return new Promise((resolve, reject) => {
@@ -826,7 +845,14 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 
 				if (!headers) {
 					// check if headers already received
-					headers = parseResponseHeaders(response);
+					try {
+						headers = parseResponseHeaders(response);
+					} catch (error) {
+						conn.off('data', dataListener);
+						reject(error instanceof Error ? error : new Error(String(error)));
+						void this.abandonConnection();
+						return;
+					}
 
 					if (headers) {
 						response = response.slice(headers.headersLineLen);
