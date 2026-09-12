@@ -4,6 +4,7 @@
 		"moduleResolution": "NodeNext",
 		"target": "ESNext",
 		"lib": ["ESNext"],
+		"types": ["node"],
 		"strict": true,
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
