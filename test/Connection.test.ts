@@ -15,6 +15,7 @@ describe('Connection', () => {
 
 		server.on('connection', (sock) => {
 			sock.on('data', (data) => inbound.emit('data', data));
+			sock.on('close', () => inbound.emit('close'));
 		});
 	});
 
@@ -149,6 +150,71 @@ describe('Connection', () => {
 			await conn.write(sendBuffer);
 
 			await expect(received).resolves.toStrictEqual(sendBuffer);
+		});
+	});
+
+	describe('Symbol.asyncDispose', () => {
+		it('closes an open connection on scope exit', async () => {
+			const conn = getNewConnection();
+
+			{
+				await using scoped = conn;
+				await scoped.open(address.port, address.address);
+				expect(scoped.getState()).toBe('open');
+			}
+
+			expect(conn.getState()).toBe('closed');
+		});
+
+		it('does nothing on a closed connection', async () => {
+			const conn = getNewConnection();
+
+			await expect(conn[Symbol.asyncDispose]()).resolves.toBeUndefined();
+			expect(conn.getState()).toBe('closed');
+		});
+
+		it('does nothing on a connection that is still opening', async () => {
+			const conn = getNewConnection();
+			const opening = conn.open(address.port, address.address);
+			const opened = (async () => {
+				await opening;
+
+				return 'opened';
+			})();
+			const disposed = (async () => {
+				await conn[Symbol.asyncDispose]();
+
+				return 'disposed';
+			})();
+
+			await expect(Promise.race([disposed, opened])).resolves.toBe('disposed');
+			await opening;
+			expect(conn.getState()).toBe('open');
+			await conn.close();
+		});
+
+		it('does nothing on a connection that is already closing', async () => {
+			const conn = getNewConnection();
+			await conn.open(address.port, address.address);
+			const peerClosed = new Promise<void>((resolve) => {
+				inbound.once('close', resolve);
+			});
+			const closing = conn.close();
+			const closed = (async () => {
+				await closing;
+
+				return 'closed';
+			})();
+			const disposed = (async () => {
+				await conn[Symbol.asyncDispose]();
+
+				return 'disposed';
+			})();
+
+			await expect(Promise.race([disposed, closed])).resolves.toBe('disposed');
+			await closing;
+			await peerClosed;
+			expect(conn.getState()).toBe('closed');
 		});
 	});
 

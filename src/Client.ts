@@ -29,6 +29,8 @@ import {
 import {Connection} from './Connection.js';
 import {type ILinkedListNode, LinkedList} from './util/LinkedList.js';
 
+const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
+
 export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [never]> extends EventEmitter<Events> {
 	private readonly _conn: Connection;
 
@@ -38,6 +40,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 		resolve: () => void;
 		reject: (err?: Error) => void;
 	}>();
+
+	#disconnecting: Promise<void> | undefined;
 
 	constructor(options: IClientCtorOptions = {}, connection = new Connection()) {
 		super();
@@ -72,6 +76,42 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	}
 
 	/**
+	 * Disconnects the client if it is connected, so `await using` closes the connection on scope exit. A disconnect
+	 * that is already in flight is awaited instead of queued again.
+	 */
+	async [Symbol.asyncDispose](): Promise<void> {
+		if (this.#disconnecting) {
+			await this.followDisconnect(this.#disconnecting, this.#disconnecting);
+			return;
+		}
+
+		if (!this.isConnected) return;
+
+		const own = this.disconnect();
+
+		await this.followDisconnect(own, this.#disconnecting);
+	}
+
+	/**
+	 * Awaits a disconnect, moving on to a forced one that supersedes it instead of failing with the superseded call's
+	 * rejection. A forced disconnect rejects the calls it displaces with ErrDisconnecting, which is how a superseded
+	 * disconnect is told apart from one that failed. `tracked` is the promise `#disconnecting` held for that disconnect.
+	 */
+	private async followDisconnect(followed: Promise<void>, tracked: Promise<void> | undefined): Promise<void> {
+		try {
+			await followed;
+		} catch (error) {
+			const successor = this.#disconnecting;
+			const displaced = error instanceof ClientError && error.code === DISPLACED_BY_FORCED_DISCONNECT;
+			const superseded = displaced && successor !== undefined && successor !== tracked;
+
+			if (!superseded) throw error;
+
+			await this.followDisconnect(successor, successor);
+		}
+	}
+
+	/**
 	 * Establish connection to the server
 	 *
 	 * @category Client
@@ -100,6 +140,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 	 *
 	 * If {force} set to truthy value - only currently running request will be awaited.
 	 *
+	 * A disconnect whose turn comes after another one already closed the connection resolves without closing again.
+	 *
 	 * @category Client
 	 */
 	public async disconnect(force = false): Promise<void> {
@@ -110,6 +152,17 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 			);
 		}
 
+		const disconnecting = this.closeAfterQueue(force);
+		this.#disconnecting = disconnecting;
+
+		try {
+			await disconnecting;
+		} finally {
+			if (this.#disconnecting === disconnecting) this.#disconnecting = undefined;
+		}
+	}
+
+	private async closeAfterQueue(force: boolean): Promise<void> {
 		if (force) {
 			// The thing is to empty whole queue and return head node to the list.
 			// As head node representing currently running request we want to await it
@@ -128,6 +181,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 
 		try {
 			await waitPromise;
+
+			if (this._conn.getState() !== 'open') return;
 
 			await this._conn.close();
 		} finally {

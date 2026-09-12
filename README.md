@@ -85,11 +85,25 @@ one by one).
 #### Disconnect
 
 To disconnect the client from remote - call `client.disconnect()`, it will wait for all the pending
-requests to be performed and then disconnect the client from server. All requests queued after
-disconnection will be rejected.
+requests to be performed and then disconnect the client from server. All commands queued after
+disconnection will be rejected; a second `disconnect()` queued behind it resolves once the connection is closed.
 
 To disconnect client immediately - call `client.disconnect(true)`, it will perform disconnect right
 after currently running request.
+
+The client implements `Symbol.asyncDispose`, so `await using` disconnects it when the scope ends. Disposal awaits a
+`disconnect()` that is still in flight and does nothing when the client is already disconnected, so a manual
+`disconnect()` inside the scope is safe:
+
+```ts
+import {Client} from 'node-beanstalk';
+
+await using c = new Client();
+await c.connect();
+
+await c.put({foo: 'bar'});
+// c.disconnect() runs here
+```
 
 #### Payload serialization
 
@@ -136,6 +150,20 @@ try {
 
 You **must always** release client back to the pool, otherwise, at some point, your pool will be
 empty forever, and your subsequent requests will wait forever.
+
+A pool client implements `Symbol.asyncDispose` by releasing itself, so `await using` guarantees the
+return:
+
+```ts
+import {Pool} from 'node-beanstalk';
+
+const p = new Pool({capacity: 5});
+
+await using client = await p.connect();
+
+await client.statsTube('my-own-tube');
+// client.releaseClient() runs here
+```
 
 #### Disconnect
 
