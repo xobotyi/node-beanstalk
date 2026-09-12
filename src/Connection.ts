@@ -2,41 +2,16 @@ import {EventEmitter} from 'node:events';
 import {Socket} from 'node:net';
 import {ConnectionError, ConnectionErrorCode} from './error/ConnectionError.js';
 
-export interface Connection {
-	emit: ((event: string, listener: (...args: any[]) => void) => boolean) &
-		((event: 'close') => boolean) &
-		((event: 'open', port: number, host: string) => boolean) &
-		((event: 'error', err: Error) => boolean) &
-		((event: 'data', data: Buffer) => boolean);
-
-	on: ((event: string, listener: (...args: any[]) => void) => this) &
-		((event: 'close', listener: (...args: any[]) => void) => this) &
-		((event: 'open', listener: (port: number, host: string) => void) => this) &
-		((event: 'error', listener: (err: Error) => void) => this) &
-		((event: 'data', listener: (data: Buffer) => void) => this);
-
-	once: ((event: string, listener: (...args: any[]) => void) => this) &
-		((event: 'close', listener: (...args: any[]) => void) => this) &
-		((event: 'open', listener: (port: number, host: string) => void) => this) &
-		((event: 'error', listener: (err: Error) => void) => this) &
-		((event: 'data', listener: (data: Buffer) => void) => this);
-
-	prependListener: ((event: string, listener: (...args: any[]) => void) => this) &
-		((event: 'close', listener: (...args: any[]) => void) => this) &
-		((event: 'open', listener: (port: number, host: string) => void) => this) &
-		((event: 'error', listener: (err: Error) => void) => this) &
-		((event: 'data', listener: (data: Buffer) => void) => this);
-
-	prependOnceListener: ((event: string, listener: (...args: any[]) => void) => this) &
-		((event: 'close', listener: (...args: any[]) => void) => this) &
-		((event: 'open', listener: (port: number, host: string) => void) => this) &
-		((event: 'error', listener: (err: Error) => void) => this) &
-		((event: 'data', listener: (data: Buffer) => void) => this);
-}
+export type IConnectionEvents = {
+	close: [];
+	open: [port: number, host: string];
+	error: [err: Error];
+	data: [data: Buffer];
+};
 
 export type ConnectionState = 'open' | 'opening' | 'closed' | 'closing';
 
-export class Connection extends EventEmitter {
+export class Connection extends EventEmitter<IConnectionEvents> {
 	private _socket?: Socket;
 
 	private _state: ConnectionState = 'closed';
