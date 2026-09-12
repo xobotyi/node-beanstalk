@@ -13,12 +13,12 @@ import {
 	type ICommandResponse,
 	type ICommandResponseHeaders,
 } from './types.js';
-import {type Command} from './Command.js';
-import {ClientError, ClientErrorCode} from './error/ClientError.js';
-import {getCommandInstance} from './util/getCommandInstance.js';
+import {type Command} from './command.js';
+import {ClientError, ClientErrorCode} from './error/client-error.js';
+import {getCommandInstance} from './util/get-command-instance.js';
 import {DEFAULT_CLIENT_OPTIONS} from './const.js';
-import {parseNumericHeader, parseResponseHeaders} from './util/parseResponseHeaders.js';
-import {BeanstalkError} from './error/BeanstalkError.js';
+import {parseNumericHeader, parseResponseHeaders} from './util/parse-response-headers.js';
+import {BeanstalkError} from './error/beanstalk-error.js';
 import {
 	validateDelay,
 	validateJobId,
@@ -27,8 +27,8 @@ import {
 	validateTTR,
 	validateTubeName,
 } from './util/validator.js';
-import {Connection} from './Connection.js';
-import {type ILinkedListNode, LinkedList} from './util/LinkedList.js';
+import {Connection} from './connection.js';
+import {type ILinkedListNode, LinkedList} from './util/linked-list.js';
 
 const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 

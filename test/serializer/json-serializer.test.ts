@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vite-plus/test';
-import {JsonSerializer} from '../../src/serializer/JsonSerializer.js';
+import {JsonSerializer} from '../../src/serializer/json-serializer.js';
 import {SerializerError} from '../../src/index.js';
-import {SerializerErrorCode} from '../../src/error/SerializerError.js';
+import {SerializerErrorCode} from '../../src/error/serializer-error.js';
 
 describe('JsonSerializer', () => {
 	it('should be defined', () => {

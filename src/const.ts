@@ -1,5 +1,5 @@
 import {type IClientCtorOptions, type IPoolCtorOptions} from './types.js';
-import {JsonSerializer} from './serializer/JsonSerializer.js';
+import {JsonSerializer} from './serializer/json-serializer.js';
 
 export const CRLF = '\r\n';
 export const CRLF_BUFF = Buffer.from(CRLF);

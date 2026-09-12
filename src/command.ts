@@ -1,5 +1,5 @@
 import {load} from 'js-yaml';
-import {CommandError, CommandErrorCode} from './error/CommandError.js';
+import {CommandError, CommandErrorCode} from './error/command-error.js';
 import {CRLF_BUFF} from './const.js';
 import {
 	BeanstalkCommand,

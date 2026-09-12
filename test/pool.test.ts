@@ -1,11 +1,11 @@
 import EventEmitter from 'node:events';
 import {setTimeout as sleep} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockedClass} from 'vite-plus/test';
-import {PoolClient} from '../src/PoolClient.js';
+import {PoolClient} from '../src/pool-client.js';
 import {Pool} from '../src/index.js';
-import {PoolError} from '../src/error/PoolError.js';
+import {PoolError} from '../src/error/pool-error.js';
 
-vi.mock('../src/PoolClient');
+vi.mock('../src/pool-client');
 
 class PoolClientMock extends EventEmitter {
 	releaseClient = vi.fn<() => void>(() => {

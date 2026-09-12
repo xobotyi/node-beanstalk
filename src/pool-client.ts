@@ -1,4 +1,4 @@
-import {Client} from './Client.js';
+import {Client} from './client.js';
 
 export type IPoolClientEvents = {
 	release: [client: PoolClient];
