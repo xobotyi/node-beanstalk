@@ -57,7 +57,7 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 					this.emit('data', data);
 				})
 				.connect(port, host, () => {
-					socket.off('error', reject).on('error', (err: any) => {
+					socket.off('error', reject).on('error', (err: NodeJS.ErrnoException) => {
 						// ignore disconnect errors during disconnect procedure
 						if (this.#state === 'closing' && (err.code === 'ECONNRESET' || err.code === 'EPIPE')) {
 							return;

@@ -207,9 +207,7 @@ describe('Connection', () => {
 
 			await conn.open(address.port, address.address);
 
-			const [port, host] = await opened;
-			expect(typeof port).toBe('number');
-			expect(typeof host).toBe('string');
+			await expect(opened).resolves.toStrictEqual([expect.any(Number), expect.any(String)]);
 			await conn.close();
 		});
 
