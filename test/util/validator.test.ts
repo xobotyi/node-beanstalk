@@ -19,6 +19,23 @@ import {
 } from '../../src/const.js';
 
 describe('validator', () => {
+	function itValidates(
+		validate: (value: never) => void,
+		tableTests: Array<{name: string; in: unknown; out: Error | undefined}>,
+	): void {
+		it.each(tableTests.filter((test) => test.out === undefined))('$name', (test) => {
+			expect(() => {
+				validate(test.in as never);
+			}).not.toThrow();
+		});
+
+		it.each(tableTests.filter((test) => test.out instanceof Error))('$name', (test) => {
+			expect(() => {
+				validate(test.in as never);
+			}).toThrow(test.out);
+		});
+	}
+
 	describe('validateTubeName', () => {
 		const tableTests = [
 			{
@@ -51,23 +68,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTubeName(test.in);
-					}).toThrow(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTubeName(test.in);
-					}).not.toThrow();
-				});
-			}
-		}
+		itValidates(validateTubeName, tableTests);
 	});
 
 	describe('validatePriority', () => {
@@ -104,23 +105,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validatePriority(test.in);
-					}).toThrow(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validatePriority(test.in);
-					}).not.toThrow();
-				});
-			}
-		}
+		itValidates(validatePriority, tableTests);
 	});
 
 	describe('validateDelay', () => {
@@ -157,23 +142,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateDelay(test.in);
-					}).toThrow(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateDelay(test.in);
-					}).not.toThrow();
-				});
-			}
-		}
+		itValidates(validateDelay, tableTests);
 	});
 
 	describe('validateTTR', () => {
@@ -210,23 +179,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTTR(test.in);
-					}).toThrow(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTTR(test.in);
-					}).not.toThrow();
-				});
-			}
-		}
+		itValidates(validateTTR, tableTests);
 	});
 
 	describe('validateTimeout', () => {
@@ -253,23 +206,7 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTimeout(test.in);
-					}).toThrow(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateTimeout(test.in);
-					}).not.toThrow();
-				});
-			}
-		}
+		itValidates(validateTimeout, tableTests);
 	});
 
 	describe('validateJobId', () => {
@@ -306,22 +243,6 @@ describe('validator', () => {
 			},
 		];
 
-		for (const test of tableTests) {
-			if (test.out instanceof Error) {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateJobId(test.in);
-					}).toThrow(test.out);
-				});
-			} else {
-				it(test.name, () => {
-					expect(() => {
-						// @ts-expect-error we're testing invalid inputs
-						validateJobId(test.in);
-					}).not.toThrow();
-				});
-			}
-		}
+		itValidates(validateJobId, tableTests);
 	});
 });

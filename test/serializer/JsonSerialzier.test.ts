@@ -39,23 +39,18 @@ describe('JsonSerializer', () => {
 
 		const s = new JsonSerializer();
 
-		for (const test of tableTests) {
-			it(test.name, () => {
-				expect(s.serialize(test.in)).toStrictEqual(test.out);
-			});
-		}
+		it.each(tableTests)('$name', (test) => {
+			expect(s.serialize(test.in)).toStrictEqual(test.out);
+		});
 
 		const obj: any = {};
 		obj.a = obj;
 
 		it('should throw on encode error', () => {
-			try {
-				s.serialize(obj);
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(SerializerError);
-				expect(error.code).toBe(SerializerErrorCode.ErrSerializeError);
-			}
+			const throwing = () => s.serialize(obj);
+
+			expect(throwing).toThrow(SerializerError);
+			expect(throwing).toThrow(expect.objectContaining({code: SerializerErrorCode.ErrSerializeError}));
 		});
 	});
 
@@ -80,20 +75,15 @@ describe('JsonSerializer', () => {
 
 		const s = new JsonSerializer();
 
-		for (const test of tableTests) {
-			it(test.name, () => {
-				expect(s.deserialize(test.in)).toStrictEqual(test.out);
-			});
-		}
+		it.each(tableTests)('$name', (test) => {
+			expect(s.deserialize(test.in)).toStrictEqual(test.out);
+		});
 
 		it('should throw on decode error', () => {
-			try {
-				s.deserialize(Buffer.from('{"invalid json'));
-				throw new Error('not thrown!');
-			} catch (error: any) {
-				expect(error).toBeInstanceOf(SerializerError);
-				expect(error.code).toBe(SerializerErrorCode.ErrDeserializeError);
-			}
+			const throwing = () => s.deserialize(Buffer.from('{"invalid json'));
+
+			expect(throwing).toThrow(SerializerError);
+			expect(throwing).toThrow(expect.objectContaining({code: SerializerErrorCode.ErrDeserializeError}));
 		});
 	});
 });
