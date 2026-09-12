@@ -31,7 +31,7 @@ describe('Connection', () => {
 	afterAll(async () => {
 		server.close();
 
-		for await (const connection of connections) {
+		for (const connection of connections) {
 			if (connection.getState() !== 'closed' && connection.getState() !== 'closing') await connection.close();
 		}
 	});

@@ -26,9 +26,9 @@ class ConnectionMock extends Connection {
 
 	public isChangingState = vi.fn(() => false);
 
-	public open = vi.fn(async (port: number, host?: string) => {});
+	public open = vi.fn(async (_port: number, _host?: string) => {});
 
-	public write: Connection['write'] = async (buffer) => buffer;
+	public write: Connection['write'] = async (buffer) => Promise.resolve(buffer);
 }
 
 describe('Client', () => {
@@ -651,11 +651,13 @@ describe('Client', () => {
 
 		beforeEach(() => {
 			readCommandResponseMock.mockReset();
-			readCommandResponseMock.mockImplementation(async () => ({
-				status: BeanstalkResponseStatus.BURIED,
-				headers: [],
-				data: undefined,
-			}));
+			readCommandResponseMock.mockImplementation(async () =>
+				Promise.resolve({
+					status: BeanstalkResponseStatus.BURIED,
+					headers: [],
+					data: undefined,
+				}),
+			);
 
 			buildCommandBufferSpy.mockReset();
 			handleResponseSpy.mockReset();

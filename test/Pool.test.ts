@@ -11,9 +11,9 @@ class PoolClientMock extends EventEmitter {
 		this.emit('release', this);
 	});
 
-	connect = vi.fn(async () => Promise.resolve());
+	connect = vi.fn(async () => {});
 
-	disconnect = vi.fn(async () => Promise.resolve());
+	disconnect = vi.fn(async () => {});
 }
 
 describe('Pool', () => {
@@ -24,9 +24,9 @@ describe('Pool', () => {
 			return new PoolClientMock() as any;
 		});
 		PC.mockClear();
-		PC.mock.instances.forEach((i) => {
+		for (const i of PC.mock.instances) {
 			i.releaseClient();
-		});
+		}
 	});
 
 	it('should be defined', () => {
@@ -239,7 +239,7 @@ describe('Pool', () => {
 	});
 
 	describe('.restore', () => {
-		it('should throw in case called on live pool', async () => {
+		it('should throw in case called on live pool', () => {
 			const p = new Pool({capacity: 2});
 
 			expect(() => {

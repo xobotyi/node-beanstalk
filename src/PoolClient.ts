@@ -17,5 +17,7 @@ export class PoolClient extends Client<IPoolClientEvents> {
 	 */
 	override async [Symbol.asyncDispose](): Promise<void> {
 		this.releaseClient();
+
+		return Promise.resolve();
 	}
 }

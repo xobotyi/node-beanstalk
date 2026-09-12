@@ -48,9 +48,7 @@ export class LinkedList<V = any> {
 		}
 
 		this.tail = node;
-		if (!this.head) {
-			this.head = node;
-		}
+		this.head ??= node;
 
 		this.size++;
 

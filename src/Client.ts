@@ -124,7 +124,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 			);
 		}
 
-		const [waitPromise, moveQueue] = await this.waitQueue();
+		const [waitPromise, moveQueue] = this.waitQueue();
 
 		try {
 			await waitPromise;
@@ -169,15 +169,15 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 			// even if force disconnecting.
 			const {head} = this._queue;
 
-			this._queue.truncate().forEach((i) => {
-				if (i.reject === head?.value.reject) return;
-				i.reject(new ClientError(ClientErrorCode.ErrDisconnecting, 'Client is disconnecting'));
-			});
+			for (const {reject} of this._queue.truncate()) {
+				if (reject === head?.value.reject) continue;
+				reject(new ClientError(ClientErrorCode.ErrDisconnecting, 'Client is disconnecting'));
+			}
 
 			if (head) this._queue.pushNode(head);
 		}
 
-		const [waitPromise, moveQueue] = await this.waitQueue();
+		const [waitPromise, moveQueue] = this.waitQueue();
 
 		try {
 			await waitPromise;
@@ -831,19 +831,17 @@ export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [
 					if (headers) {
 						response = response.slice(headers.headersLineLen);
 
-						if (headers.hasData) {
-							if (response.length < headers.dataLength) {
-								// if response data not read - start read timeout
-								dataReadTimeout = setTimeout(() => {
-									conn.off('data', dataListener);
-									reject(
-										new ClientError(
-											ClientErrorCode.ErrResponseRead,
-											`Failed to read response data after ${this._opt.dataReadTimeoutMs} ms`,
-										),
-									);
-								}, this._opt.dataReadTimeoutMs);
-							}
+						if (headers.hasData && response.length < headers.dataLength) {
+							// if response data not read - start read timeout
+							dataReadTimeout = setTimeout(() => {
+								conn.off('data', dataListener);
+								reject(
+									new ClientError(
+										ClientErrorCode.ErrResponseRead,
+										`Failed to read response data after ${this._opt.dataReadTimeoutMs} ms`,
+									),
+								);
+							}, this._opt.dataReadTimeoutMs);
 						}
 					}
 				}
