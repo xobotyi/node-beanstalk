@@ -11,7 +11,7 @@ describe('parseResponseHeaders', () => {
 		expect(parseResponseHeaders).toBeInstanceOf(Function);
 	});
 
-	const tableTests = [
+	const tableTests: Array<{name: string; in: Buffer; out: ICommandResponseHeaders | null}> = [
 		{
 			name: 'null in case no LF',
 			in: Buffer.from('OK 1234'),
@@ -26,7 +26,7 @@ describe('parseResponseHeaders', () => {
 				hasData: false,
 				dataLength: 0,
 				headersLineLen: 8,
-			} as ICommandResponseHeaders,
+			},
 		},
 		{
 			name: 'response with headers',
@@ -37,7 +37,7 @@ describe('parseResponseHeaders', () => {
 				hasData: false,
 				dataLength: 0,
 				headersLineLen: 20,
-			} as ICommandResponseHeaders,
+			},
 		},
 		{
 			name: 'data response',
@@ -48,7 +48,7 @@ describe('parseResponseHeaders', () => {
 				hasData: true,
 				dataLength: 125,
 				headersLineLen: 8,
-			} as ICommandResponseHeaders,
+			},
 		},
 	];
 

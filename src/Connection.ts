@@ -47,11 +47,15 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 			socket
 				.setNoDelay(true)
 				.setKeepAlive(true)
-				.on('close', () => this.emit('close'))
+				.on('close', () => {
+					this.emit('close');
+				})
 				.on('error', (err) => {
 					reject(err);
 				})
-				.on('data', (data) => this.emit('data', data))
+				.on('data', (data) => {
+					this.emit('data', data);
+				})
 				.connect(port, host, () => {
 					socket.off('error', reject).on('error', (err: any) => {
 						// ignore disconnect errors during disconnect procedure

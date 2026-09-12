@@ -57,12 +57,14 @@ describe('validator', () => {
 					expect(() => {
 						// @ts-expect-error we're testing invalid inputs
 						validateTubeName(test.in);
-					}).toThrowError(test.out);
+					}).toThrow(test.out);
 				});
 			} else {
 				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateTubeName(test.in)).toStrictEqual(test.out);
+					expect(() => {
+						// @ts-expect-error we're testing invalid inputs
+						validateTubeName(test.in);
+					}).not.toThrow();
 				});
 			}
 		}
@@ -108,12 +110,14 @@ describe('validator', () => {
 					expect(() => {
 						// @ts-expect-error we're testing invalid inputs
 						validatePriority(test.in);
-					}).toThrowError(test.out);
+					}).toThrow(test.out);
 				});
 			} else {
 				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validatePriority(test.in)).toStrictEqual(test.out);
+					expect(() => {
+						// @ts-expect-error we're testing invalid inputs
+						validatePriority(test.in);
+					}).not.toThrow();
 				});
 			}
 		}
@@ -159,12 +163,14 @@ describe('validator', () => {
 					expect(() => {
 						// @ts-expect-error we're testing invalid inputs
 						validateDelay(test.in);
-					}).toThrowError(test.out);
+					}).toThrow(test.out);
 				});
 			} else {
 				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateDelay(test.in)).toStrictEqual(test.out);
+					expect(() => {
+						// @ts-expect-error we're testing invalid inputs
+						validateDelay(test.in);
+					}).not.toThrow();
 				});
 			}
 		}
@@ -210,12 +216,14 @@ describe('validator', () => {
 					expect(() => {
 						// @ts-expect-error we're testing invalid inputs
 						validateTTR(test.in);
-					}).toThrowError(test.out);
+					}).toThrow(test.out);
 				});
 			} else {
 				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateTTR(test.in)).toStrictEqual(test.out);
+					expect(() => {
+						// @ts-expect-error we're testing invalid inputs
+						validateTTR(test.in);
+					}).not.toThrow();
 				});
 			}
 		}
@@ -251,12 +259,14 @@ describe('validator', () => {
 					expect(() => {
 						// @ts-expect-error we're testing invalid inputs
 						validateTimeout(test.in);
-					}).toThrowError(test.out);
+					}).toThrow(test.out);
 				});
 			} else {
 				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateTimeout(test.in)).toStrictEqual(test.out);
+					expect(() => {
+						// @ts-expect-error we're testing invalid inputs
+						validateTimeout(test.in);
+					}).not.toThrow();
 				});
 			}
 		}
@@ -302,12 +312,14 @@ describe('validator', () => {
 					expect(() => {
 						// @ts-expect-error we're testing invalid inputs
 						validateJobId(test.in);
-					}).toThrowError(test.out);
+					}).toThrow(test.out);
 				});
 			} else {
 				it(test.name, () => {
-					// @ts-expect-error we're testing invalid inputs
-					expect(validateJobId(test.in)).toStrictEqual(test.out);
+					expect(() => {
+						// @ts-expect-error we're testing invalid inputs
+						validateJobId(test.in);
+					}).not.toThrow();
 				});
 			}
 		}

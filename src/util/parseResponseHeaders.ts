@@ -28,7 +28,7 @@ export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | nu
 
 	if (firstCrlf === -1) return null;
 
-	const [status, ...restHeaders] = buff.slice(0, firstCrlf).toString().split(' ') as [
+	const [status, ...restHeaders] = buff.subarray(0, firstCrlf).toString().split(' ') as [
 		BeanstalkResponseStatus,
 		...string[],
 	];

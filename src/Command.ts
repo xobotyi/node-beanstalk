@@ -20,7 +20,7 @@ export type ICommandCtorOptions<R extends BeanstalkResponseStatus = BeanstalkRes
 export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> {
 	private readonly commandName: BeanstalkCommand;
 
-	private readonly opt: ICommandCtorOptions<R>;
+	private readonly opt: Required<ICommandCtorOptions<R>>;
 
 	constructor(commandName: BeanstalkCommand, opt: ICommandCtorOptions<R> = {}) {
 		if (!BeanstalkCommand[commandName]) {
@@ -68,7 +68,7 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 			);
 		}
 
-		if (!this.opt.expectedStatus?.includes(response.status as R)) {
+		if (!this.opt.expectedStatus.includes(response.status as R)) {
 			throw new CommandError(
 				CommandErrorCode.ErrUnexpectedResponseStatus,
 				`Unexpected status '${response.status}' received in response to '${this.commandName}' command`,
@@ -81,7 +81,7 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 		} as any;
 
 		if (response.data) {
-			res.data = response.data.slice(0, response.data.length - CRLF_BUFF.length);
+			res.data = response.data.subarray(0, response.data.length - CRLF_BUFF.length);
 
 			if (this.opt.payloadBody) {
 				if (serializer) {

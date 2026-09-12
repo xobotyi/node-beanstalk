@@ -1,4 +1,5 @@
 import {describe, expect, it, vi} from 'vite-plus/test';
+import {once} from 'node:events';
 import {PoolClient} from '../src/PoolClient.js';
 import {Connection, type ConnectionState} from '../src/Connection.js';
 
@@ -12,11 +13,11 @@ describe('PoolClient', () => {
 	describe('releaseClient', () => {
 		it('should emit `release` event on client', async () => {
 			const c = new PoolClient();
-			const released = new Promise((resolve) => c.once('release', resolve));
+			const released = once(c, 'release');
 
 			c.releaseClient();
 
-			await expect(released).resolves.toBe(c);
+			await expect(released).resolves.toStrictEqual([c]);
 		});
 	});
 
@@ -25,14 +26,14 @@ describe('PoolClient', () => {
 			const conn = new OpenConnection();
 			const c = new PoolClient(undefined, conn);
 			const disconnect = vi.spyOn(c, 'disconnect');
-			const released = new Promise((resolve) => c.once('release', resolve));
+			const released = once(c, 'release');
 
 			{
 				await using scoped = c;
 				expect(scoped.isConnected).toBe(true);
 			}
 
-			await expect(released).resolves.toBe(c);
+			await expect(released).resolves.toStrictEqual([c]);
 			expect(disconnect).not.toHaveBeenCalled();
 			expect(conn.close).not.toHaveBeenCalled();
 			expect(c.isConnected).toBe(true);
