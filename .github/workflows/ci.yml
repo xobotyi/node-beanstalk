@@ -9,6 +9,9 @@ on:
       - master
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     name: 'Check'
@@ -85,26 +88,3 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           target: 'minor'
-
-  semantic-release:
-    name: 'Release'
-    runs-on: ubuntu-latest
-    needs: ['check', 'test', 'build']
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    steps:
-      - name: 'Checkout'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - name: 'Setup Vite+'
-        uses: voidzero-dev/setup-vp@49c3e4e92c52e7f8392712a9267bbe71c5ab30e5 # v1.19.0
-        with:
-          node-version: 'lts'
-          cache: true
-      - name: 'Install dependencies'
-        run: vp install --frozen-lockfile
-      - name: 'Release'
-        run: vp exec semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
