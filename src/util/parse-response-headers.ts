@@ -46,6 +46,6 @@ export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | nu
 		status,
 		headers,
 		hasData,
-		dataLength: dataLength && dataLength + CRLF_BUFF.length,
+		dataLength: hasData ? dataLength + CRLF_BUFF.length : 0,
 	};
 }
