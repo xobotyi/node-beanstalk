@@ -650,7 +650,8 @@ export class Client<
 
 		const result = await this.dispatchCommand(cmd);
 
-		return result.data;
+		// constraint: the instance id is the one unquoted string in the response, so an all-digit id parses as a number
+		return {...result.data, id: String(result.data.id)};
 	}
 
 	/**
