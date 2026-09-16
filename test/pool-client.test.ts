@@ -1,5 +1,4 @@
 import {describe, expect, it, vi} from 'vite-plus/test';
-import {once} from 'node:events';
 import {PoolClient} from '../src/pool-client.js';
 import {Connection, type ConnectionState} from '../src/connection.js';
 
@@ -11,13 +10,33 @@ class OpenConnection extends Connection {
 
 describe('PoolClient', () => {
 	describe('releaseClient', () => {
-		it('should emit `release` event on client', async () => {
+		it('should call the registered handler with the client', () => {
 			const c = new PoolClient();
-			const released = once(c, 'release');
+			const release = vi.fn<(client: PoolClient) => void>();
+			c.onRelease(release);
 
 			c.releaseClient();
 
-			await expect(released).resolves.toStrictEqual([c]);
+			expect(release).toHaveBeenCalledExactlyOnceWith(c);
+		});
+
+		it('should call the registered handler once, whatever the number of releases', () => {
+			const c = new PoolClient();
+			const release = vi.fn<(client: PoolClient) => void>();
+			c.onRelease(release);
+
+			c.releaseClient();
+			c.releaseClient();
+
+			expect(release).toHaveBeenCalledExactlyOnceWith(c);
+		});
+
+		it('should do nothing when no handler is registered', () => {
+			const c = new PoolClient();
+
+			expect(() => {
+				c.releaseClient();
+			}).not.toThrow();
 		});
 	});
 
@@ -26,14 +45,15 @@ describe('PoolClient', () => {
 			const conn = new OpenConnection();
 			const c = new PoolClient(undefined, conn);
 			const disconnect = vi.spyOn(c, 'disconnect');
-			const released = once(c, 'release');
+			const release = vi.fn<(client: PoolClient) => void>();
+			c.onRelease(release);
 
 			{
 				await using scoped = c;
 				expect(scoped.isConnected).toBe(true);
 			}
 
-			await expect(released).resolves.toStrictEqual([c]);
+			expect(release).toHaveBeenCalledExactlyOnceWith(c);
 			expect(disconnect).not.toHaveBeenCalled();
 			expect(conn.close).not.toHaveBeenCalled();
 			expect(c.isConnected).toBe(true);

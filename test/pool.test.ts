@@ -8,8 +8,18 @@ import {PoolError, PoolErrorCode} from '../src/error/pool-error.js';
 vi.mock('../src/pool-client');
 
 class PoolClientMock extends EventEmitter {
+	#release: ((client: PoolClient) => void) | undefined;
+
+	onRelease = vi.fn<PoolClient['onRelease']>((handler) => {
+		this.#release = handler;
+	});
+
 	releaseClient = vi.fn<() => void>(() => {
-		this.emit('release', this);
+		const release = this.#release;
+
+		this.#release = undefined;
+
+		release?.(this as unknown as PoolClient);
 	});
 
 	connect = vi.fn<() => Promise<void>>(async () => {});

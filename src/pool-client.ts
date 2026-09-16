@@ -1,15 +1,25 @@
 import {Client} from './client.js';
 
-export type PoolClientEvents = {
-	release: [client: PoolClient];
-};
+export class PoolClient extends Client {
+	#release: ((client: PoolClient) => void) | undefined;
 
-export class PoolClient extends Client<PoolClientEvents> {
+	/**
+	 * Registers {handler} to run on the next release of this client and on no later one, so a client released twice
+	 * reaches the pool once. Registering again replaces a handler that has not run yet.
+	 */
+	public onRelease(handler: (client: PoolClient) => void): void {
+		this.#release = handler;
+	}
+
 	/**
 	 * Release client back to the pool where it can be reserved again.
 	 */
 	public releaseClient(): void {
-		this.emit('release', this);
+		const release = this.#release;
+
+		this.#release = undefined;
+
+		release?.(this);
 	}
 
 	/**

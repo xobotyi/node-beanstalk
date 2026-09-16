@@ -45,9 +45,7 @@ export type ClientEvents = {
 	error: [err: Error];
 };
 
-export class Client<Events extends Record<keyof Events, unknown[]> = Record<never, never>> extends EventEmitter<
-	Events & ClientEvents
-> {
+export class Client extends EventEmitter<ClientEvents> {
 	readonly #conn: Connection;
 
 	readonly #opt: Omit<Required<ClientOptions>, 'serializer'> & {serializer: Serializer | undefined};
@@ -67,19 +65,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		this.#conn = connection;
 
 		connection.on('close', () => {
-			this.lifecycle.emit('close');
+			this.emit('close');
 		});
 		connection.on('error', (error) => {
-			this.lifecycle.emit('error', error);
+			this.emit('error', error);
 		});
-	}
-
-	/**
-	 * The emitter viewed as the carrier of {@link ClientEvents} alone. `Events & ClientEvents` cannot be indexed while
-	 * `Events` is still generic, so every emit of a connection event goes through this view.
-	 */
-	private get lifecycle(): EventEmitter<ClientEvents> {
-		return this;
 	}
 
 	/**
@@ -166,7 +156,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 			await this.#conn.open(this.#opt.port, this.#opt.host, this.#opt.connectTimeoutMs);
 
-			this.lifecycle.emit('connect');
+			this.emit('connect');
 		} finally {
 			moveQueue();
 		}
