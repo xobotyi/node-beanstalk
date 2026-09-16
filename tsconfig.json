@@ -6,6 +6,7 @@
 		"lib": ["ESNext"],
 		"types": ["node"],
 		"strict": true,
+		"noUncheckedIndexedAccess": true,
 		"verbatimModuleSyntax": true,
 		"erasableSyntaxOnly": true,
 		"skipLibCheck": true,

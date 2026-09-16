@@ -20,6 +20,22 @@ export function parseNumericHeader(
 	return value;
 }
 
+/**
+ * Reads the header token at {index}. A response that carries none throws a ResponseError of code `ErrMissingHeader`.
+ */
+export function requireHeader(headers: string[], index: number): string {
+	const header = headers[index];
+
+	if (header === undefined) {
+		throw new ResponseError(
+			ResponseErrorCode.ErrMissingHeader,
+			`Expected a header at position ${index}, response carries ${headers.length}`,
+		);
+	}
+
+	return header;
+}
+
 // constraint: the read loop compares the body length plus the CRLF against buffer sizes, so their sum must stay exact
 const MAX_DATA_LENGTH = Number.MAX_SAFE_INTEGER - CRLF_BUFF.length;
 

@@ -1336,6 +1336,19 @@ describe('Client', () => {
 
 				expect(await c.use('testTube')).toBe('awesome-tube');
 			});
+
+			it('should throw in case response carries no tube name', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: ResponseStatus.USING,
+						headers: [],
+					}),
+				);
+
+				await expect(c.use('testTube')).rejects.toThrow(
+					expect.objectContaining({code: ResponseErrorCode.ErrMissingHeader}),
+				);
+			});
 		});
 
 		describe('watch', () => {
@@ -1727,6 +1740,19 @@ describe('Client', () => {
 				);
 				expect(await c.listTubeUsed()).toBe('some-tube');
 			});
+
+			it('should throw in case response carries no tube name', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: ResponseStatus.USING,
+						headers: [],
+					}),
+				);
+
+				await expect(c.listTubeUsed()).rejects.toThrow(
+					expect.objectContaining({code: ResponseErrorCode.ErrMissingHeader}),
+				);
+			});
 		});
 
 		describe('pauseTube', () => {
@@ -1817,7 +1843,7 @@ describe('Client', () => {
 		responses = queueResponses();
 		const trackedWithFailure = [track(10), track(20), track(30), track(40), track(50)];
 		await setImmediate();
-		responses[2].reject(new Error('some error'));
+		responses[2]!.reject(new Error('some error'));
 		for (const {resolve} of responses.toReversed()) {
 			resolve(buried);
 		}
