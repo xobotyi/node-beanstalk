@@ -29,6 +29,10 @@ export function validatePriority(priority: number): void {
 		throw new TypeError(`priority should be a number, got ${typeof priority}`);
 	}
 
+	if (!Number.isInteger(priority)) {
+		throw new TypeError(`priority should be an integer, got ${priority}`);
+	}
+
 	if (priority < PRIORITY_MIN) {
 		throw new TypeError(`priority should be >= ${PRIORITY_MIN}`);
 	}
@@ -42,6 +46,10 @@ export function validateDelay(delay: number): void {
 		throw new TypeError(`delay should be a number, got ${typeof delay}`);
 	}
 
+	if (!Number.isInteger(delay)) {
+		throw new TypeError(`delay should be an integer, got ${delay}`);
+	}
+
 	if (delay < DELAY_MIN) {
 		throw new TypeError(`delay should be >= ${DELAY_MIN}`);
 	}
@@ -53,6 +61,10 @@ export function validateDelay(delay: number): void {
 export function validateTTR(ttr: number): void {
 	if (typeof ttr !== 'number') {
 		throw new TypeError(`ttr should be a number, got ${typeof ttr}`);
+	}
+
+	if (!Number.isInteger(ttr)) {
+		throw new TypeError(`ttr should be an integer, got ${ttr}`);
 	}
 
 	if (ttr < TTR_MIN) {
