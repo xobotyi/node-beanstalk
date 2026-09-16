@@ -4,6 +4,7 @@ export const ResponseErrorCode = {
 	ErrInvalidBodyLength: 'ErrInvalidBodyLength',
 	ErrInvalidNumericHeader: 'ErrInvalidNumericHeader',
 	ErrMissingHeader: 'ErrMissingHeader',
+	ErrUnexpectedBody: 'ErrUnexpectedBody',
 } as const satisfies Record<string, string>;
 export type ResponseErrorCode = (typeof ResponseErrorCode)[keyof typeof ResponseErrorCode];
 

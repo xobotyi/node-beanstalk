@@ -127,16 +127,16 @@ export type PoolOptions = {
 
 export type Job = {
 	id: number;
-	payload: any;
+	payload: unknown;
 };
 
 /**
  * Contract a custom serializer satisfies to process job payloads.
  */
 export type Serializer = {
-	serialize(data: any): Buffer;
+	serialize(data: unknown): Buffer;
 
-	deserialize(buffer: Buffer): any;
+	deserialize(buffer: Buffer): unknown;
 };
 
 /**
@@ -235,7 +235,7 @@ export type CommandHandledResponse<R extends ResponseStatus = ResponseStatus> = 
 	? {
 			status: R;
 			headers: string[];
-			data: any;
+			data: unknown;
 		}
 	: {
 			status: R;

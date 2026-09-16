@@ -1625,12 +1625,12 @@ describe('Client', () => {
 		});
 
 		describe('statsTube', () => {
-			it('should validate job id', async () => {
+			it('should validate tube name', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
 						status: ResponseStatus.OK,
 						headers: ['100500'],
-						data: 'some job payload',
+						data: {name: 'tube'},
 					}),
 				);
 
@@ -1645,10 +1645,10 @@ describe('Client', () => {
 					Promise.resolve({
 						status: ResponseStatus.OK,
 						headers: ['100500'],
-						data: 'this is some data',
+						data: {name: 'test-tube', 'current-jobs-ready': 3},
 					}),
 				);
-				expect(await c.statsTube('test-tube')).toBe('this is some data');
+				expect(await c.statsTube('test-tube')).toStrictEqual({name: 'test-tube', 'current-jobs-ready': 3});
 			});
 
 			it('should return null in case tube not found', async () => {
@@ -1668,7 +1668,7 @@ describe('Client', () => {
 					Promise.resolve({
 						status: ResponseStatus.OK,
 						headers: ['100500'],
-						data: 'some job payload',
+						data: {id: 12_345, state: 'ready'},
 					}),
 				);
 
@@ -1683,10 +1683,24 @@ describe('Client', () => {
 					Promise.resolve({
 						status: ResponseStatus.OK,
 						headers: ['100500'],
+						data: {id: 12_345, state: 'ready'},
+					}),
+				);
+				expect(await c.statsJob(12_345)).toStrictEqual({id: 12_345, state: 'ready'});
+			});
+
+			it('should throw in case the body is not a map', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: ResponseStatus.OK,
+						headers: ['100500'],
 						data: 'this is some data',
 					}),
 				);
-				expect(await c.statsJob(12_345)).toBe('this is some data');
+
+				await expect(c.statsJob(12_345)).rejects.toThrow(
+					expect.objectContaining({code: ResponseErrorCode.ErrUnexpectedBody}),
+				);
 			});
 
 			it('should return null in case job not found', async () => {
@@ -1710,6 +1724,20 @@ describe('Client', () => {
 					}),
 				);
 				expect(await c.listTubes()).toStrictEqual(['this', 'is', 'tubes', 'list']);
+			});
+
+			it('should throw in case the body is not a list of strings', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: ResponseStatus.OK,
+						headers: [],
+						data: {tube: 'default'},
+					}),
+				);
+
+				await expect(c.listTubes()).rejects.toThrow(
+					expect.objectContaining({code: ResponseErrorCode.ErrUnexpectedBody}),
+				);
 			});
 		});
 

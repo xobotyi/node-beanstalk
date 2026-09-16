@@ -18,6 +18,7 @@ import {ClientError, ClientErrorCode} from './error/client-error.js';
 import {getCommandInstance} from './util/get-command-instance.js';
 import {DEFAULT_CLIENT_OPTIONS} from './const.js';
 import {parseNumericHeader, parseResponseHeaders, requireHeader} from './util/parse-response-headers.js';
+import {requireMapBody, requireStringListBody} from './util/response-body.js';
 import {BeanstalkError} from './error/beanstalk-error.js';
 import {
 	validateBound,
@@ -256,7 +257,7 @@ export class Client extends EventEmitter<ClientEvents> {
 	 * @category Producer Commands
 	 */
 	public async put(
-		payload: any,
+		payload: unknown,
 		ttr: number = this.#opt.defaultTTR,
 		priority: number = this.#opt.defaultPriority,
 		delay: number = this.#opt.defaultDelay,
@@ -673,7 +674,9 @@ export class Client extends EventEmitter<ClientEvents> {
 		const result = await this.dispatchCommand(cmd);
 
 		// constraint: the instance id is the one unquoted string in the response, so an all-digit id parses as a number
-		return {...result.data, id: String(result.data.id)};
+		const {id, ...rest} = requireMapBody(result.data, CommandName.stats) as Omit<Stats, 'id'> & {id: unknown};
+
+		return {...rest, id: String(id)};
 	}
 
 	/**
@@ -693,7 +696,7 @@ export class Client extends EventEmitter<ClientEvents> {
 			return null;
 		}
 
-		return result.data;
+		return requireMapBody(result.data, CommandName['stats-tube']) as TubeStats;
 	}
 
 	/**
@@ -714,7 +717,7 @@ export class Client extends EventEmitter<ClientEvents> {
 			return null;
 		}
 
-		return result.data;
+		return requireMapBody(result.data, CommandName['stats-job']) as JobStats;
 	}
 
 	/**
@@ -727,7 +730,7 @@ export class Client extends EventEmitter<ClientEvents> {
 
 		const result = await this.dispatchCommand(cmd);
 
-		return result.data;
+		return requireStringListBody(result.data, CommandName['list-tubes']);
 	}
 
 	/**
@@ -755,7 +758,7 @@ export class Client extends EventEmitter<ClientEvents> {
 
 		const result = await this.dispatchCommand(cmd);
 
-		return result.data;
+		return requireStringListBody(result.data, CommandName['list-tubes-watched']);
 	}
 
 	/**
@@ -811,24 +814,22 @@ export class Client extends EventEmitter<ClientEvents> {
 	 * @throws {ClientError}
 	 * @category Client
 	 */
-	private payloadToBuffer(payload: any): Buffer | undefined {
+	private payloadToBuffer(payload: unknown): Buffer | undefined {
 		if (payload === undefined) return undefined;
 
 		const {serializer, maxPayloadSize} = this.#opt;
-
-		if (typeof payload !== 'string' && !serializer) {
-			throw new ClientError(
-				ClientErrorCode.ErrInvalidPayload,
-				`Serializer not defined, payload has to be string, got ${typeof payload}. Configure serializer or serialize payload manually.`,
-			);
-		}
 
 		let payloadBuffer: Buffer;
 
 		if (serializer) {
 			payloadBuffer = serializer.serialize(payload);
-		} else {
+		} else if (typeof payload === 'string') {
 			payloadBuffer = Buffer.from(payload);
+		} else {
+			throw new ClientError(
+				ClientErrorCode.ErrInvalidPayload,
+				`Serializer not defined, payload has to be string, got ${typeof payload}. Configure serializer or serialize payload manually.`,
+			);
 		}
 
 		if (payloadBuffer.length > maxPayloadSize) {
@@ -926,7 +927,7 @@ export class Client extends EventEmitter<ClientEvents> {
 			};
 
 			const abandonRead = () => {
-				const {reason} = signal;
+				const reason: unknown = signal.reason;
 
 				cleanup();
 				reject(reason instanceof Error ? reason : new Error(String(reason)));
@@ -989,7 +990,7 @@ export class Client extends EventEmitter<ClientEvents> {
 	private async dispatchCommand<R extends ResponseStatus = ResponseStatus>(
 		cmd: Command<R>,
 		args?: string[],
-		payload?: any,
+		payload?: unknown,
 		deadlineMs: number = this.responseDeadlineMs(),
 	): Promise<CommandHandledResponse<R>> {
 		// wait for the queue

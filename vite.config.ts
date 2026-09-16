@@ -24,11 +24,7 @@ export default defineConfig({
 			// redeclaration; `tsc` reports a real one
 			'no-redeclare': 'off',
 			'typescript/no-restricted-types': 'off',
-			'typescript/no-unsafe-argument': 'off',
-			'typescript/no-unsafe-assignment': 'off',
-			'typescript/no-unsafe-call': 'off',
-			'typescript/no-unsafe-member-access': 'off',
-			'typescript/no-unsafe-return': 'off',
+			// a narrowing assertion is how a validated `unknown` body and a test double reach their type
 			'typescript/no-unsafe-type-assertion': 'off',
 			'typescript/prefer-readonly-parameter-types': 'off',
 			'unicorn/prefer-event-target': 'off',
