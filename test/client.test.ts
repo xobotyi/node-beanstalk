@@ -1,6 +1,6 @@
 import {Buffer} from 'node:buffer';
 import {once} from 'node:events';
-import {setImmediate} from 'node:timers/promises';
+import {setImmediate, setTimeout as sleep} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockInstance} from 'vite-plus/test';
 import {BeanstalkError} from '../src/error/beanstalk-error.js';
 import {Connection, type ConnectionState} from '../src/connection.js';
@@ -573,7 +573,7 @@ describe('Client', () => {
 		const conn = new ConnectionMock();
 		const c = new Client({}, conn);
 
-		const readCommandResponse = async () => c['readCommandResponse'](new AbortController().signal);
+		const readCommandResponse = async () => c['readCommandResponse'](new AbortController().signal, 0);
 
 		it('should reject, stop listening and force-disconnect when the body length is malformed', async () => {
 			const openConn = new ConnectionMock();
@@ -767,6 +767,60 @@ describe('Client', () => {
 			await expect(reading).rejects.toHaveProperty('cause', socketError);
 			expect(conn.listenerCount('data')).toBe(0);
 			expect(c.queueSize).toBe(0);
+		});
+
+		it('should reject the command that got no response within the response timeout', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const c = new Client({responseTimeoutMs: 20}, conn);
+
+			const reading = c.bury(1);
+
+			await expect(reading).rejects.toBeInstanceOf(ClientError);
+			await expect(reading).rejects.toHaveProperty('code', ClientErrorCode.ErrResponseTimeout);
+			expect(conn.listenerCount('data')).toBe(0);
+			expect(c.queueSize).toBe(0);
+			await setImmediate();
+			expect(conn.close).toHaveBeenCalledTimes(1);
+		});
+
+		it('should keep waiting for a blocking reserve while the response timeout is set', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const c = new Client({responseTimeoutMs: 20, serializer: undefined}, conn);
+
+			const reserving = c.reserve();
+			const settled = (async () => {
+				await reserving;
+
+				return 'settled';
+			})();
+
+			await expect(Promise.race([settled, sleep(60, 'pending')])).resolves.toBe('pending');
+			expect(conn.close).not.toHaveBeenCalled();
+
+			conn.emit('data', Buffer.from('RESERVED 1 2\r\nhi\r\n'));
+
+			await expect(reserving).resolves.toStrictEqual({id: 1, payload: Buffer.from('hi')});
+		});
+
+		it('should add the reserve timeout to the deadline of a reserve with timeout', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const c = new Client({responseTimeoutMs: 40, serializer: undefined}, conn);
+
+			const reserving = c.reserveWithTimeout(1);
+			const settled = (async () => {
+				await reserving.catch(() => 'rejected');
+
+				return 'settled';
+			})();
+
+			await expect(Promise.race([settled, sleep(60, 'pending')])).resolves.toBe('pending');
+
+			conn.emit('data', Buffer.from('TIMED_OUT\r\n'));
+
+			await expect(reserving).resolves.toBeNull();
 		});
 
 		it('should stop reading the response when the write fails', async () => {

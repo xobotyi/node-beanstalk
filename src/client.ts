@@ -33,6 +33,8 @@ import {type ILinkedListNode, LinkedList} from './util/linked-list.js';
 
 const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 
+const NO_RESPONSE_DEADLINE = 0;
+
 export type IClientEvents = {
 	connect: [];
 	close: [];
@@ -324,7 +326,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async reserve(): Promise<null | IClientRawReservedJob> {
 		const cmd = getCommandInstance(BeanstalkCommand.reserve);
 
-		const result = await this.dispatchCommand(cmd);
+		// constraint: the server holds `reserve` until a job exists, so no deadline tells a silent server from an idle one
+		const result = await this.dispatchCommand(cmd, undefined, undefined, NO_RESPONSE_DEADLINE);
 
 		if (result.status === BeanstalkResponseStatus.TIMED_OUT) {
 			return null;
@@ -358,7 +361,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 		const cmd = getCommandInstance(BeanstalkCommand['reserve-with-timeout']);
 
-		const result = await this.dispatchCommand(cmd, [`${timeout}`]);
+		const result = await this.dispatchCommand(cmd, [`${timeout}`], undefined, this.responseDeadlineMs(timeout * 1000));
 
 		if (result.status === BeanstalkResponseStatus.TIMED_OUT) {
 			return null;
@@ -863,13 +866,18 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * Reads the response of the command that is currently on the wire. A connection that dies rejects the read with
 	 * `ErrConnectionClosed`, and an abort of {signal} rejects it with the abort reason, so a command whose response
 	 * the server will never send does not hold the queue.
+	 *
+	 * A {deadlineMs} above zero bounds the wait for the whole response and drops the connection on expiry, since
+	 * the protocol cannot cancel a command that is already on the wire. {@link IClientCtorOptions.responseTimeoutMs}
+	 * states what that costs.
 	 */
-	private async readCommandResponse(signal: AbortSignal): Promise<ICommandResponse> {
+	private async readCommandResponse(signal: AbortSignal, deadlineMs: number): Promise<ICommandResponse> {
 		const conn = this.#conn;
 		return new Promise((resolve, reject) => {
 			let response: Buffer = Buffer.alloc(0);
 			let headers: ICommandResponseHeaders | null = null;
 			let dataReadTimeout: NodeJS.Timeout;
+			let responseTimeout: NodeJS.Timeout | undefined;
 			let cleanup: () => void;
 
 			const dataListener = (data: Buffer) => {
@@ -943,17 +951,42 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 			cleanup = () => {
 				clearTimeout(dataReadTimeout);
+				clearTimeout(responseTimeout);
 				conn.off('data', dataListener);
 				conn.off('close', connectionLost);
 				conn.off('error', connectionLost);
 				signal.removeEventListener('abort', abandonRead);
 			};
 
+			if (deadlineMs > 0) {
+				responseTimeout = setTimeout(() => {
+					cleanup();
+					reject(
+						new ClientError(
+							ClientErrorCode.ErrResponseTimeout,
+							`Server sent no response within ${deadlineMs} ms, dropping the connection and every job reserved on it`,
+						),
+					);
+					void this.abandonConnection();
+				}, deadlineMs);
+			}
+
 			conn.on('data', dataListener);
 			conn.on('close', connectionLost);
 			conn.on('error', connectionLost);
 			signal.addEventListener('abort', abandonRead, {once: true});
 		});
+	}
+
+	/**
+	 * The deadline of a command the server may hold for {serverHoldsForMs} before it answers, which is what
+	 * `reserve-with-timeout` does. Zero means no deadline, and that is the only correct value for a command the
+	 * server holds for as long as it likes.
+	 */
+	private responseDeadlineMs(serverHoldsForMs = 0): number {
+		const {responseTimeoutMs} = this.#opt;
+
+		return responseTimeoutMs > 0 ? responseTimeoutMs + serverHoldsForMs : NO_RESPONSE_DEADLINE;
 	}
 
 	/**
@@ -965,6 +998,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		cmd: Command<R>,
 		args?: string[],
 		payload?: any,
+		deadlineMs: number = this.responseDeadlineMs(),
 	): Promise<ICommandHandledResponse<R>> {
 		// wait for the queue
 		const [waitPromise, moveQueue] = this.waitQueue();
@@ -985,7 +1019,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 			const unsent = new AbortController();
 
 			const [received] = await Promise.all([
-				this.readCommandResponse(unsent.signal),
+				this.readCommandResponse(unsent.signal, deadlineMs),
 				conn.write(command).catch((error: unknown) => {
 					unsent.abort(error);
 
