@@ -240,8 +240,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * This command for any process that wants to insert a job into the queue.
 	 *
 	 * @param payload - Payload of the job. Non string or integer values will be serialized with
-	 * [[ClientOptions.serializer]]. Byte size of payload should not exceed server's
-	 * max-job-size (default: 2**16) nor client's [[ClientOptions.maxPayloadSize]].
+	 * {@link ClientOptions.serializer}. Byte size of payload should not exceed server's
+	 * max-job-size (default: 2**16) nor client's {@link ClientOptions.maxPayloadSize}.
 	 *
 	 * @param ttr - Time to run -- is an integer number of seconds to allow a worker
 	 * to run this job. This time is counted from the moment a worker reserves
@@ -306,7 +306,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * job is reserved for the client, the client has limited time to run (TTR) the
 	 * job before the job times out. When the job times out, the server will put the
 	 * job back into the ready queue. Both the TTR and the actual time left can be
-	 * found in response to the [[Client.statsJob]] command.
+	 * found in response to the {@link Client.statsJob} command.
 	 *
 	 * If more than one job is ready, beanstalkd will choose the one with the
 	 * smallest priority value. Within each priority, it will choose the one that
@@ -347,7 +347,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	}
 
 	/**
-	 * Same as [[Client.reserve]] but with limited amount of time to wait for the job.
+	 * Same as {@link Client.reserve} but with limited amount of time to wait for the job.
 	 *
 	 * A timeout value of 0 will cause the server to immediately return either a
 	 * response or TIMED_OUT. A positive value of timeout will limit the amount of
@@ -465,7 +465,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	/**
 	 * The bury command puts a job into the "buried" state. Buried jobs are put into a
 	 * FIFO linked list and will not be touched by the server again until a client
-	 * kicks them with the [[Client.kick]] command
+	 * kicks them with the {@link Client.kick} command
 	 *
 	 * @param jobId - integer id of the job to bury.
 	 * @param priority - a new priority to assign to the job.
@@ -816,8 +816,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	/**
 	 * Transforms payload to buffer. Also performs size and type checks.
 	 *
-	 * In case provided payload is not a [[string | number]] it
-	 * will be serialized via [[ClientOptions.serializer]]
+	 * In case provided payload is not a `string` or `number` it
+	 * will be serialized via {@link ClientOptions.serializer}
 	 *
 	 * @throws {ClientError}
 	 * @category Client
@@ -993,7 +993,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	}
 
 	/**
-	 * Sends command to the server and reads response which then passed to [[Command.handleResponse]].
+	 * Sends command to the server and reads response which then passed to {@link Command.handleResponse}.
 	 *
 	 * @category Client
 	 */
