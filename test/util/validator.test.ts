@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vite-plus/test';
 import {
+	validateBound,
 	validateDelay,
 	validateJobId,
 	validatePriority,
@@ -8,11 +9,14 @@ import {
 	validateTubeName,
 } from '../../src/util/validator.js';
 import {
+	BOUND_MAX,
+	BOUND_MIN,
 	DELAY_MAX,
 	DELAY_MIN,
 	JOB_ID_MIN,
 	PRIORITY_MAX,
 	PRIORITY_MIN,
+	TIMEOUT_MAX,
 	TIMEOUT_MIN,
 	TTR_MAX,
 	TTR_MIN,
@@ -195,9 +199,24 @@ describe('validator', () => {
 				out: undefined,
 			},
 			{
+				name: 'valid maximum timeout',
+				in: TIMEOUT_MAX,
+				out: undefined,
+			},
+			{
 				name: 'timeout below minimal',
 				in: TIMEOUT_MIN - 1,
 				out: new TypeError(`timeout should be >= ${TIMEOUT_MIN}`),
+			},
+			{
+				name: 'timeout above maximal',
+				in: TIMEOUT_MAX + 1,
+				out: new TypeError(`timeout should be <= ${TIMEOUT_MAX}`),
+			},
+			{
+				name: 'fractional timeout',
+				in: 1.5,
+				out: new TypeError(`timeout should be an integer, got 1.5`),
 			},
 			{
 				name: 'non-number timeout',
@@ -207,6 +226,48 @@ describe('validator', () => {
 		];
 
 		itValidates(validateTimeout, tableTests);
+	});
+
+	describe('validateBound', () => {
+		const tableTests = [
+			{
+				name: 'valid bound',
+				in: 5,
+				out: undefined,
+			},
+			{
+				name: 'valid minimum bound',
+				in: BOUND_MIN,
+				out: undefined,
+			},
+			{
+				name: 'valid maximum bound',
+				in: BOUND_MAX,
+				out: undefined,
+			},
+			{
+				name: 'bound below minimal',
+				in: BOUND_MIN - 1,
+				out: new TypeError(`bound should be >= ${BOUND_MIN}`),
+			},
+			{
+				name: 'bound above maximal',
+				in: BOUND_MAX + 1,
+				out: new TypeError(`bound should be <= ${BOUND_MAX}`),
+			},
+			{
+				name: 'fractional bound',
+				in: 1.5,
+				out: new TypeError(`bound should be an integer, got 1.5`),
+			},
+			{
+				name: 'non-number bound',
+				in: '123',
+				out: new TypeError(`bound should be a number, got string`),
+			},
+		];
+
+		itValidates(validateBound, tableTests);
 	});
 
 	describe('validateJobId', () => {

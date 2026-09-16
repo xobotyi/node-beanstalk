@@ -10,6 +10,7 @@ import {JsonSerializer} from '../src/serializer/json-serializer.js';
 import {Command} from '../src/command.js';
 import {BeanstalkCommand, BeanstalkResponseStatus, type ICommandResponse} from '../src/types.js';
 import {
+	validateBound,
 	validateDelay,
 	validateJobId,
 	validatePriority,
@@ -1364,6 +1365,19 @@ describe('Client', () => {
 		});
 
 		describe('kick', () => {
+			it('should validate bound', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: BeanstalkResponseStatus.KICKED,
+						headers: ['100500'],
+					}),
+				);
+
+				await c.kick(50);
+
+				expect(validateBound).toHaveBeenCalledExactlyOnceWith(50);
+			});
+
 			it('should return amount of kicked jobs', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({

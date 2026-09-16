@@ -20,6 +20,7 @@ import {DEFAULT_CLIENT_OPTIONS} from './const.js';
 import {parseNumericHeader, parseResponseHeaders} from './util/parse-response-headers.js';
 import {BeanstalkError} from './error/beanstalk-error.js';
 import {
+	validateBound,
 	validateDelay,
 	validateJobId,
 	validatePriority,
@@ -611,6 +612,8 @@ export class Client<
 	 * @category Other Commands
 	 */
 	public async kick(bound: number): Promise<number> {
+		validateBound(bound);
+
 		const cmd = getCommandInstance(BeanstalkCommand.kick);
 
 		const result = await this.dispatchCommand(cmd, [`${bound}`]);
