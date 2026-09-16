@@ -29,11 +29,15 @@ import {
 	validateTubeName,
 } from './util/validator.js';
 import {Connection} from './connection.js';
-import {type LinkedListNode, LinkedList} from './util/linked-list.js';
 
 const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 
 const NO_RESPONSE_DEADLINE = 0;
+
+type QueuedRequest = {
+	resolve: () => void;
+	reject: (err?: Error) => void;
+};
 
 export type ClientEvents = {
 	connect: [];
@@ -48,10 +52,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 	readonly #opt: Omit<Required<ClientOptions>, 'serializer'> & {serializer: Serializer | undefined};
 
-	readonly #queue = new LinkedList<{
-		resolve: () => void;
-		reject: (err?: Error) => void;
-	}>();
+	readonly #queue = new Set<QueuedRequest>();
 
 	#disconnecting: Promise<void> | undefined;
 
@@ -79,6 +80,13 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 */
 	private get lifecycle(): EventEmitter<ClientEvents> {
 		return this;
+	}
+
+	/**
+	 * The request whose turn it is.
+	 */
+	private get queueHead(): QueuedRequest | undefined {
+		return this.#queue.values().next().value;
 	}
 
 	/**
@@ -193,17 +201,15 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 	private async closeAfterQueue(force: boolean): Promise<void> {
 		if (force) {
-			// The thing is to empty whole queue and return head node to the list.
-			// As head node representing currently running request we want to await it
-			// even if force disconnecting.
-			const {head} = this.#queue;
+			// constraint: the command of the head request is already on the wire, so even a forced disconnect awaits it
+			const {queueHead} = this;
 
-			for (const {reject} of this.#queue.truncate()) {
-				if (reject === head?.value.reject) continue;
-				reject(new ClientError(ClientErrorCode.ErrDisconnecting, 'Client is disconnecting'));
+			for (const queued of this.#queue) {
+				if (queued === queueHead) continue;
+
+				this.#queue.delete(queued);
+				queued.reject(new ClientError(ClientErrorCode.ErrDisconnecting, 'Client is disconnecting'));
 			}
-
-			if (head) this.#queue.pushNode(head);
 		}
 
 		const [waitPromise, moveQueue] = this.waitQueue();
@@ -786,15 +792,13 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Client
 	 */
 	private waitQueue(): [waitPromise: Promise<void>, moveQueue: () => void] {
-		let listNode: LinkedListNode<{
-			resolve: () => void;
-			reject: (err?: Error) => void;
-		}>;
+		let queued: QueuedRequest;
 
 		const promise = new Promise<void>((resolve, reject) => {
-			listNode = this.#queue.push({resolve, reject});
+			queued = {resolve, reject};
+			this.#queue.add(queued);
 
-			if (this.#queue.head === listNode) {
+			if (this.queueHead === queued) {
 				resolve();
 			}
 		});
@@ -802,11 +806,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		return [
 			promise,
 			() => {
-				// remove current node from list
-				this.#queue.removeNode(listNode);
-
-				// resolve first promise waiting in queue if it exists
-				this.#queue.head?.value.resolve();
+				this.#queue.delete(queued);
+				this.queueHead?.resolve();
 			},
 		];
 	}
