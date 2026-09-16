@@ -125,7 +125,7 @@ export type PoolOptions = {
 	pendingTimeoutMs?: number;
 };
 
-export type IClientRawReservedJob = {
+export type Job = {
 	id: number;
 	payload: any;
 };

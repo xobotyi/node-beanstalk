@@ -15,7 +15,7 @@ export type {
 	Serializer,
 	ClientOptions,
 	PoolOptions,
-	IClientRawReservedJob,
+	Job,
 	Stats,
 	JobStats,
 	TubeStats,
