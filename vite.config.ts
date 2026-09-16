@@ -36,7 +36,6 @@ export default defineConfig({
 		dir: 'test',
 		coverage: {
 			include: ['src/**/*.ts'],
-			reporter: ['text', 'lcov'],
 		},
 	},
 });
