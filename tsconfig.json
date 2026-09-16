@@ -7,6 +7,7 @@
 		"types": ["node"],
 		"strict": true,
 		"verbatimModuleSyntax": true,
+		"erasableSyntaxOnly": true,
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"sourceMap": true,
