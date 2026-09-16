@@ -7,7 +7,7 @@ import {
 	type Stats,
 	type TubeStats,
 	type ClientOptions,
-	type IClientRawReservedJob,
+	type Job,
 	type Serializer,
 	type CommandHandledResponse,
 	type CommandResponse,
@@ -323,7 +323,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 *
 	 * @category Worker Commands
 	 */
-	public async reserve(): Promise<null | IClientRawReservedJob> {
+	public async reserve(): Promise<null | Job> {
 		const cmd = getCommandInstance(CommandName.reserve);
 
 		// constraint: the server holds `reserve` until a job exists, so no deadline tells a silent server from an idle one
@@ -356,7 +356,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 *
 	 * @category Worker Commands
 	 */
-	public async reserveWithTimeout(timeout: number): Promise<null | IClientRawReservedJob> {
+	public async reserveWithTimeout(timeout: number): Promise<null | Job> {
 		validateTimeout(timeout);
 
 		const cmd = getCommandInstance(CommandName['reserve-with-timeout']);
@@ -388,7 +388,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @param jobId - integer id of the job.
 	 * @category Worker Commands
 	 */
-	public async reserveJob(jobId: number): Promise<null | IClientRawReservedJob> {
+	public async reserveJob(jobId: number): Promise<null | Job> {
 		validateJobId(jobId);
 
 		const cmd = getCommandInstance(CommandName['reserve-job']);
@@ -552,7 +552,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @param jobId - integer id of the job.
 	 * @category Other Commands
 	 */
-	public async peek(jobId: number): Promise<null | IClientRawReservedJob> {
+	public async peek(jobId: number): Promise<null | Job> {
 		validateJobId(jobId);
 
 		const cmd = getCommandInstance(CommandName.peek);
@@ -574,7 +574,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 *
 	 * @category Other Commands
 	 */
-	public async peekReady(): Promise<null | IClientRawReservedJob> {
+	public async peekReady(): Promise<null | Job> {
 		const cmd = getCommandInstance(CommandName['peek-ready']);
 
 		const result = await this.dispatchCommand(cmd);
@@ -594,7 +594,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 *
 	 * @category Other Commands
 	 */
-	public async peekDelayed(): Promise<null | IClientRawReservedJob> {
+	public async peekDelayed(): Promise<null | Job> {
 		const cmd = getCommandInstance(CommandName['peek-delayed']);
 
 		const result = await this.dispatchCommand(cmd);
@@ -614,7 +614,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 *
 	 * @category Other Commands
 	 */
-	public async peekBuried(): Promise<null | IClientRawReservedJob> {
+	public async peekBuried(): Promise<null | Job> {
 		const cmd = getCommandInstance(CommandName['peek-buried']);
 
 		const result = await this.dispatchCommand(cmd);
