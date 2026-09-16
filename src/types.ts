@@ -136,59 +136,67 @@ export abstract class Serializer {
 	abstract deserialize(buffer: Buffer): any;
 }
 
-export enum BeanstalkCommand {
-	put = 'put',
-	use = 'use',
-	reserve = 'reserve',
-	'reserve-with-timeout' = 'reserve-with-timeout',
-	'reserve-job' = 'reserve-job',
-	delete = 'delete',
-	release = 'release',
-	bury = 'bury',
-	touch = 'touch',
-	watch = 'watch',
-	ignore = 'ignore',
-	peek = 'peek',
-	'peek-ready' = 'peek-ready',
-	'peek-delayed' = 'peek-delayed',
-	'peek-buried' = 'peek-buried',
-	kick = 'kick',
-	'kick-job' = 'kick-job',
-	stats = 'stats',
-	'stats-job' = 'stats-job',
-	'stats-tube' = 'stats-tube',
-	'list-tubes' = 'list-tubes',
-	'list-tube-used' = 'list-tube-used',
-	'list-tubes-watched' = 'list-tubes-watched',
-	'pause-tube' = 'pause-tube',
-	quit = 'quit',
-}
+/**
+ * Every command of the protocol, keyed by the name it carries on the wire.
+ */
+export const BeanstalkCommand = {
+	put: 'put',
+	use: 'use',
+	reserve: 'reserve',
+	'reserve-with-timeout': 'reserve-with-timeout',
+	'reserve-job': 'reserve-job',
+	delete: 'delete',
+	release: 'release',
+	bury: 'bury',
+	touch: 'touch',
+	watch: 'watch',
+	ignore: 'ignore',
+	peek: 'peek',
+	'peek-ready': 'peek-ready',
+	'peek-delayed': 'peek-delayed',
+	'peek-buried': 'peek-buried',
+	kick: 'kick',
+	'kick-job': 'kick-job',
+	stats: 'stats',
+	'stats-job': 'stats-job',
+	'stats-tube': 'stats-tube',
+	'list-tubes': 'list-tubes',
+	'list-tube-used': 'list-tube-used',
+	'list-tubes-watched': 'list-tubes-watched',
+	'pause-tube': 'pause-tube',
+	quit: 'quit',
+} as const satisfies Record<string, string>;
+export type BeanstalkCommand = (typeof BeanstalkCommand)[keyof typeof BeanstalkCommand];
 
-export enum BeanstalkResponseStatus {
-	BAD_FORMAT = 'BAD_FORMAT',
-	BURIED = 'BURIED',
-	DEADLINE_SOON = 'DEADLINE_SOON',
-	DELETED = 'DELETED',
-	DRAINING = 'DRAINING',
-	EXPECTED_CRLF = 'EXPECTED_CRLF',
-	FOUND = 'FOUND',
-	INSERTED = 'INSERTED',
-	INTERNAL_ERROR = 'INTERNAL_ERROR',
-	JOB_TOO_BIG = 'JOB_TOO_BIG',
-	KICKED = 'KICKED',
-	NOT_FOUND = 'NOT_FOUND',
-	NOT_IGNORED = 'NOT_IGNORED',
-	OK = 'OK',
-	OUT_OF_MEMORY = 'OUT_OF_MEMORY',
-	PAUSED = 'PAUSED',
-	RELEASED = 'RELEASED',
-	RESERVED = 'RESERVED',
-	TIMED_OUT = 'TIMED_OUT',
-	TOUCHED = 'TOUCHED',
-	UNKNOWN_COMMAND = 'UNKNOWN_COMMAND',
-	USING = 'USING',
-	WATCHING = 'WATCHING',
-}
+/**
+ * Every response status of the protocol, keyed by the word it carries on the wire.
+ */
+export const BeanstalkResponseStatus = {
+	BAD_FORMAT: 'BAD_FORMAT',
+	BURIED: 'BURIED',
+	DEADLINE_SOON: 'DEADLINE_SOON',
+	DELETED: 'DELETED',
+	DRAINING: 'DRAINING',
+	EXPECTED_CRLF: 'EXPECTED_CRLF',
+	FOUND: 'FOUND',
+	INSERTED: 'INSERTED',
+	INTERNAL_ERROR: 'INTERNAL_ERROR',
+	JOB_TOO_BIG: 'JOB_TOO_BIG',
+	KICKED: 'KICKED',
+	NOT_FOUND: 'NOT_FOUND',
+	NOT_IGNORED: 'NOT_IGNORED',
+	OK: 'OK',
+	OUT_OF_MEMORY: 'OUT_OF_MEMORY',
+	PAUSED: 'PAUSED',
+	RELEASED: 'RELEASED',
+	RESERVED: 'RESERVED',
+	TIMED_OUT: 'TIMED_OUT',
+	TOUCHED: 'TOUCHED',
+	UNKNOWN_COMMAND: 'UNKNOWN_COMMAND',
+	USING: 'USING',
+	WATCHING: 'WATCHING',
+} as const satisfies Record<string, string>;
+export type BeanstalkResponseStatus = (typeof BeanstalkResponseStatus)[keyof typeof BeanstalkResponseStatus];
 
 export const BeanstalkDataResponseStatus = {
 	[BeanstalkResponseStatus.OK]: BeanstalkResponseStatus.OK,
@@ -566,12 +574,16 @@ export type IBeanstalkTubeStats = {
 	'pause-time-left': number;
 };
 
-export enum BeanstalkJobState {
-	ready = 'ready',
-	delayed = 'delayed',
-	reserved = 'reserved',
-	buried = 'buried',
-}
+/**
+ * Every state a job can be in, keyed by the word the server reports.
+ */
+export const BeanstalkJobState = {
+	ready: 'ready',
+	delayed: 'delayed',
+	reserved: 'reserved',
+	buried: 'buried',
+} as const satisfies Record<string, string>;
+export type BeanstalkJobState = (typeof BeanstalkJobState)[keyof typeof BeanstalkJobState];
 
 export type IBeanstalkJobStats = {
 	/**
