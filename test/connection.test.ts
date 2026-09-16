@@ -1,18 +1,26 @@
 import {afterAll, beforeAll, describe, expect, it} from 'vite-plus/test';
 import {EventEmitter, once} from 'node:events';
-import {type AddressInfo, createServer} from 'node:net';
+import {type AddressInfo, createServer, type Server, type Socket} from 'node:net';
 import {Connection} from '../src/connection.js';
 import {ConnectionError, ConnectionErrorCode} from '../src/error/connection-error.js';
 
 describe('Connection', () => {
 	const server = createServer();
 	let address: AddressInfo;
+	let refusedPort: number;
 	const inbound = new EventEmitter();
 
 	beforeAll(async () => {
 		server.listen();
 		await once(server, 'listening');
 		address = server.address() as AddressInfo;
+
+		const vacant = createServer();
+		vacant.listen();
+		await once(vacant, 'listening');
+		refusedPort = (vacant.address() as AddressInfo).port;
+		vacant.close();
+		await once(vacant, 'close');
 
 		server.on('connection', (sock) => {
 			sock.on('data', (data) => {
@@ -197,6 +205,87 @@ describe('Connection', () => {
 			await closing;
 			await peerClosed;
 			expect(conn.getState()).toBe('closed');
+		});
+	});
+
+	describe('socket death', () => {
+		const ownServers: Server[] = [];
+
+		/**
+		 * Opens {conn} to a server of its own and returns the accepted peer. The shared server delivers
+		 * `connection` for a previous test's dial too late to tell the two apart.
+		 */
+		async function openToOwnServer(conn: Connection): Promise<Socket> {
+			const own = createServer();
+			ownServers.push(own);
+			own.listen();
+			await once(own, 'listening');
+
+			const accepted = once(own, 'connection');
+
+			await conn.open((own.address() as AddressInfo).port, '127.0.0.1');
+
+			const [peer] = (await accepted) as [Socket];
+
+			return peer;
+		}
+
+		afterAll(() => {
+			for (const own of ownServers) {
+				own.close();
+			}
+		});
+
+		it('should move to `closed` and emit `close` when the peer ends the socket', async () => {
+			const conn = getNewConnection();
+			const peer = await openToOwnServer(conn);
+			const closed = once(conn, 'close');
+
+			peer.end();
+
+			await expect(closed).resolves.toStrictEqual([]);
+			expect(conn.getState()).toBe('closed');
+		});
+
+		it('should emit `error` and move to `closed` when the peer resets the socket', async () => {
+			const conn = getNewConnection();
+			const peer = await openToOwnServer(conn);
+			const errored = once(conn, 'error');
+			const closed = new Promise<void>((resolve) => {
+				conn.once('close', resolve);
+			});
+
+			peer.resetAndDestroy();
+
+			await expect(errored).resolves.toStrictEqual([expect.objectContaining({code: 'ECONNRESET'})]);
+			await closed;
+			expect(conn.getState()).toBe('closed');
+		});
+
+		it('should move to `closed` when the dial is refused, so a later open succeeds', async () => {
+			const conn = getNewConnection();
+
+			await expect(conn.open(refusedPort, '127.0.0.1')).rejects.toHaveProperty('code', 'ECONNREFUSED');
+			expect(conn.getState()).toBe('closed');
+
+			await conn.open(address.port, address.address);
+
+			expect(conn.getState()).toBe('open');
+			await conn.close();
+		});
+
+		it('should reject a write to a connection the peer already closed', async () => {
+			const conn = getNewConnection();
+			const peer = await openToOwnServer(conn);
+			const closed = once(conn, 'close');
+
+			peer.end();
+			await closed;
+
+			const rejected = conn.write(Buffer.from('hey!'));
+
+			await expect(rejected).rejects.toBeInstanceOf(ConnectionError);
+			await expect(rejected).rejects.toHaveProperty('code', ConnectionErrorCode.ErrNotOpened);
 		});
 	});
 
