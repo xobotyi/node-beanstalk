@@ -837,8 +837,9 @@ export class Client<
 	}
 
 	/**
-	 * Reads the response of the command that is currently on the wire. An abort of {signal} rejects the read with the
-	 * abort reason, so a command whose write failed stops waiting for a response the server will never send.
+	 * Reads the response of the command that is currently on the wire. A connection that dies rejects the read with
+	 * `ErrConnectionClosed`, and an abort of {signal} rejects it with the abort reason, so a command whose response
+	 * the server will never send does not hold the queue.
 	 */
 	private async readCommandResponse(signal: AbortSignal): Promise<ICommandResponse> {
 		const conn = this.#conn;
@@ -908,13 +909,26 @@ export class Client<
 				reject(reason instanceof Error ? reason : new Error(String(reason)));
 			};
 
+			const connectionLost = (cause?: Error) => {
+				cleanup();
+				reject(
+					new ClientError(ClientErrorCode.ErrConnectionClosed, 'Connection closed while the response was awaited', {
+						cause,
+					}),
+				);
+			};
+
 			cleanup = () => {
 				clearTimeout(dataReadTimeout);
 				conn.off('data', dataListener);
+				conn.off('close', connectionLost);
+				conn.off('error', connectionLost);
 				signal.removeEventListener('abort', abandonRead);
 			};
 
 			conn.on('data', dataListener);
+			conn.on('close', connectionLost);
+			conn.on('error', connectionLost);
 			signal.addEventListener('abort', abandonRead, {once: true});
 		});
 	}

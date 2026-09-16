@@ -690,6 +690,37 @@ describe('Client', () => {
 	});
 
 	describe('connection loss', () => {
+		it('should reject the command in flight when the connection closes', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const c = new Client(undefined, conn);
+			const reading = c.bury(1);
+
+			await setImmediate();
+			conn.emit('close');
+
+			await expect(reading).rejects.toBeInstanceOf(ClientError);
+			await expect(reading).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionClosed);
+			expect(conn.listenerCount('data')).toBe(0);
+			expect(c.queueSize).toBe(0);
+		});
+
+		it('should reject the command in flight with the connection error as its cause', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const c = new Client(undefined, conn);
+			const reading = c.bury(1);
+			const socketError = Object.assign(new Error('read ECONNRESET'), {code: 'ECONNRESET'});
+
+			await setImmediate();
+			conn.emit('error', socketError);
+
+			await expect(reading).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionClosed);
+			await expect(reading).rejects.toHaveProperty('cause', socketError);
+			expect(conn.listenerCount('data')).toBe(0);
+			expect(c.queueSize).toBe(0);
+		});
+
 		it('should stop reading the response when the write fails', async () => {
 			const conn = new ConnectionMock();
 			conn.getState.mockReturnValue('open');
