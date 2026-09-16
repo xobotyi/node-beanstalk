@@ -217,7 +217,7 @@ export const BeanstalkErrorResponseStatus = {
 } as const;
 export type IBeanstalkErrorResponseStatus = keyof typeof BeanstalkErrorResponseStatus;
 
-export type ICommandResponseHeaders = {
+export type CommandResponseHeaders = {
 	status: BeanstalkResponseStatus;
 	hasData: boolean;
 	dataLength: number;
@@ -225,13 +225,13 @@ export type ICommandResponseHeaders = {
 	headersLineLen: number;
 };
 
-export type ICommandResponse = {
+export type CommandResponse = {
 	status: BeanstalkResponseStatus;
 	headers: string[];
 	data?: Buffer;
 };
 
-export type ICommandHandledResponse<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> =
+export type CommandHandledResponse<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> =
 	R extends IBeanstalkDataResponseStatus
 		? {
 				status: R;

@@ -1,10 +1,10 @@
 import {Client} from './client.js';
 
-export type IPoolClientEvents = {
+export type PoolClientEvents = {
 	release: [client: PoolClient];
 };
 
-export class PoolClient extends Client<IPoolClientEvents> {
+export class PoolClient extends Client<PoolClientEvents> {
 	/**
 	 * Release client back to the pool where it can be reserved again.
 	 */

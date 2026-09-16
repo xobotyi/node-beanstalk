@@ -9,9 +9,9 @@ import {
 	type IClientCtorOptions,
 	type IClientRawReservedJob,
 	type Serializer,
-	type ICommandHandledResponse,
-	type ICommandResponse,
-	type ICommandResponseHeaders,
+	type CommandHandledResponse,
+	type CommandResponse,
+	type CommandResponseHeaders,
 } from './types.js';
 import {type Command} from './command.js';
 import {ClientError, ClientErrorCode} from './error/client-error.js';
@@ -29,20 +29,20 @@ import {
 	validateTubeName,
 } from './util/validator.js';
 import {Connection} from './connection.js';
-import {type ILinkedListNode, LinkedList} from './util/linked-list.js';
+import {type LinkedListNode, LinkedList} from './util/linked-list.js';
 
 const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 
 const NO_RESPONSE_DEADLINE = 0;
 
-export type IClientEvents = {
+export type ClientEvents = {
 	connect: [];
 	close: [];
 	error: [err: Error];
 };
 
 export class Client<Events extends Record<keyof Events, unknown[]> = Record<never, never>> extends EventEmitter<
-	Events & IClientEvents
+	Events & ClientEvents
 > {
 	readonly #conn: Connection;
 
@@ -74,10 +74,10 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	}
 
 	/**
-	 * The emitter viewed as the carrier of {IClientEvents} alone. `Events & IClientEvents` cannot be indexed while
+	 * The emitter viewed as the carrier of {@link ClientEvents} alone. `Events & ClientEvents` cannot be indexed while
 	 * `Events` is still generic, so every emit of a connection event goes through this view.
 	 */
-	private get lifecycle(): EventEmitter<IClientEvents> {
+	private get lifecycle(): EventEmitter<ClientEvents> {
 		return this;
 	}
 
@@ -788,7 +788,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Client
 	 */
 	private waitQueue(): [waitPromise: Promise<void>, moveQueue: () => void] {
-		let listNode: ILinkedListNode<{
+		let listNode: LinkedListNode<{
 			resolve: () => void;
 			reject: (err?: Error) => void;
 		}>;
@@ -873,11 +873,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * the protocol cannot cancel a command that is already on the wire. {@link IClientCtorOptions.responseTimeoutMs}
 	 * states what that costs.
 	 */
-	private async readCommandResponse(signal: AbortSignal, deadlineMs: number): Promise<ICommandResponse> {
+	private async readCommandResponse(signal: AbortSignal, deadlineMs: number): Promise<CommandResponse> {
 		const conn = this.#conn;
 		return new Promise((resolve, reject) => {
 			let response: Buffer = Buffer.alloc(0);
-			let headers: ICommandResponseHeaders | null = null;
+			let headers: CommandResponseHeaders | null = null;
 			let dataReadTimeout: NodeJS.Timeout;
 			let responseTimeout: NodeJS.Timeout | undefined;
 			let cleanup: () => void;
@@ -1002,12 +1002,12 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		args?: string[],
 		payload?: any,
 		deadlineMs: number = this.responseDeadlineMs(),
-	): Promise<ICommandHandledResponse<R>> {
+	): Promise<CommandHandledResponse<R>> {
 		// wait for the queue
 		const [waitPromise, moveQueue] = this.waitQueue();
 
 		await waitPromise;
-		let response: ICommandResponse;
+		let response: CommandResponse;
 		try {
 			const conn = this.#conn;
 

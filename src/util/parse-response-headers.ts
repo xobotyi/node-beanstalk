@@ -1,4 +1,4 @@
-import {BeanstalkDataResponseStatus, type BeanstalkResponseStatus, type ICommandResponseHeaders} from '../types.js';
+import {BeanstalkDataResponseStatus, type BeanstalkResponseStatus, type CommandResponseHeaders} from '../types.js';
 import {CRLF_BUFF} from '../const.js';
 import {ResponseError, ResponseErrorCode} from '../error/response-error.js';
 
@@ -23,7 +23,7 @@ export function parseNumericHeader(
 // constraint: the read loop compares the body length plus the CRLF against buffer sizes, so their sum must stay exact
 const MAX_DATA_LENGTH = Number.MAX_SAFE_INTEGER - CRLF_BUFF.length;
 
-export function parseResponseHeaders(buff: Buffer): ICommandResponseHeaders | null {
+export function parseResponseHeaders(buff: Buffer): CommandResponseHeaders | null {
 	const firstCrlf = buff.indexOf(CRLF_BUFF);
 
 	if (firstCrlf === -1) return null;
