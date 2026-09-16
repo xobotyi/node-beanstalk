@@ -266,7 +266,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		delay: number = this.#opt.defaultDelay,
 	): Promise<{
 		id: number;
-		state: BeanstalkJobState.buried | BeanstalkJobState.ready | BeanstalkJobState.delayed;
+		state: typeof BeanstalkJobState.buried | typeof BeanstalkJobState.ready | typeof BeanstalkJobState.delayed;
 	}> {
 		validateTTR(ttr);
 		validatePriority(priority);
@@ -440,7 +440,9 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		jobId: number,
 		priority: number = this.#opt.defaultPriority,
 		delay: number = this.#opt.defaultDelay,
-	): Promise<null | BeanstalkJobState.buried | BeanstalkJobState.ready | BeanstalkJobState.delayed> {
+	): Promise<
+		null | typeof BeanstalkJobState.buried | typeof BeanstalkJobState.ready | typeof BeanstalkJobState.delayed
+	> {
 		validateJobId(jobId);
 		validatePriority(priority);
 		validateDelay(delay);
