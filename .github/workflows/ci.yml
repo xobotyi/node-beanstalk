@@ -14,43 +14,7 @@ permissions:
 
 jobs:
   check:
-    name: 'Check'
-    runs-on: ubuntu-latest
-    steps:
-      - name: 'Checkout'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - name: 'Setup Vite+'
-        uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
-        with:
-          node-version: 'lts'
-          cache: true
-      - name: 'Install dependencies'
-        run: vp install --frozen-lockfile
-      - name: 'Check'
-        run: vp check
-      - name: 'Typecheck'
-        run: yarn typecheck
-
-  build:
-    name: 'Build'
-    runs-on: ubuntu-latest
-    steps:
-      - name: 'Checkout'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: 'Setup Vite+'
-        uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
-        with:
-          node-version: 'lts'
-          cache: true
-      - name: 'Install dependencies'
-        run: vp install --frozen-lockfile
-      - name: 'Build'
-        run: yarn build
-
-  test:
-    name: 'Test (node ${{ matrix.node }})'
+    name: 'Check (node ${{ matrix.node }})'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -59,16 +23,31 @@ jobs:
     steps:
       - name: 'Checkout'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - name: 'Setup Vite+'
         uses: voidzero-dev/setup-vp@9fd26ff49f9b5e6276c2b493da4454ad4527f7f4 # v1.20.0
         with:
           node-version: ${{ matrix.node }}
           cache: true
+
       - name: 'Install dependencies'
         run: vp install --frozen-lockfile
+
+      - name: 'Check'
+        run: vp check
+
+      - name: 'Typecheck'
+        run: yarn typecheck
+
       - name: 'Test'
         run: vp test --coverage --reporter=default --reporter=github-actions
+
+      - name: 'Build'
+        run: yarn build
+
       - name: 'Upload coverage to Codecov'
+        if: matrix.node == 'lts'
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -81,10 +60,9 @@ jobs:
     permissions:
       pull-requests: write
       contents: write
-    needs: ['check', 'test', 'build']
+    needs: ['check']
     if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
     steps:
       - uses: fastify/github-action-merge-dependabot@73ec4cbb5e56df5591eae286972d5b2201ffe90f # v3.15.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          target: 'minor'
