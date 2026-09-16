@@ -215,8 +215,8 @@ export class Client<
 	 * This command for any process that wants to insert a job into the queue.
 	 *
 	 * @param payload - Payload of the job. Non string or integer values will be serialized with
-	 * [[IClientCtorOptions.serializer]]. Byte size of payload should be less than less than server's
-	 * max-job-size (default: 2**16) and client's [[IClientCtorOptions.maxPayloadSize]].
+	 * [[IClientCtorOptions.serializer]]. Byte size of payload should not exceed server's
+	 * max-job-size (default: 2**16) nor client's [[IClientCtorOptions.maxPayloadSize]].
 	 *
 	 * @param ttr - Time to run -- is an integer number of seconds to allow a worker
 	 * to run this job. This time is counted from the moment a worker reserves

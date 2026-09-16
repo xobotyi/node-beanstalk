@@ -23,7 +23,7 @@ The package is published as ES modules only and requires Node.js 24 or newer.
 ## USAGE
 
 `node-beanstalk` fully supports
-[beanstalk protocol v1.12](https://raw.githubusercontent.com/beanstalkd/beanstalkd/master/doc/protocol.txt)
+[beanstalk protocol v1.13](https://github.com/beanstalkd/beanstalkd/blob/v1.13/doc/protocol.txt)
 
 ### Client
 
