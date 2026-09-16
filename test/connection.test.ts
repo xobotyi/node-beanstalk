@@ -89,6 +89,17 @@ describe('Connection', () => {
 			await expect(rejected).rejects.toBeInstanceOf(ConnectionError);
 			await expect(rejected).rejects.toHaveProperty('code', ConnectionErrorCode.ErrChangingState);
 		});
+
+		it('should reject the dial that did not connect within the given timeout', async () => {
+			const conn = getNewConnection();
+
+			// constraint: 192.0.2.1 is TEST-NET-1 (RFC 5737), so nothing answers and the dial runs to the deadline
+			const rejected = conn.open(address.port, '192.0.2.1', 50);
+
+			await expect(rejected).rejects.toBeInstanceOf(ConnectionError);
+			await expect(rejected).rejects.toHaveProperty('code', ConnectionErrorCode.ErrConnectTimeout);
+			expect(conn.getState()).toBe('closed');
+		});
 	});
 
 	describe('connection.close()', () => {

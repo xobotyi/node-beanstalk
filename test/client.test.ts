@@ -41,15 +41,25 @@ describe('Client', () => {
 	});
 
 	describe('connect', () => {
-		it('should call underlying connection.open with configured host and port', async () => {
+		it('should call underlying connection.open with configured host, port and connect timeout', async () => {
 			const conn = new ConnectionMock();
 			conn.getState.mockReturnValue('closed');
-			const c = new Client({host: 'example.com', port: 1234}, conn);
+			const c = new Client({host: 'example.com', port: 1234, connectTimeoutMs: 500}, conn);
 
 			await c.connect();
 
 			expect(conn.open).toHaveBeenCalledTimes(1);
-			expect(conn.open).toHaveBeenCalledWith(1234, 'example.com');
+			expect(conn.open).toHaveBeenCalledWith(1234, 'example.com', 500);
+		});
+
+		it('should leave the dial unbounded by default', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('closed');
+			const c = new Client(undefined, conn);
+
+			await c.connect();
+
+			expect(conn.open).toHaveBeenCalledWith(11_300, '127.0.0.1', 0);
 		});
 
 		it('should create queue item', async () => {

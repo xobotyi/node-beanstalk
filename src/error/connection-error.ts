@@ -5,6 +5,7 @@ export enum ConnectionErrorCode {
 	ErrAlreadyOpened = 'ErrAlreadyOpened',
 	ErrAlreadyClosed = 'ErrAlreadyClosed',
 	ErrNotOpened = 'ErrNotOpened',
+	ErrConnectTimeout = 'ErrConnectTimeout',
 }
 
 export class ConnectionError extends ErrorWithCode<ConnectionErrorCode> {
