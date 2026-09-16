@@ -1,4 +1,4 @@
-import {Serializer} from '../types.js';
+import {type Serializer} from '../types.js';
 import {SerializerError, SerializerErrorCode} from '../error/serializer-error.js';
 
 function errorMessage(error: unknown): string {
@@ -7,7 +7,7 @@ function errorMessage(error: unknown): string {
 	return typeof error === 'string' ? error : 'non-Error value thrown';
 }
 
-export class JsonSerializer extends Serializer {
+export class JsonSerializer implements Serializer {
 	public serialize(data: any): Buffer {
 		try {
 			return Buffer.from(JSON.stringify(data), 'utf8');
