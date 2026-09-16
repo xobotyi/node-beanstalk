@@ -28,10 +28,7 @@ export function parseResponseHeaders(buff: Buffer): CommandResponseHeaders | nul
 
 	if (firstCrlf === -1) return null;
 
-	const [status, ...restHeaders] = buff.subarray(0, firstCrlf).toString().split(' ') as [
-		ResponseStatus,
-		...string[],
-	];
+	const [status, ...restHeaders] = buff.subarray(0, firstCrlf).toString().split(' ') as [ResponseStatus, ...string[]];
 
 	const hasData = status in DataResponseStatus;
 	let dataLength = 0;

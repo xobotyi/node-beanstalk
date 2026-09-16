@@ -440,9 +440,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		jobId: number,
 		priority: number = this.#opt.defaultPriority,
 		delay: number = this.#opt.defaultDelay,
-	): Promise<
-		null | typeof JobState.buried | typeof JobState.ready | typeof JobState.delayed
-	> {
+	): Promise<null | typeof JobState.buried | typeof JobState.ready | typeof JobState.delayed> {
 		validateJobId(jobId);
 		validatePriority(priority);
 		validateDelay(delay);
