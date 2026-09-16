@@ -1,4 +1,16 @@
-import {DELAY_MAX, DELAY_MIN, JOB_ID_MIN, PRIORITY_MAX, PRIORITY_MIN, TIMEOUT_MIN, TTR_MAX, TTR_MIN} from '../const.js';
+import {
+	BOUND_MAX,
+	BOUND_MIN,
+	DELAY_MAX,
+	DELAY_MIN,
+	JOB_ID_MIN,
+	PRIORITY_MAX,
+	PRIORITY_MIN,
+	TIMEOUT_MAX,
+	TIMEOUT_MIN,
+	TTR_MAX,
+	TTR_MIN,
+} from '../const.js';
 
 const tubeNameValidateRE = /^[A-Za-z0-9\-+/;.$_()]{1,200}$/;
 
@@ -56,8 +68,34 @@ export function validateTimeout(timeout: number): void {
 		throw new TypeError(`timeout should be a number, got ${typeof timeout}`);
 	}
 
+	if (!Number.isInteger(timeout)) {
+		throw new TypeError(`timeout should be an integer, got ${timeout}`);
+	}
+
 	if (timeout < TIMEOUT_MIN) {
 		throw new TypeError(`timeout should be >= ${TIMEOUT_MIN}`);
+	}
+
+	if (timeout > TIMEOUT_MAX) {
+		throw new TypeError(`timeout should be <= ${TIMEOUT_MAX}`);
+	}
+}
+
+export function validateBound(bound: number): void {
+	if (typeof bound !== 'number') {
+		throw new TypeError(`bound should be a number, got ${typeof bound}`);
+	}
+
+	if (!Number.isInteger(bound)) {
+		throw new TypeError(`bound should be an integer, got ${bound}`);
+	}
+
+	if (bound < BOUND_MIN) {
+		throw new TypeError(`bound should be >= ${BOUND_MIN}`);
+	}
+
+	if (bound > BOUND_MAX) {
+		throw new TypeError(`bound should be <= ${BOUND_MAX}`);
 	}
 }
 
