@@ -67,6 +67,30 @@ export type IClientCtorOptions = {
 	 * @default 0
 	 */
 	connectTimeoutMs?: number;
+
+	/**
+	 * Time in milliseconds a command waits for its response, counted from the moment it is written to the socket.
+	 * On expiry the command rejects with a {@link ClientError} of code `ErrResponseTimeout`.
+	 *
+	 * **The connection is dropped on expiry, and that costs everything the connection held.** The beanstalk
+	 * protocol answers one command at a time over one socket and carries no way to cancel a command that was
+	 * already sent, so the only way to stop waiting is to close the socket. The server then:
+	 *
+	 * - releases every job this connection had reserved, which hands each of them to another worker while this
+	 *   process may still be running the job;
+	 * - forgets the tube of `use`, so the next `put` on a reconnected client goes to `default`;
+	 * - forgets the watch list of `watch` and `ignore`, so the next `reserve` watches `default`.
+	 *
+	 * Reconnecting restores none of it. A client that reserves jobs has to `watch` and `use` again, and the work
+	 * of an in-flight job may be done twice. Keep the value well above the time the server needs under load, and
+	 * leave it at `0` unless a broker that goes silent is the greater risk.
+	 *
+	 * The deadline never applies to {@link Client.reserve}, which the server holds until a job exists, and
+	 * {@link Client.reserveWithTimeout} adds its own timeout to it.
+	 *
+	 * @default 0
+	 */
+	responseTimeoutMs?: number;
 };
 
 export type IPoolCtorOptions = {
