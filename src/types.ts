@@ -239,6 +239,11 @@ export type IBeanstalkStats = {
 	'cmd-reserve': number;
 
 	/**
+	 * The cumulative number of reserve-with-timeout commands.
+	 */
+	'cmd-reserve-with-timeout': number;
+
+	/**
 	 * The cumulative number of use commands.
 	 */
 	'cmd-use': number;
@@ -272,6 +277,11 @@ export type IBeanstalkStats = {
 	 * The cumulative number of kick commands.
 	 */
 	'cmd-kick': number;
+
+	/**
+	 * The cumulative number of touch commands.
+	 */
+	'cmd-touch': number;
 
 	/**
 	 * The cumulative number of stats commands.
