@@ -1,7 +1,7 @@
 import {type PoolOptions} from './types.js';
 import {DEFAULT_POOL_OPTIONS} from './const.js';
 import {PoolClient} from './pool-client.js';
-import {PoolError} from './error/pool-error.js';
+import {PoolError, PoolErrorCode} from './error/pool-error.js';
 
 export type PoolState = 'live' | 'disconnected' | 'disconnecting';
 
@@ -85,11 +85,11 @@ export class Pool {
 	 */
 	public async connect(): Promise<PoolClient> {
 		if (this.#state !== 'live') {
-			throw new PoolError(`Unable to gain client, pool is not live: ${this.#state}`);
+			throw new PoolError(PoolErrorCode.ErrNotLive, `Unable to gain client, pool is not live: ${this.#state}`);
 		}
 
 		if (this.#disconnectRequested) {
-			throw new PoolError('Unable to gain client, pool is disconnecting.');
+			throw new PoolError(PoolErrorCode.ErrDisconnecting, 'Unable to gain client, pool is disconnecting.');
 		}
 
 		let client: PoolClient;
@@ -114,11 +114,14 @@ export class Pool {
 	 */
 	public async disconnect(force = false): Promise<void> {
 		if (this.#state !== 'live') {
-			throw new PoolError(`Unable to disconnect pool that is not live, current state: ${this.#state}`);
+			throw new PoolError(
+				PoolErrorCode.ErrNotLive,
+				`Unable to disconnect pool that is not live, current state: ${this.#state}`,
+			);
 		}
 
 		if (this.#disconnectRequested) {
-			throw new PoolError('Unable to disconnect pool that is already disconnecting');
+			throw new PoolError(PoolErrorCode.ErrDisconnecting, 'Unable to disconnect pool that is already disconnecting');
 		}
 
 		this.#disconnectRequested = true;
@@ -134,7 +137,7 @@ export class Pool {
 		this.#pendingQueue.clear();
 
 		for (const {reject} of pending) {
-			reject(new PoolError('Unable to gain client, pool is disconnecting.'));
+			reject(new PoolError(PoolErrorCode.ErrDisconnecting, 'Unable to gain client, pool is disconnecting.'));
 		}
 
 		this.#idleClients.clear();
@@ -149,7 +152,10 @@ export class Pool {
 	 */
 	public restore(): void {
 		if (this.#state !== 'disconnected') {
-			throw new PoolError(`Unable to restore pool that was not disconnected, current state: ${this.#state}`);
+			throw new PoolError(
+				PoolErrorCode.ErrNotDisconnected,
+				`Unable to restore pool that was not disconnected, current state: ${this.#state}`,
+			);
 		}
 
 		this.#disconnectRequested = false;
@@ -179,7 +185,12 @@ export class Pool {
 			if (timeoutMs > 0) {
 				deadline = setTimeout(() => {
 					this.#pendingQueue.delete(pending);
-					reject(new PoolError(`No client of the pool became available within ${timeoutMs} ms`));
+					reject(
+						new PoolError(
+							PoolErrorCode.ErrClientTimeout,
+							`No client of the pool became available within ${timeoutMs} ms`,
+						),
+					);
 				}, timeoutMs);
 			}
 		});
@@ -239,7 +250,7 @@ export class Pool {
 		try {
 			pending.resolve(await this.createClient());
 		} catch (error) {
-			pending.reject(error instanceof Error ? error : new PoolError(String(error)));
+			pending.reject(error instanceof Error ? error : new PoolError(PoolErrorCode.ErrClientConnect, String(error)));
 		}
 	}
 

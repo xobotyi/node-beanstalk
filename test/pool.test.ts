@@ -3,7 +3,7 @@ import {setTimeout as sleep} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockedClass} from 'vite-plus/test';
 import {PoolClient} from '../src/pool-client.js';
 import {Pool} from '../src/index.js';
-import {PoolError} from '../src/error/pool-error.js';
+import {PoolError, PoolErrorCode} from '../src/error/pool-error.js';
 
 vi.mock('../src/pool-client');
 
@@ -293,8 +293,12 @@ describe('Pool', () => {
 			expect(c1.disconnect).toHaveBeenCalledWith(true);
 			expect(c2.disconnect).toHaveBeenCalledWith(true);
 
-			await expect(c3).rejects.toStrictEqual(new PoolError('Unable to gain client, pool is disconnecting.'));
-			await expect(c4).rejects.toStrictEqual(new PoolError('Unable to gain client, pool is disconnecting.'));
+			await expect(c3).rejects.toStrictEqual(
+				new PoolError(PoolErrorCode.ErrDisconnecting, 'Unable to gain client, pool is disconnecting.'),
+			);
+			await expect(c4).rejects.toStrictEqual(
+				new PoolError(PoolErrorCode.ErrDisconnecting, 'Unable to gain client, pool is disconnecting.'),
+			);
 		});
 
 		it('should reject a connect while a graceful disconnect waits for the queue', async () => {

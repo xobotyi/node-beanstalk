@@ -287,15 +287,15 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		const result = await this.dispatchCommand(cmd, [`${priority}`, `${delay}`, `${ttr}`], payload);
 
 		if (result.status === ResponseStatus.JOB_TOO_BIG) {
-			throw new BeanstalkError(`Provided job payload exceeds maximal server's 'max-job-size' config`, result.status);
+			throw new BeanstalkError(result.status, `Provided job payload exceeds maximal server's 'max-job-size' config`);
 		}
 
 		if (result.status === ResponseStatus.EXPECTED_CRLF) {
-			throw new BeanstalkError(`Missing trailing CRLF`, result.status);
+			throw new BeanstalkError(result.status, `Missing trailing CRLF`);
 		}
 
 		if (result.status === ResponseStatus.DRAINING) {
-			throw new BeanstalkError(`Server is in 'drain mode' and no longer accepting new jobs.`, result.status);
+			throw new BeanstalkError(result.status, `Server is in 'drain mode' and no longer accepting new jobs.`);
 		}
 
 		const state = delay === 0 ? JobState.ready : JobState.delayed;
@@ -341,8 +341,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 		if (result.status === ResponseStatus.DEADLINE_SOON) {
 			throw new BeanstalkError(
-				'One of jobs reserved by this client will reach deadline soon, release it first.',
 				result.status,
+				'One of jobs reserved by this client will reach deadline soon, release it first.',
 			);
 		}
 
@@ -375,8 +375,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 		if (result.status === ResponseStatus.DEADLINE_SOON) {
 			throw new BeanstalkError(
-				'One of jobs reserved by this client will reach deadline soon, release it first.',
 				result.status,
+				'One of jobs reserved by this client will reach deadline soon, release it first.',
 			);
 		}
 

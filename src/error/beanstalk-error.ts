@@ -1,11 +1,6 @@
-export class BeanstalkError extends Error {
+import {type ResponseStatus} from '../types.js';
+import {ErrorWithCode} from './error-with-code.js';
+
+export class BeanstalkError extends ErrorWithCode<ResponseStatus> {
 	name = 'BeanstalkError';
-
-	public readonly code: string;
-
-	constructor(message: string, code: string) {
-		super(message);
-
-		this.code = code;
-	}
 }
