@@ -980,30 +980,22 @@ describe('Client', () => {
 				await expect(c.put(undefined)).rejects.toStrictEqual(new TypeError('payload has to be a non-undefined value'));
 			});
 
-			it('should throw in case of server error-ish responses', async () => {
-				dispatchCommandMock.mockReturnValueOnce(
-					Promise.resolve({
-						status: ResponseStatus.JOB_TOO_BIG,
-						headers: ['100500'],
-					}),
-				);
+			it.each([ResponseStatus.JOB_TOO_BIG, ResponseStatus.EXPECTED_CRLF, ResponseStatus.DRAINING])(
+				'should throw in case %s received',
+				async (status) => {
+					dispatchCommandMock.mockReturnValueOnce(
+						Promise.resolve({
+							status,
+							headers: ['100500'],
+						}),
+					);
 
-				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
-				dispatchCommandMock.mockReturnValueOnce(
-					Promise.resolve({
-						status: ResponseStatus.EXPECTED_CRLF,
-						headers: ['100500'],
-					}),
-				);
-				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
-				dispatchCommandMock.mockReturnValueOnce(
-					Promise.resolve({
-						status: ResponseStatus.DRAINING,
-						headers: ['100500'],
-					}),
-				);
-				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
-			});
+					const failure = c.put('test');
+
+					await expect(failure).rejects.toBeInstanceOf(BeanstalkError);
+					await expect(failure).rejects.toMatchObject({code: status});
+				},
+			);
 		});
 
 		describe('reserve', () => {
@@ -1037,7 +1029,10 @@ describe('Client', () => {
 						headers: [],
 					}),
 				);
-				await expect(c.reserve()).rejects.toBeInstanceOf(BeanstalkError);
+				const failure = c.reserve();
+
+				await expect(failure).rejects.toBeInstanceOf(BeanstalkError);
+				await expect(failure).rejects.toMatchObject({code: ResponseStatus.DEADLINE_SOON});
 			});
 		});
 
@@ -1091,7 +1086,10 @@ describe('Client', () => {
 					}),
 				);
 
-				await expect(c.reserveWithTimeout(123)).rejects.toBeInstanceOf(BeanstalkError);
+				const failure = c.reserveWithTimeout(123);
+
+				await expect(failure).rejects.toBeInstanceOf(BeanstalkError);
+				await expect(failure).rejects.toMatchObject({code: ResponseStatus.DEADLINE_SOON});
 			});
 		});
 
