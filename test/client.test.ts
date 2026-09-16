@@ -562,7 +562,7 @@ describe('Client', () => {
 		const conn = new ConnectionMock();
 		const c = new Client({}, conn);
 
-		const readCommandResponse = c['readCommandResponse'].bind(c);
+		const readCommandResponse = async () => c['readCommandResponse'](new AbortController().signal);
 
 		it('should reject, stop listening and force-disconnect when the body length is malformed', async () => {
 			const openConn = new ConnectionMock();
@@ -686,6 +686,21 @@ describe('Client', () => {
 				status: BeanstalkResponseStatus.BURIED,
 				headers: [],
 			});
+		});
+	});
+
+	describe('connection loss', () => {
+		it('should stop reading the response when the write fails', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('open');
+			const write = vi.spyOn(conn, 'write').mockRejectedValueOnce(new Error('socket gone'));
+			const c = new Client(undefined, conn);
+
+			await expect(c.bury(1)).rejects.toThrow('socket gone');
+
+			expect(write).toHaveBeenCalledTimes(1);
+			expect(conn.listenerCount('data')).toBe(0);
+			expect(c.queueSize).toBe(0);
 		});
 	});
 
