@@ -142,7 +142,7 @@ export type Serializer = {
 /**
  * Every command of the protocol, keyed by the name it carries on the wire.
  */
-export const BeanstalkCommand = {
+export const CommandName = {
 	put: 'put',
 	use: 'use',
 	reserve: 'reserve',
@@ -169,12 +169,12 @@ export const BeanstalkCommand = {
 	'pause-tube': 'pause-tube',
 	quit: 'quit',
 } as const satisfies Record<string, string>;
-export type BeanstalkCommand = (typeof BeanstalkCommand)[keyof typeof BeanstalkCommand];
+export type CommandName = (typeof CommandName)[keyof typeof CommandName];
 
 /**
  * Every response status of the protocol, keyed by the word it carries on the wire.
  */
-export const BeanstalkResponseStatus = {
+export const ResponseStatus = {
 	BAD_FORMAT: 'BAD_FORMAT',
 	BURIED: 'BURIED',
 	DEADLINE_SOON: 'DEADLINE_SOON',
@@ -199,26 +199,26 @@ export const BeanstalkResponseStatus = {
 	USING: 'USING',
 	WATCHING: 'WATCHING',
 } as const satisfies Record<string, string>;
-export type BeanstalkResponseStatus = (typeof BeanstalkResponseStatus)[keyof typeof BeanstalkResponseStatus];
+export type ResponseStatus = (typeof ResponseStatus)[keyof typeof ResponseStatus];
 
-export const BeanstalkDataResponseStatus = {
-	[BeanstalkResponseStatus.OK]: BeanstalkResponseStatus.OK,
-	[BeanstalkResponseStatus.RESERVED]: BeanstalkResponseStatus.RESERVED,
-	[BeanstalkResponseStatus.FOUND]: BeanstalkResponseStatus.FOUND,
+export const DataResponseStatus = {
+	[ResponseStatus.OK]: ResponseStatus.OK,
+	[ResponseStatus.RESERVED]: ResponseStatus.RESERVED,
+	[ResponseStatus.FOUND]: ResponseStatus.FOUND,
 } as const;
-export type IBeanstalkDataResponseStatus = keyof typeof BeanstalkDataResponseStatus;
+export type DataResponseStatus = keyof typeof DataResponseStatus;
 
-export const BeanstalkErrorResponseStatus = {
-	[BeanstalkResponseStatus.OUT_OF_MEMORY]: BeanstalkResponseStatus.OUT_OF_MEMORY,
-	[BeanstalkResponseStatus.INTERNAL_ERROR]: BeanstalkResponseStatus.INTERNAL_ERROR,
-	[BeanstalkResponseStatus.BAD_FORMAT]: BeanstalkResponseStatus.BAD_FORMAT,
-	[BeanstalkResponseStatus.DRAINING]: BeanstalkResponseStatus.DRAINING,
-	[BeanstalkResponseStatus.UNKNOWN_COMMAND]: BeanstalkResponseStatus.UNKNOWN_COMMAND,
+export const ErrorResponseStatus = {
+	[ResponseStatus.OUT_OF_MEMORY]: ResponseStatus.OUT_OF_MEMORY,
+	[ResponseStatus.INTERNAL_ERROR]: ResponseStatus.INTERNAL_ERROR,
+	[ResponseStatus.BAD_FORMAT]: ResponseStatus.BAD_FORMAT,
+	[ResponseStatus.DRAINING]: ResponseStatus.DRAINING,
+	[ResponseStatus.UNKNOWN_COMMAND]: ResponseStatus.UNKNOWN_COMMAND,
 } as const;
-export type IBeanstalkErrorResponseStatus = keyof typeof BeanstalkErrorResponseStatus;
+export type ErrorResponseStatus = keyof typeof ErrorResponseStatus;
 
 export type CommandResponseHeaders = {
-	status: BeanstalkResponseStatus;
+	status: ResponseStatus;
 	hasData: boolean;
 	dataLength: number;
 	headers: string[];
@@ -226,13 +226,13 @@ export type CommandResponseHeaders = {
 };
 
 export type CommandResponse = {
-	status: BeanstalkResponseStatus;
+	status: ResponseStatus;
 	headers: string[];
 	data?: Buffer;
 };
 
-export type CommandHandledResponse<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> =
-	R extends IBeanstalkDataResponseStatus
+export type CommandHandledResponse<R extends ResponseStatus = ResponseStatus> =
+	R extends DataResponseStatus
 		? {
 				status: R;
 				headers: string[];
@@ -580,13 +580,13 @@ export type IBeanstalkTubeStats = {
 /**
  * Every state a job can be in, keyed by the word the server reports.
  */
-export const BeanstalkJobState = {
+export const JobState = {
 	ready: 'ready',
 	delayed: 'delayed',
 	reserved: 'reserved',
 	buried: 'buried',
 } as const satisfies Record<string, string>;
-export type BeanstalkJobState = (typeof BeanstalkJobState)[keyof typeof BeanstalkJobState];
+export type JobState = (typeof JobState)[keyof typeof JobState];
 
 export type IBeanstalkJobStats = {
 	/**
@@ -602,7 +602,7 @@ export type IBeanstalkJobStats = {
 	/**
 	 * "ready" or "delayed" or "reserved" or "buried"
 	 */
-	state: BeanstalkJobState;
+	state: JobState;
 
 	/**
 	 * The priority value set by the put, release, or bury commands.

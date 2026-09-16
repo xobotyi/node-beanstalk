@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vite-plus/test';
 import {Buffer} from 'node:buffer';
 import {parseResponseHeaders} from '../../src/util/parse-response-headers.js';
-import {BeanstalkResponseStatus, type CommandResponseHeaders} from '../../src/types.js';
+import {ResponseStatus, type CommandResponseHeaders} from '../../src/types.js';
 import {CRLF_BUFF} from '../../src/const.js';
 import {ResponseErrorCode} from '../../src/error/response-error.js';
 
@@ -21,7 +21,7 @@ describe('parseResponseHeaders', () => {
 			name: 'response with no headers',
 			in: Buffer.from('BURIED\r\n'),
 			out: {
-				status: BeanstalkResponseStatus.BURIED,
+				status: ResponseStatus.BURIED,
 				headers: [],
 				hasData: false,
 				dataLength: 0,
@@ -32,7 +32,7 @@ describe('parseResponseHeaders', () => {
 			name: 'response with headers',
 			in: Buffer.from('WATCHING test-tube\r\n'),
 			out: {
-				status: BeanstalkResponseStatus.WATCHING,
+				status: ResponseStatus.WATCHING,
 				headers: ['test-tube'],
 				hasData: false,
 				dataLength: 0,
@@ -43,7 +43,7 @@ describe('parseResponseHeaders', () => {
 			name: 'data response',
 			in: Buffer.from('OK 123\r\n'),
 			out: {
-				status: BeanstalkResponseStatus.OK,
+				status: ResponseStatus.OK,
 				headers: [],
 				hasData: true,
 				dataLength: 125,
@@ -58,7 +58,7 @@ describe('parseResponseHeaders', () => {
 
 	it('should count the trailing CRLF of an empty data body', () => {
 		expect(parseResponseHeaders(Buffer.from('OK 0\r\n'))).toStrictEqual({
-			status: BeanstalkResponseStatus.OK,
+			status: ResponseStatus.OK,
 			headers: [],
 			hasData: true,
 			dataLength: CRLF_BUFF.length,
@@ -82,7 +82,7 @@ describe('parseResponseHeaders', () => {
 		const headersLine = `OK ${Number.MAX_SAFE_INTEGER - CRLF_BUFF.length}`;
 
 		expect(parseResponseHeaders(Buffer.from(`${headersLine}\r\n`))).toStrictEqual({
-			status: BeanstalkResponseStatus.OK,
+			status: ResponseStatus.OK,
 			headers: [],
 			hasData: true,
 			dataLength: Number.MAX_SAFE_INTEGER,

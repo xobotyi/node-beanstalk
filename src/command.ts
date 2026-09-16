@@ -2,28 +2,27 @@ import {load} from 'js-yaml';
 import {CommandError, CommandErrorCode} from './error/command-error.js';
 import {CRLF_BUFF} from './const.js';
 import {
-	BeanstalkCommand,
-	BeanstalkErrorResponseStatus,
-	BeanstalkResponseStatus,
-	type IBeanstalkErrorResponseStatus,
+	CommandName,
+	ErrorResponseStatus,
+	ResponseStatus,
 	type CommandHandledResponse,
 	type CommandResponse,
 	type Serializer,
 } from './types.js';
 
-export type CommandOptions<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> = {
+export type CommandOptions<R extends ResponseStatus = ResponseStatus> = {
 	payloadBody?: boolean;
 	yamlBody?: boolean;
 	expectedStatus?: readonly R[];
 };
 
-export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> {
-	private readonly commandName: BeanstalkCommand;
+export class Command<R extends ResponseStatus = ResponseStatus> {
+	private readonly commandName: CommandName;
 
 	private readonly opt: Required<CommandOptions<R>>;
 
-	constructor(commandName: BeanstalkCommand, opt: CommandOptions<R> = {}) {
-		if (!BeanstalkCommand[commandName]) {
+	constructor(commandName: CommandName, opt: CommandOptions<R> = {}) {
+		if (!CommandName[commandName]) {
 			throw new CommandError(CommandErrorCode.ErrCommandUnknown, `Unknown beanstalk command '${commandName}'`);
 		}
 
@@ -31,7 +30,7 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 			payloadBody: opt.payloadBody ?? false,
 			yamlBody: opt.yamlBody ?? false,
 			expectedStatus: (opt.expectedStatus ?? []).map((status) => {
-				if (!BeanstalkResponseStatus[status])
+				if (!ResponseStatus[status])
 					throw new CommandError(
 						CommandErrorCode.ErrResponseStatusUnknown,
 						`Unknown beanstalk response status expected '${commandName}'`,
@@ -61,7 +60,7 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 	}
 
 	public handleResponse(response: CommandResponse, serializer?: Serializer): CommandHandledResponse<R> {
-		if (BeanstalkErrorResponseStatus[response.status as IBeanstalkErrorResponseStatus]) {
+		if (ErrorResponseStatus[response.status as ErrorResponseStatus]) {
 			throw new CommandError(
 				CommandErrorCode.ErrErrorResponseStatus,
 				`Error status '${response.status}' received in response to '${this.commandName}' command`,
@@ -75,7 +74,7 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 			);
 		}
 
-		const res: {status: BeanstalkResponseStatus; headers: string[]; data?: unknown} = {
+		const res: {status: ResponseStatus; headers: string[]; data?: unknown} = {
 			status: response.status,
 			headers: response.headers,
 		};

@@ -1,129 +1,129 @@
-import {BeanstalkCommand, BeanstalkResponseStatus} from '../types.js';
+import {CommandName, ResponseStatus} from '../types.js';
 import {Command, type CommandOptions} from '../command.js';
 import {CommandError, CommandErrorCode} from '../error/command-error.js';
 
 const commandConfig = {
-	[BeanstalkCommand.put]: {
+	[CommandName.put]: {
 		expectedStatus: [
-			BeanstalkResponseStatus.INSERTED,
-			BeanstalkResponseStatus.BURIED,
-			BeanstalkResponseStatus.EXPECTED_CRLF,
-			BeanstalkResponseStatus.JOB_TOO_BIG,
-			BeanstalkResponseStatus.DRAINING,
+			ResponseStatus.INSERTED,
+			ResponseStatus.BURIED,
+			ResponseStatus.EXPECTED_CRLF,
+			ResponseStatus.JOB_TOO_BIG,
+			ResponseStatus.DRAINING,
 		],
 	},
-	[BeanstalkCommand.use]: {
-		expectedStatus: [BeanstalkResponseStatus.USING],
+	[CommandName.use]: {
+		expectedStatus: [ResponseStatus.USING],
 	},
 
-	[BeanstalkCommand.reserve]: {
+	[CommandName.reserve]: {
 		expectedStatus: [
-			BeanstalkResponseStatus.TIMED_OUT,
-			BeanstalkResponseStatus.DEADLINE_SOON,
-			BeanstalkResponseStatus.RESERVED,
-		],
-		payloadBody: true,
-	},
-	[BeanstalkCommand['reserve-with-timeout']]: {
-		expectedStatus: [
-			BeanstalkResponseStatus.TIMED_OUT,
-			BeanstalkResponseStatus.DEADLINE_SOON,
-			BeanstalkResponseStatus.RESERVED,
+			ResponseStatus.TIMED_OUT,
+			ResponseStatus.DEADLINE_SOON,
+			ResponseStatus.RESERVED,
 		],
 		payloadBody: true,
 	},
-	[BeanstalkCommand['reserve-job']]: {
-		expectedStatus: [BeanstalkResponseStatus.NOT_FOUND, BeanstalkResponseStatus.RESERVED],
+	[CommandName['reserve-with-timeout']]: {
+		expectedStatus: [
+			ResponseStatus.TIMED_OUT,
+			ResponseStatus.DEADLINE_SOON,
+			ResponseStatus.RESERVED,
+		],
 		payloadBody: true,
 	},
-	[BeanstalkCommand.delete]: {
-		expectedStatus: [BeanstalkResponseStatus.NOT_FOUND, BeanstalkResponseStatus.DELETED],
+	[CommandName['reserve-job']]: {
+		expectedStatus: [ResponseStatus.NOT_FOUND, ResponseStatus.RESERVED],
+		payloadBody: true,
 	},
-	[BeanstalkCommand.release]: {
+	[CommandName.delete]: {
+		expectedStatus: [ResponseStatus.NOT_FOUND, ResponseStatus.DELETED],
+	},
+	[CommandName.release]: {
 		expectedStatus: [
-			BeanstalkResponseStatus.RELEASED,
-			BeanstalkResponseStatus.BURIED,
-			BeanstalkResponseStatus.NOT_FOUND,
+			ResponseStatus.RELEASED,
+			ResponseStatus.BURIED,
+			ResponseStatus.NOT_FOUND,
 		],
 	},
-	[BeanstalkCommand.bury]: {
-		expectedStatus: [BeanstalkResponseStatus.BURIED, BeanstalkResponseStatus.NOT_FOUND],
+	[CommandName.bury]: {
+		expectedStatus: [ResponseStatus.BURIED, ResponseStatus.NOT_FOUND],
 	},
-	[BeanstalkCommand.touch]: {
-		expectedStatus: [BeanstalkResponseStatus.TOUCHED, BeanstalkResponseStatus.NOT_FOUND],
-	},
-
-	[BeanstalkCommand.watch]: {
-		expectedStatus: [BeanstalkResponseStatus.WATCHING],
-	},
-	[BeanstalkCommand.ignore]: {
-		expectedStatus: [BeanstalkResponseStatus.WATCHING, BeanstalkResponseStatus.NOT_IGNORED],
+	[CommandName.touch]: {
+		expectedStatus: [ResponseStatus.TOUCHED, ResponseStatus.NOT_FOUND],
 	},
 
-	[BeanstalkCommand.peek]: {
-		expectedStatus: [BeanstalkResponseStatus.FOUND, BeanstalkResponseStatus.NOT_FOUND],
+	[CommandName.watch]: {
+		expectedStatus: [ResponseStatus.WATCHING],
+	},
+	[CommandName.ignore]: {
+		expectedStatus: [ResponseStatus.WATCHING, ResponseStatus.NOT_IGNORED],
+	},
+
+	[CommandName.peek]: {
+		expectedStatus: [ResponseStatus.FOUND, ResponseStatus.NOT_FOUND],
 		payloadBody: true,
 	},
-	[BeanstalkCommand['peek-ready']]: {
-		expectedStatus: [BeanstalkResponseStatus.FOUND, BeanstalkResponseStatus.NOT_FOUND],
+	[CommandName['peek-ready']]: {
+		expectedStatus: [ResponseStatus.FOUND, ResponseStatus.NOT_FOUND],
 		payloadBody: true,
 	},
-	[BeanstalkCommand['peek-buried']]: {
-		expectedStatus: [BeanstalkResponseStatus.FOUND, BeanstalkResponseStatus.NOT_FOUND],
+	[CommandName['peek-buried']]: {
+		expectedStatus: [ResponseStatus.FOUND, ResponseStatus.NOT_FOUND],
 		payloadBody: true,
 	},
-	[BeanstalkCommand['peek-delayed']]: {
-		expectedStatus: [BeanstalkResponseStatus.FOUND, BeanstalkResponseStatus.NOT_FOUND],
+	[CommandName['peek-delayed']]: {
+		expectedStatus: [ResponseStatus.FOUND, ResponseStatus.NOT_FOUND],
 		payloadBody: true,
 	},
 
-	[BeanstalkCommand.kick]: {
-		expectedStatus: [BeanstalkResponseStatus.KICKED],
+	[CommandName.kick]: {
+		expectedStatus: [ResponseStatus.KICKED],
 	},
-	[BeanstalkCommand['kick-job']]: {
-		expectedStatus: [BeanstalkResponseStatus.KICKED, BeanstalkResponseStatus.NOT_FOUND],
-	},
-
-	[BeanstalkCommand.stats]: {
-		expectedStatus: [BeanstalkResponseStatus.OK],
-		yamlBody: true,
-	},
-	[BeanstalkCommand['stats-job']]: {
-		expectedStatus: [BeanstalkResponseStatus.OK, BeanstalkResponseStatus.NOT_FOUND],
-		yamlBody: true,
-	},
-	[BeanstalkCommand['stats-tube']]: {
-		expectedStatus: [BeanstalkResponseStatus.OK, BeanstalkResponseStatus.NOT_FOUND],
-		yamlBody: true,
+	[CommandName['kick-job']]: {
+		expectedStatus: [ResponseStatus.KICKED, ResponseStatus.NOT_FOUND],
 	},
 
-	[BeanstalkCommand['list-tubes']]: {
-		expectedStatus: [BeanstalkResponseStatus.OK],
+	[CommandName.stats]: {
+		expectedStatus: [ResponseStatus.OK],
 		yamlBody: true,
 	},
-	[BeanstalkCommand['list-tube-used']]: {
-		expectedStatus: [BeanstalkResponseStatus.USING],
-	},
-	[BeanstalkCommand['list-tubes-watched']]: {
+	[CommandName['stats-job']]: {
+		expectedStatus: [ResponseStatus.OK, ResponseStatus.NOT_FOUND],
 		yamlBody: true,
-		expectedStatus: [BeanstalkResponseStatus.OK],
+	},
+	[CommandName['stats-tube']]: {
+		expectedStatus: [ResponseStatus.OK, ResponseStatus.NOT_FOUND],
+		yamlBody: true,
 	},
 
-	[BeanstalkCommand['pause-tube']]: {
-		expectedStatus: [BeanstalkResponseStatus.PAUSED, BeanstalkResponseStatus.NOT_FOUND],
+	[CommandName['list-tubes']]: {
+		expectedStatus: [ResponseStatus.OK],
+		yamlBody: true,
+	},
+	[CommandName['list-tube-used']]: {
+		expectedStatus: [ResponseStatus.USING],
+	},
+	[CommandName['list-tubes-watched']]: {
+		yamlBody: true,
+		expectedStatus: [ResponseStatus.OK],
 	},
 
-	[BeanstalkCommand.quit]: {
+	[CommandName['pause-tube']]: {
+		expectedStatus: [ResponseStatus.PAUSED, ResponseStatus.NOT_FOUND],
+	},
+
+	[CommandName.quit]: {
 		expectedStatus: [],
 	},
 } as const;
 type CommandConfig = typeof commandConfig;
 
 const commandInstances: Partial<
-	Record<BeanstalkCommand, Command<CommandConfig[BeanstalkCommand]['expectedStatus'][number]>>
+	Record<CommandName, Command<CommandConfig[CommandName]['expectedStatus'][number]>>
 > = {};
 
-export function getCommandInstance<Cmd extends BeanstalkCommand>(
+export function getCommandInstance<Cmd extends CommandName>(
 	cmd: Cmd,
 ): Command<CommandConfig[Cmd]['expectedStatus'][number]> {
 	let command = commandInstances[cmd] as Command<CommandConfig[Cmd]['expectedStatus'][number]> | undefined;
