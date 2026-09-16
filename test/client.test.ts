@@ -4,12 +4,12 @@ import {setImmediate, setTimeout as sleep} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockInstance} from 'vite-plus/test';
 import {BeanstalkError} from '../src/error/beanstalk-error.js';
 import {Connection, type ConnectionState} from '../src/connection.js';
-import {BeanstalkJobState, Client} from '../src/index.js';
+import {JobState, Client} from '../src/index.js';
 import {ClientError, ClientErrorCode} from '../src/error/client-error.js';
 import {ResponseError, ResponseErrorCode} from '../src/error/response-error.js';
 import {JsonSerializer} from '../src/serializer/json-serializer.js';
 import {Command} from '../src/command.js';
-import {BeanstalkCommand, BeanstalkResponseStatus, type CommandResponse} from '../src/types.js';
+import {CommandName, ResponseStatus, type CommandResponse} from '../src/types.js';
 import {
 	validateBound,
 	validateDelay,
@@ -424,7 +424,7 @@ describe('Client', () => {
 					new Promise((resolve) => {
 						setTimeout(() => {
 							resolve({
-								status: BeanstalkResponseStatus.BURIED,
+								status: ResponseStatus.BURIED,
 								headers: ['100500'],
 							});
 						}, 10);
@@ -453,7 +453,7 @@ describe('Client', () => {
 					new Promise((resolve) => {
 						setTimeout(() => {
 							resolve({
-								status: BeanstalkResponseStatus.BURIED,
+								status: ResponseStatus.BURIED,
 								headers: ['100500'],
 							});
 						}, 10);
@@ -658,8 +658,8 @@ describe('Client', () => {
 		const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 		const dispatchCommand = c['dispatchCommand'].bind(c);
 
-		const cmd = new Command(BeanstalkCommand.bury, {
-			expectedStatus: [BeanstalkResponseStatus.BURIED],
+		const cmd = new Command(CommandName.bury, {
+			expectedStatus: [ResponseStatus.BURIED],
 		});
 		const buildCommandBufferSpy = vi.spyOn(cmd, 'buildCommandBuffer');
 		const handleResponseOrig = cmd.handleResponse.bind(cmd);
@@ -669,7 +669,7 @@ describe('Client', () => {
 			readCommandResponseMock.mockReset();
 			readCommandResponseMock.mockImplementation(async () =>
 				Promise.resolve({
-					status: BeanstalkResponseStatus.BURIED,
+					status: ResponseStatus.BURIED,
 					headers: [],
 					data: undefined,
 				}),
@@ -704,14 +704,14 @@ describe('Client', () => {
 			expect(handleResponseSpy).toHaveBeenCalledTimes(1);
 			expect(handleResponseSpy).toHaveBeenCalledWith(
 				{
-					status: BeanstalkResponseStatus.BURIED,
+					status: ResponseStatus.BURIED,
 					headers: [],
 					data: undefined,
 				},
 				serializer,
 			);
 			expect(result).toStrictEqual({
-				status: BeanstalkResponseStatus.BURIED,
+				status: ResponseStatus.BURIED,
 				headers: [],
 			});
 		});
@@ -886,7 +886,7 @@ describe('Client', () => {
 			it('should validate ttr, priority and delay', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.INSERTED,
+						status: ResponseStatus.INSERTED,
 						headers: ['100500'],
 					}),
 				);
@@ -904,45 +904,45 @@ describe('Client', () => {
 			it("should return job id and it's status", async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.INSERTED,
+						status: ResponseStatus.INSERTED,
 						headers: ['100500'],
 					}),
 				);
 
 				expect(await c.put('payload', 1, 0, 0)).toStrictEqual({
 					id: 100_500,
-					state: BeanstalkJobState.ready,
+					state: JobState.ready,
 				});
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.INSERTED,
+						status: ResponseStatus.INSERTED,
 						headers: ['100500'],
 					}),
 				);
 
 				expect(await c.put('payload', 1, 2, 3)).toStrictEqual({
 					id: 100_500,
-					state: BeanstalkJobState.delayed,
+					state: JobState.delayed,
 				});
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.BURIED,
+						status: ResponseStatus.BURIED,
 						headers: ['100500'],
 					}),
 				);
 
 				expect(await c.put('payload')).toStrictEqual({
 					id: 100_500,
-					state: BeanstalkJobState.buried,
+					state: JobState.buried,
 				});
 			});
 
 			it('should reject a job id header with trailing garbage', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.INSERTED,
+						status: ResponseStatus.INSERTED,
 						headers: ['100abc'],
 					}),
 				);
@@ -956,7 +956,7 @@ describe('Client', () => {
 			it('should use default ttr, priority and delay in case it is not defined', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.INSERTED,
+						status: ResponseStatus.INSERTED,
 						headers: ['100500'],
 					}),
 				);
@@ -974,7 +974,7 @@ describe('Client', () => {
 			it('should throw in case of undefined payload received', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.INSERTED,
+						status: ResponseStatus.INSERTED,
 						headers: ['100500'],
 					}),
 				);
@@ -985,7 +985,7 @@ describe('Client', () => {
 			it('should throw in case of server error-ish responses', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.JOB_TOO_BIG,
+						status: ResponseStatus.JOB_TOO_BIG,
 						headers: ['100500'],
 					}),
 				);
@@ -993,14 +993,14 @@ describe('Client', () => {
 				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.EXPECTED_CRLF,
+						status: ResponseStatus.EXPECTED_CRLF,
 						headers: ['100500'],
 					}),
 				);
 				await expect(c.put('test')).rejects.toBeInstanceOf(BeanstalkError);
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.DRAINING,
+						status: ResponseStatus.DRAINING,
 						headers: ['100500'],
 					}),
 				);
@@ -1012,7 +1012,7 @@ describe('Client', () => {
 			it("should return job id and it's payload", async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.RESERVED,
+						status: ResponseStatus.RESERVED,
 						headers: ['100500'],
 						data: 'hey there',
 					}),
@@ -1024,7 +1024,7 @@ describe('Client', () => {
 			it('should return null in case no job available', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.TIMED_OUT,
+						status: ResponseStatus.TIMED_OUT,
 						headers: [],
 					}),
 				);
@@ -1035,7 +1035,7 @@ describe('Client', () => {
 			it('should throw in case DEADLINE_SOON received', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.DEADLINE_SOON,
+						status: ResponseStatus.DEADLINE_SOON,
 						headers: [],
 					}),
 				);
@@ -1047,7 +1047,7 @@ describe('Client', () => {
 			it('should validate timeout', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.RESERVED,
+						status: ResponseStatus.RESERVED,
 						headers: ['100500'],
 						data: 'hey there',
 					}),
@@ -1062,7 +1062,7 @@ describe('Client', () => {
 			it("should return job id and it's payload", async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.RESERVED,
+						status: ResponseStatus.RESERVED,
 						headers: ['100500'],
 						data: 'hey there',
 					}),
@@ -1077,7 +1077,7 @@ describe('Client', () => {
 			it('should return null in case no job available', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.TIMED_OUT,
+						status: ResponseStatus.TIMED_OUT,
 						headers: [],
 					}),
 				);
@@ -1088,7 +1088,7 @@ describe('Client', () => {
 			it('should throw in case DEADLINE_SOON received', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.DEADLINE_SOON,
+						status: ResponseStatus.DEADLINE_SOON,
 						headers: [],
 					}),
 				);
@@ -1101,7 +1101,7 @@ describe('Client', () => {
 			it('should validate job id', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.RESERVED,
+						status: ResponseStatus.RESERVED,
 						headers: ['100500'],
 						data: 'hey there',
 					}),
@@ -1116,7 +1116,7 @@ describe('Client', () => {
 			it("should return job id and it's payload", async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.RESERVED,
+						status: ResponseStatus.RESERVED,
 						headers: ['123'],
 						data: 'hey there',
 					}),
@@ -1131,7 +1131,7 @@ describe('Client', () => {
 			it('should return null in case no job with such id found', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1144,7 +1144,7 @@ describe('Client', () => {
 			it('should validate job id', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.RESERVED,
+						status: ResponseStatus.RESERVED,
 						headers: ['100500'],
 						data: 'hey there',
 					}),
@@ -1159,7 +1159,7 @@ describe('Client', () => {
 			it('should return boolean representing delete result', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.DELETED,
+						status: ResponseStatus.DELETED,
 						headers: [],
 					}),
 				);
@@ -1168,7 +1168,7 @@ describe('Client', () => {
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1181,7 +1181,7 @@ describe('Client', () => {
 			it('should validate jobId, priority and delay', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.INSERTED,
+						status: ResponseStatus.INSERTED,
 						headers: ['100500'],
 					}),
 				);
@@ -1199,36 +1199,36 @@ describe('Client', () => {
 			it('should return status of released job', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.RELEASED,
+						status: ResponseStatus.RELEASED,
 						headers: [],
 					}),
 				);
 
-				expect(await c.release(123, 0, 0)).toBe(BeanstalkJobState.ready);
+				expect(await c.release(123, 0, 0)).toBe(JobState.ready);
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.BURIED,
+						status: ResponseStatus.BURIED,
 						headers: [],
 					}),
 				);
 
-				expect(await c.release(123)).toBe(BeanstalkJobState.buried);
+				expect(await c.release(123)).toBe(JobState.buried);
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.RELEASED,
+						status: ResponseStatus.RELEASED,
 						headers: [],
 					}),
 				);
 
-				expect(await c.release(123, 0, 123)).toBe(BeanstalkJobState.delayed);
+				expect(await c.release(123, 0, 123)).toBe(JobState.delayed);
 			});
 
 			it('should return null in case job not found', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1241,7 +1241,7 @@ describe('Client', () => {
 			it('should validate jobId and priority', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.BURIED,
+						status: ResponseStatus.BURIED,
 						headers: ['100500'],
 					}),
 				);
@@ -1257,7 +1257,7 @@ describe('Client', () => {
 			it('should return boolean representing bury result', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.BURIED,
+						status: ResponseStatus.BURIED,
 						headers: [],
 					}),
 				);
@@ -1266,7 +1266,7 @@ describe('Client', () => {
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1279,7 +1279,7 @@ describe('Client', () => {
 			it('should validate jobId and priority', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.TOUCHED,
+						status: ResponseStatus.TOUCHED,
 						headers: ['100500'],
 					}),
 				);
@@ -1293,7 +1293,7 @@ describe('Client', () => {
 			it('should return boolean representing bury result', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.TOUCHED,
+						status: ResponseStatus.TOUCHED,
 						headers: [],
 					}),
 				);
@@ -1302,7 +1302,7 @@ describe('Client', () => {
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1315,7 +1315,7 @@ describe('Client', () => {
 			it('should validate tube name', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.USING,
+						status: ResponseStatus.USING,
 						headers: ['tube-name'],
 					}),
 				);
@@ -1329,7 +1329,7 @@ describe('Client', () => {
 			it('should return currently usied tube name', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.USING,
+						status: ResponseStatus.USING,
 						headers: ['awesome-tube'],
 					}),
 				);
@@ -1342,7 +1342,7 @@ describe('Client', () => {
 			it('should validate tube name', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.WATCHING,
+						status: ResponseStatus.WATCHING,
 						headers: ['1'],
 					}),
 				);
@@ -1356,7 +1356,7 @@ describe('Client', () => {
 			it('should return amount of tubes watched', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.WATCHING,
+						status: ResponseStatus.WATCHING,
 						headers: ['123'],
 					}),
 				);
@@ -1369,7 +1369,7 @@ describe('Client', () => {
 			it('should validate tube name', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.WATCHING,
+						status: ResponseStatus.WATCHING,
 						headers: ['1'],
 					}),
 				);
@@ -1383,7 +1383,7 @@ describe('Client', () => {
 			it('should reject a malformed WATCHING count', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.WATCHING,
+						status: ResponseStatus.WATCHING,
 						headers: ['100abc'],
 					}),
 				);
@@ -1394,7 +1394,7 @@ describe('Client', () => {
 			it('should return ignore result of tubes watched', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.WATCHING,
+						status: ResponseStatus.WATCHING,
 						headers: ['123'],
 					}),
 				);
@@ -1402,7 +1402,7 @@ describe('Client', () => {
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_IGNORED,
+						status: ResponseStatus.NOT_IGNORED,
 						headers: ['123'],
 					}),
 				);
@@ -1414,7 +1414,7 @@ describe('Client', () => {
 			it('should validate job id', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.FOUND,
+						status: ResponseStatus.FOUND,
 						headers: ['100500'],
 						data: 'some job payload',
 					}),
@@ -1429,7 +1429,7 @@ describe('Client', () => {
 			it('should return job id and payload', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.FOUND,
+						status: ResponseStatus.FOUND,
 						headers: ['100500'],
 						data: 'some job payload',
 					}),
@@ -1443,7 +1443,7 @@ describe('Client', () => {
 			it('should return null in case job not found', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1455,7 +1455,7 @@ describe('Client', () => {
 			it('should return job id and payload', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.FOUND,
+						status: ResponseStatus.FOUND,
 						headers: ['100500'],
 						data: 'some job payload',
 					}),
@@ -1469,7 +1469,7 @@ describe('Client', () => {
 			it('should return null in case job not found', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1481,7 +1481,7 @@ describe('Client', () => {
 			it('should return job id and payload', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.FOUND,
+						status: ResponseStatus.FOUND,
 						headers: ['100500'],
 						data: 'some job payload',
 					}),
@@ -1495,7 +1495,7 @@ describe('Client', () => {
 			it('should return null in case job not found', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1507,7 +1507,7 @@ describe('Client', () => {
 			it('should return job id and payload', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.FOUND,
+						status: ResponseStatus.FOUND,
 						headers: ['100500'],
 						data: 'some job payload',
 					}),
@@ -1521,7 +1521,7 @@ describe('Client', () => {
 			it('should return null in case job not found', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1533,7 +1533,7 @@ describe('Client', () => {
 			it('should validate bound', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.KICKED,
+						status: ResponseStatus.KICKED,
 						headers: ['100500'],
 					}),
 				);
@@ -1546,7 +1546,7 @@ describe('Client', () => {
 			it('should return amount of kicked jobs', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.KICKED,
+						status: ResponseStatus.KICKED,
 						headers: ['100500'],
 					}),
 				);
@@ -1558,7 +1558,7 @@ describe('Client', () => {
 			it('should validate job id', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.KICKED,
+						status: ResponseStatus.KICKED,
 						headers: ['100500'],
 						data: 'some job payload',
 					}),
@@ -1573,7 +1573,7 @@ describe('Client', () => {
 			it('should return boolean representing kick result', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.KICKED,
+						status: ResponseStatus.KICKED,
 						headers: ['100500'],
 					}),
 				);
@@ -1581,7 +1581,7 @@ describe('Client', () => {
 
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: ['100500'],
 					}),
 				);
@@ -1593,7 +1593,7 @@ describe('Client', () => {
 			it('should return provided data', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.OK,
+						status: ResponseStatus.OK,
 						headers: ['100500'],
 						data: {id: 'f3c5a91d0b2e47a6', 'current-tubes': 1},
 					}),
@@ -1604,7 +1604,7 @@ describe('Client', () => {
 			it('should stringify an instance id that parsed as a number', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.OK,
+						status: ResponseStatus.OK,
 						headers: ['100500'],
 						data: {id: 1_234_567_890_123_456},
 					}),
@@ -1619,7 +1619,7 @@ describe('Client', () => {
 			it('should validate job id', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.OK,
+						status: ResponseStatus.OK,
 						headers: ['100500'],
 						data: 'some job payload',
 					}),
@@ -1634,7 +1634,7 @@ describe('Client', () => {
 			it('should return provided data', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.OK,
+						status: ResponseStatus.OK,
 						headers: ['100500'],
 						data: 'this is some data',
 					}),
@@ -1645,7 +1645,7 @@ describe('Client', () => {
 			it('should return null in case tube not found', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1657,7 +1657,7 @@ describe('Client', () => {
 			it('should validate job id', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.OK,
+						status: ResponseStatus.OK,
 						headers: ['100500'],
 						data: 'some job payload',
 					}),
@@ -1672,7 +1672,7 @@ describe('Client', () => {
 			it('should return provided data', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.OK,
+						status: ResponseStatus.OK,
 						headers: ['100500'],
 						data: 'this is some data',
 					}),
@@ -1683,7 +1683,7 @@ describe('Client', () => {
 			it('should return null in case job not found', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1695,7 +1695,7 @@ describe('Client', () => {
 			it('should return provided list', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.OK,
+						status: ResponseStatus.OK,
 						headers: [],
 						data: ['this', 'is', 'tubes', 'list'],
 					}),
@@ -1708,7 +1708,7 @@ describe('Client', () => {
 			it('should return provided list', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.OK,
+						status: ResponseStatus.OK,
 						headers: [],
 						data: ['this', 'is', 'tubes', 'list'],
 					}),
@@ -1721,7 +1721,7 @@ describe('Client', () => {
 			it('should return provided list', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.USING,
+						status: ResponseStatus.USING,
 						headers: ['some-tube'],
 					}),
 				);
@@ -1733,7 +1733,7 @@ describe('Client', () => {
 			it('should validate tube name and delay', async () => {
 				dispatchCommandMock.mockReturnValue(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.PAUSED,
+						status: ResponseStatus.PAUSED,
 						headers: [],
 					}),
 				);
@@ -1749,14 +1749,14 @@ describe('Client', () => {
 			it('should return boolean representing success of tube pause', async () => {
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.PAUSED,
+						status: ResponseStatus.PAUSED,
 						headers: [],
 					}),
 				);
 				expect(await c.pauseTube('tube', 123)).toBe(true);
 				dispatchCommandMock.mockReturnValueOnce(
 					Promise.resolve({
-						status: BeanstalkResponseStatus.NOT_FOUND,
+						status: ResponseStatus.NOT_FOUND,
 						headers: [],
 					}),
 				);
@@ -1783,7 +1783,7 @@ describe('Client', () => {
 		// @ts-expect-error we're mocking private method so obviously TS is unhappy.
 		const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
-		const buried: CommandResponse = {status: BeanstalkResponseStatus.BURIED, headers: ['100500']};
+		const buried: CommandResponse = {status: ResponseStatus.BURIED, headers: ['100500']};
 		const queueResponses = (): Array<PromiseWithResolvers<CommandResponse>> => {
 			const responses = Array.from({length: 5}, () => Promise.withResolvers<CommandResponse>());
 

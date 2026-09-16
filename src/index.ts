@@ -9,7 +9,7 @@ export {PoolError} from './error/pool-error.js';
 export {ResponseError} from './error/response-error.js';
 export {SerializerError} from './error/serializer-error.js';
 
-export {BeanstalkJobState, BeanstalkResponseStatus} from './types.js';
+export {JobState, ResponseStatus} from './types.js';
 
 export type {
 	Serializer,

@@ -32,7 +32,7 @@ Each client gives you full access to functionality of beanstalk queue manager, w
 separation to emitter and worker.
 
 ```ts
-import {Client, BeanstalkJobState} from 'node-beanstalk';
+import {Client, JobState} from 'node-beanstalk';
 
 const c = new Client();
 
@@ -43,7 +43,7 @@ await c.use('my-own-tube');
 
 // put our very important job
 const putJob = await c.put({foo: 'My awsome payload', bar: ['baz', 'qux']}, 40);
-if (putJob.state !== BeanstalkJobState.ready) {
+if (putJob.state !== JobState.ready) {
 	// as a result of put command job can done in `buried` state,
 	// or `delayed` in case delay or client's default delay been specified
 	throw new Error('job is not in ready state');
@@ -67,7 +67,7 @@ will wait for the end of previous one. So below code will be executed consecutiv
 fact of being asyncronous.
 
 ```ts
-import {Client, BeanstalkJobState} from 'node-beanstalk';
+import {Client, JobState} from 'node-beanstalk';
 
 const c = new Client();
 await c.connect();

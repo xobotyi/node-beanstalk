@@ -1,4 +1,4 @@
-import {BeanstalkDataResponseStatus, type BeanstalkResponseStatus, type CommandResponseHeaders} from '../types.js';
+import {DataResponseStatus, type ResponseStatus, type CommandResponseHeaders} from '../types.js';
 import {CRLF_BUFF} from '../const.js';
 import {ResponseError, ResponseErrorCode} from '../error/response-error.js';
 
@@ -29,11 +29,11 @@ export function parseResponseHeaders(buff: Buffer): CommandResponseHeaders | nul
 	if (firstCrlf === -1) return null;
 
 	const [status, ...restHeaders] = buff.subarray(0, firstCrlf).toString().split(' ') as [
-		BeanstalkResponseStatus,
+		ResponseStatus,
 		...string[],
 	];
 
-	const hasData = status in BeanstalkDataResponseStatus;
+	const hasData = status in DataResponseStatus;
 	let dataLength = 0;
 	const headers = restHeaders;
 

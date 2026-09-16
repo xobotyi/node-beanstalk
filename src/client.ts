@@ -1,8 +1,8 @@
 import EventEmitter from 'node:events';
 import {
-	BeanstalkCommand,
-	BeanstalkJobState,
-	BeanstalkResponseStatus,
+	CommandName,
+	JobState,
+	ResponseStatus,
 	type IBeanstalkJobStats,
 	type IBeanstalkStats,
 	type IBeanstalkTubeStats,
@@ -229,7 +229,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async use(tubeName: string): Promise<string> {
 		validateTubeName(tubeName);
 
-		const cmd = getCommandInstance(BeanstalkCommand.use);
+		const cmd = getCommandInstance(CommandName.use);
 
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
@@ -266,7 +266,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		delay: number = this.#opt.defaultDelay,
 	): Promise<{
 		id: number;
-		state: typeof BeanstalkJobState.buried | typeof BeanstalkJobState.ready | typeof BeanstalkJobState.delayed;
+		state: typeof JobState.buried | typeof JobState.ready | typeof JobState.delayed;
 	}> {
 		validateTTR(ttr);
 		validatePriority(priority);
@@ -276,27 +276,27 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 			throw new TypeError(`payload has to be a non-undefined value`);
 		}
 
-		const cmd = getCommandInstance(BeanstalkCommand.put);
+		const cmd = getCommandInstance(CommandName.put);
 
 		const result = await this.dispatchCommand(cmd, [`${priority}`, `${delay}`, `${ttr}`], payload);
 
-		if (result.status === BeanstalkResponseStatus.JOB_TOO_BIG) {
+		if (result.status === ResponseStatus.JOB_TOO_BIG) {
 			throw new BeanstalkError(`Provided job payload exceeds maximal server's 'max-job-size' config`, result.status);
 		}
 
-		if (result.status === BeanstalkResponseStatus.EXPECTED_CRLF) {
+		if (result.status === ResponseStatus.EXPECTED_CRLF) {
 			throw new BeanstalkError(`Missing trailing CRLF`, result.status);
 		}
 
-		if (result.status === BeanstalkResponseStatus.DRAINING) {
+		if (result.status === ResponseStatus.DRAINING) {
 			throw new BeanstalkError(`Server is in 'drain mode' and no longer accepting new jobs.`, result.status);
 		}
 
-		const state = delay === 0 ? BeanstalkJobState.ready : BeanstalkJobState.delayed;
+		const state = delay === 0 ? JobState.ready : JobState.delayed;
 
 		return {
 			id: parseNumericHeader(result.headers[0]),
-			state: result.status === BeanstalkResponseStatus.BURIED ? BeanstalkJobState.buried : state,
+			state: result.status === ResponseStatus.BURIED ? JobState.buried : state,
 		};
 	}
 
@@ -324,16 +324,16 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Worker Commands
 	 */
 	public async reserve(): Promise<null | IClientRawReservedJob> {
-		const cmd = getCommandInstance(BeanstalkCommand.reserve);
+		const cmd = getCommandInstance(CommandName.reserve);
 
 		// constraint: the server holds `reserve` until a job exists, so no deadline tells a silent server from an idle one
 		const result = await this.dispatchCommand(cmd, undefined, undefined, NO_RESPONSE_DEADLINE);
 
-		if (result.status === BeanstalkResponseStatus.TIMED_OUT) {
+		if (result.status === ResponseStatus.TIMED_OUT) {
 			return null;
 		}
 
-		if (result.status === BeanstalkResponseStatus.DEADLINE_SOON) {
+		if (result.status === ResponseStatus.DEADLINE_SOON) {
 			throw new BeanstalkError(
 				'One of jobs reserved by this client will reach deadline soon, release it first.',
 				result.status,
@@ -359,15 +359,15 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async reserveWithTimeout(timeout: number): Promise<null | IClientRawReservedJob> {
 		validateTimeout(timeout);
 
-		const cmd = getCommandInstance(BeanstalkCommand['reserve-with-timeout']);
+		const cmd = getCommandInstance(CommandName['reserve-with-timeout']);
 
 		const result = await this.dispatchCommand(cmd, [`${timeout}`], undefined, this.responseDeadlineMs(timeout * 1000));
 
-		if (result.status === BeanstalkResponseStatus.TIMED_OUT) {
+		if (result.status === ResponseStatus.TIMED_OUT) {
 			return null;
 		}
 
-		if (result.status === BeanstalkResponseStatus.DEADLINE_SOON) {
+		if (result.status === ResponseStatus.DEADLINE_SOON) {
 			throw new BeanstalkError(
 				'One of jobs reserved by this client will reach deadline soon, release it first.',
 				result.status,
@@ -391,11 +391,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async reserveJob(jobId: number): Promise<null | IClientRawReservedJob> {
 		validateJobId(jobId);
 
-		const cmd = getCommandInstance(BeanstalkCommand['reserve-job']);
+		const cmd = getCommandInstance(CommandName['reserve-job']);
 
 		const result = await this.dispatchCommand(cmd, [`${jobId}`]);
 
-		if (result.status === BeanstalkResponseStatus.NOT_FOUND) {
+		if (result.status === ResponseStatus.NOT_FOUND) {
 			return null;
 		}
 
@@ -417,11 +417,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async delete(jobId: number): Promise<boolean> {
 		validateJobId(jobId);
 
-		const cmd = getCommandInstance(BeanstalkCommand.delete);
+		const cmd = getCommandInstance(CommandName.delete);
 
 		const result = await this.dispatchCommand(cmd, [`${jobId}`]);
 
-		return result.status === BeanstalkResponseStatus.DELETED;
+		return result.status === ResponseStatus.DELETED;
 	}
 
 	/**
@@ -441,25 +441,25 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		priority: number = this.#opt.defaultPriority,
 		delay: number = this.#opt.defaultDelay,
 	): Promise<
-		null | typeof BeanstalkJobState.buried | typeof BeanstalkJobState.ready | typeof BeanstalkJobState.delayed
+		null | typeof JobState.buried | typeof JobState.ready | typeof JobState.delayed
 	> {
 		validateJobId(jobId);
 		validatePriority(priority);
 		validateDelay(delay);
 
-		const cmd = getCommandInstance(BeanstalkCommand.release);
+		const cmd = getCommandInstance(CommandName.release);
 
 		const result = await this.dispatchCommand(cmd, [`${jobId}`, `${priority}`, `${delay}`]);
 
-		if (result.status === BeanstalkResponseStatus.NOT_FOUND) {
+		if (result.status === ResponseStatus.NOT_FOUND) {
 			return null;
 		}
 
-		if (result.status === BeanstalkResponseStatus.BURIED) {
-			return BeanstalkJobState.buried;
+		if (result.status === ResponseStatus.BURIED) {
+			return JobState.buried;
 		}
 
-		return delay === 0 ? BeanstalkJobState.ready : BeanstalkJobState.delayed;
+		return delay === 0 ? JobState.ready : JobState.delayed;
 	}
 
 	/**
@@ -476,11 +476,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		validateJobId(jobId);
 		validatePriority(priority);
 
-		const cmd = getCommandInstance(BeanstalkCommand.bury);
+		const cmd = getCommandInstance(CommandName.bury);
 
 		const result = await this.dispatchCommand(cmd, [`${jobId}`, `${priority}`]);
 
-		return result.status === BeanstalkResponseStatus.BURIED;
+		return result.status === ResponseStatus.BURIED;
 	}
 
 	/**
@@ -497,11 +497,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async touch(jobId: number): Promise<boolean> {
 		validateJobId(jobId);
 
-		const cmd = getCommandInstance(BeanstalkCommand.touch);
+		const cmd = getCommandInstance(CommandName.touch);
 
 		const result = await this.dispatchCommand(cmd, [`${jobId}`]);
 
-		return result.status === BeanstalkResponseStatus.TOUCHED;
+		return result.status === ResponseStatus.TOUCHED;
 	}
 
 	/**
@@ -515,7 +515,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async watch(tubeName: string): Promise<number> {
 		validateTubeName(tubeName);
 
-		const cmd = getCommandInstance(BeanstalkCommand.watch);
+		const cmd = getCommandInstance(CommandName.watch);
 
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
@@ -533,11 +533,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async ignore(tubeName: string): Promise<boolean> {
 		validateTubeName(tubeName);
 
-		const cmd = getCommandInstance(BeanstalkCommand.ignore);
+		const cmd = getCommandInstance(CommandName.ignore);
 
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
-		if (result.status === BeanstalkResponseStatus.WATCHING) {
+		if (result.status === ResponseStatus.WATCHING) {
 			parseNumericHeader(result.headers[0]);
 
 			return true;
@@ -555,11 +555,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async peek(jobId: number): Promise<null | IClientRawReservedJob> {
 		validateJobId(jobId);
 
-		const cmd = getCommandInstance(BeanstalkCommand.peek);
+		const cmd = getCommandInstance(CommandName.peek);
 
 		const result = await this.dispatchCommand(cmd, [`${jobId}`]);
 
-		if (result.status === BeanstalkResponseStatus.NOT_FOUND) {
+		if (result.status === ResponseStatus.NOT_FOUND) {
 			return null;
 		}
 
@@ -575,11 +575,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Other Commands
 	 */
 	public async peekReady(): Promise<null | IClientRawReservedJob> {
-		const cmd = getCommandInstance(BeanstalkCommand['peek-ready']);
+		const cmd = getCommandInstance(CommandName['peek-ready']);
 
 		const result = await this.dispatchCommand(cmd);
 
-		if (result.status === BeanstalkResponseStatus.NOT_FOUND) {
+		if (result.status === ResponseStatus.NOT_FOUND) {
 			return null;
 		}
 
@@ -595,11 +595,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Other Commands
 	 */
 	public async peekDelayed(): Promise<null | IClientRawReservedJob> {
-		const cmd = getCommandInstance(BeanstalkCommand['peek-delayed']);
+		const cmd = getCommandInstance(CommandName['peek-delayed']);
 
 		const result = await this.dispatchCommand(cmd);
 
-		if (result.status === BeanstalkResponseStatus.NOT_FOUND) {
+		if (result.status === ResponseStatus.NOT_FOUND) {
 			return null;
 		}
 
@@ -615,11 +615,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Other Commands
 	 */
 	public async peekBuried(): Promise<null | IClientRawReservedJob> {
-		const cmd = getCommandInstance(BeanstalkCommand['peek-buried']);
+		const cmd = getCommandInstance(CommandName['peek-buried']);
 
 		const result = await this.dispatchCommand(cmd);
 
-		if (result.status === BeanstalkResponseStatus.NOT_FOUND) {
+		if (result.status === ResponseStatus.NOT_FOUND) {
 			return null;
 		}
 
@@ -642,7 +642,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async kick(bound: number): Promise<number> {
 		validateBound(bound);
 
-		const cmd = getCommandInstance(BeanstalkCommand.kick);
+		const cmd = getCommandInstance(CommandName.kick);
 
 		const result = await this.dispatchCommand(cmd, [`${bound}`]);
 
@@ -661,11 +661,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async kickJob(jobId: number): Promise<boolean> {
 		validateJobId(jobId);
 
-		const cmd = getCommandInstance(BeanstalkCommand['kick-job']);
+		const cmd = getCommandInstance(CommandName['kick-job']);
 
 		const result = await this.dispatchCommand(cmd, [`${jobId}`]);
 
-		return result.status === BeanstalkResponseStatus.KICKED;
+		return result.status === ResponseStatus.KICKED;
 	}
 
 	/**
@@ -674,7 +674,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Other Commands
 	 */
 	public async stats(): Promise<IBeanstalkStats> {
-		const cmd = getCommandInstance(BeanstalkCommand.stats);
+		const cmd = getCommandInstance(CommandName.stats);
 
 		const result = await this.dispatchCommand(cmd);
 
@@ -691,11 +691,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async statsTube(tubeName: string): Promise<IBeanstalkTubeStats | null> {
 		validateTubeName(tubeName);
 
-		const cmd = getCommandInstance(BeanstalkCommand['stats-tube']);
+		const cmd = getCommandInstance(CommandName['stats-tube']);
 
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
-		if (result.status === BeanstalkResponseStatus.NOT_FOUND) {
+		if (result.status === ResponseStatus.NOT_FOUND) {
 			return null;
 		}
 
@@ -712,11 +712,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	public async statsJob(jobId: number): Promise<IBeanstalkJobStats | null> {
 		validateJobId(jobId);
 
-		const cmd = getCommandInstance(BeanstalkCommand['stats-job']);
+		const cmd = getCommandInstance(CommandName['stats-job']);
 
 		const result = await this.dispatchCommand(cmd, [`${jobId}`]);
 
-		if (result.status === BeanstalkResponseStatus.NOT_FOUND) {
+		if (result.status === ResponseStatus.NOT_FOUND) {
 			return null;
 		}
 
@@ -729,7 +729,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Other Commands
 	 */
 	public async listTubes(): Promise<string[]> {
-		const cmd = getCommandInstance(BeanstalkCommand['list-tubes']);
+		const cmd = getCommandInstance(CommandName['list-tubes']);
 
 		const result = await this.dispatchCommand(cmd);
 
@@ -743,7 +743,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Other Commands
 	 */
 	public async listTubeUsed(): Promise<string> {
-		const cmd = getCommandInstance(BeanstalkCommand['list-tube-used']);
+		const cmd = getCommandInstance(CommandName['list-tube-used']);
 
 		const result = await this.dispatchCommand(cmd);
 
@@ -757,7 +757,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @category Other Commands
 	 */
 	public async listTubesWatched(): Promise<string[]> {
-		const cmd = getCommandInstance(BeanstalkCommand['list-tubes-watched']);
+		const cmd = getCommandInstance(CommandName['list-tubes-watched']);
 
 		const result = await this.dispatchCommand(cmd);
 
@@ -777,11 +777,11 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		validateTubeName(tubeName);
 		validateDelay(delay);
 
-		const cmd = getCommandInstance(BeanstalkCommand['pause-tube']);
+		const cmd = getCommandInstance(CommandName['pause-tube']);
 
 		const result = await this.dispatchCommand(cmd, [tubeName, `${delay}`]);
 
-		return result.status === BeanstalkResponseStatus.PAUSED;
+		return result.status === ResponseStatus.PAUSED;
 	}
 
 	/**
@@ -997,7 +997,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 *
 	 * @category Client
 	 */
-	private async dispatchCommand<R extends BeanstalkResponseStatus = BeanstalkResponseStatus>(
+	private async dispatchCommand<R extends ResponseStatus = ResponseStatus>(
 		cmd: Command<R>,
 		args?: string[],
 		payload?: any,

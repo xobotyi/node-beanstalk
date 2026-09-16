@@ -2,7 +2,7 @@ import {describe, expect, it} from 'vite-plus/test';
 import {Buffer} from 'node:buffer';
 import {dump} from 'js-yaml';
 import {Command} from '../src/command.js';
-import {BeanstalkCommand, BeanstalkResponseStatus} from '../src/types.js';
+import {CommandName, ResponseStatus} from '../src/types.js';
 import {CommandError, CommandErrorCode} from '../src/error/command-error.js';
 import {JsonSerializer} from '../src/serializer/json-serializer.js';
 
@@ -13,7 +13,7 @@ describe('Command', () => {
 
 	describe('construct', () => {
 		it('should be constructable via new', () => {
-			expect(new Command(BeanstalkCommand.bury)).toBeInstanceOf(Command);
+			expect(new Command(CommandName.bury)).toBeInstanceOf(Command);
 		});
 
 		it('should throw on unknown command', () => {
@@ -26,7 +26,7 @@ describe('Command', () => {
 
 		it('should throw if unknown status expected', () => {
 			const construct = () =>
-				new Command(BeanstalkCommand.bury, {
+				new Command(CommandName.bury, {
 					// @ts-expect-error testing incompatible status
 					expectedStatus: ['totally unknown status'],
 				});
@@ -37,7 +37,7 @@ describe('Command', () => {
 	});
 
 	describe('buildCommandBuffer', () => {
-		const cmd = new Command(BeanstalkCommand.bury);
+		const cmd = new Command(CommandName.bury);
 
 		const tableTests: Array<{
 			name: string;
@@ -73,113 +73,113 @@ describe('Command', () => {
 
 	describe('handleResponse', () => {
 		it('should throw in case of error response', () => {
-			const cmd = new Command(BeanstalkCommand.bury);
+			const cmd = new Command(CommandName.bury);
 
-			const throwing = () => cmd.handleResponse({status: BeanstalkResponseStatus.UNKNOWN_COMMAND, headers: []});
+			const throwing = () => cmd.handleResponse({status: ResponseStatus.UNKNOWN_COMMAND, headers: []});
 
 			expect(throwing).toThrow(CommandError);
 			expect(throwing).toThrow(expect.objectContaining({code: CommandErrorCode.ErrErrorResponseStatus}));
 		});
 
 		it('should throw in case of unexpected response', () => {
-			const cmd = new Command(BeanstalkCommand.bury);
+			const cmd = new Command(CommandName.bury);
 
-			const throwing = () => cmd.handleResponse({status: BeanstalkResponseStatus.OK, headers: []});
+			const throwing = () => cmd.handleResponse({status: ResponseStatus.OK, headers: []});
 
 			expect(throwing).toThrow(CommandError);
 			expect(throwing).toThrow(expect.objectContaining({code: CommandErrorCode.ErrUnexpectedResponseStatus}));
 		});
 
 		it('should return status and headers', () => {
-			const cmd = new Command(BeanstalkCommand.bury, {
-				expectedStatus: [BeanstalkResponseStatus.BURIED],
+			const cmd = new Command(CommandName.bury, {
+				expectedStatus: [ResponseStatus.BURIED],
 			});
 
 			expect(
 				cmd.handleResponse({
-					status: BeanstalkResponseStatus.BURIED,
+					status: ResponseStatus.BURIED,
 					headers: ['123'],
 				}),
 			).toStrictEqual({
-				status: BeanstalkResponseStatus.BURIED,
+				status: ResponseStatus.BURIED,
 				headers: ['123'],
 			});
 		});
 
 		it('should parse json body with given serializer', () => {
-			const cmd = new Command(BeanstalkCommand.bury, {
-				expectedStatus: [BeanstalkResponseStatus.BURIED],
+			const cmd = new Command(CommandName.bury, {
+				expectedStatus: [ResponseStatus.BURIED],
 				payloadBody: true,
 			});
 
 			expect(
 				cmd.handleResponse(
 					{
-						status: BeanstalkResponseStatus.BURIED,
+						status: ResponseStatus.BURIED,
 						headers: ['123'],
 						data: Buffer.from(`${JSON.stringify(['hello', 'world'])}\r\n`),
 					},
 					new JsonSerializer(),
 				),
 			).toStrictEqual({
-				status: BeanstalkResponseStatus.BURIED,
+				status: ResponseStatus.BURIED,
 				headers: ['123'],
 				data: ['hello', 'world'],
 			});
 		});
 
 		it('should return raw data if no serializer passed or body specification passed', () => {
-			const cmd = new Command(BeanstalkCommand.bury, {
-				expectedStatus: [BeanstalkResponseStatus.BURIED],
+			const cmd = new Command(CommandName.bury, {
+				expectedStatus: [ResponseStatus.BURIED],
 				payloadBody: true,
 			});
 
 			expect(
 				cmd.handleResponse({
-					status: BeanstalkResponseStatus.BURIED,
+					status: ResponseStatus.BURIED,
 					headers: ['123'],
 					data: Buffer.from(`${JSON.stringify(['hello', 'world'])}\r\n`),
 				}),
 			).toStrictEqual({
-				status: BeanstalkResponseStatus.BURIED,
+				status: ResponseStatus.BURIED,
 				headers: ['123'],
 				data: Buffer.from(JSON.stringify(['hello', 'world'])),
 			});
 
-			const cmd2 = new Command(BeanstalkCommand.bury, {
-				expectedStatus: [BeanstalkResponseStatus.BURIED],
+			const cmd2 = new Command(CommandName.bury, {
+				expectedStatus: [ResponseStatus.BURIED],
 			});
 
 			expect(
 				cmd2.handleResponse({
-					status: BeanstalkResponseStatus.BURIED,
+					status: ResponseStatus.BURIED,
 					headers: ['123'],
 					data: Buffer.from(`${JSON.stringify(['hello', 'world'])}\r\n`),
 				}),
 			).toStrictEqual({
-				status: BeanstalkResponseStatus.BURIED,
+				status: ResponseStatus.BURIED,
 				headers: ['123'],
 				data: Buffer.from(JSON.stringify(['hello', 'world'])),
 			});
 		});
 
 		it('should parse yaml body', () => {
-			const cmd = new Command(BeanstalkCommand.bury, {
-				expectedStatus: [BeanstalkResponseStatus.BURIED],
+			const cmd = new Command(CommandName.bury, {
+				expectedStatus: [ResponseStatus.BURIED],
 				yamlBody: true,
 			});
 
 			expect(
 				cmd.handleResponse(
 					{
-						status: BeanstalkResponseStatus.BURIED,
+						status: ResponseStatus.BURIED,
 						headers: ['123'],
 						data: Buffer.from(`${dump(['hello', 'world'])}\r\n`),
 					},
 					new JsonSerializer(),
 				),
 			).toStrictEqual({
-				status: BeanstalkResponseStatus.BURIED,
+				status: ResponseStatus.BURIED,
 				headers: ['123'],
 				data: ['hello', 'world'],
 			});
