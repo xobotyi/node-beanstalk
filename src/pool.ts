@@ -1,4 +1,4 @@
-import {type IPoolCtorOptions} from './types.js';
+import {type PoolOptions} from './types.js';
 import {DEFAULT_POOL_OPTIONS} from './const.js';
 import {PoolClient} from './pool-client.js';
 import {LinkedList} from './util/linked-list.js';
@@ -9,7 +9,7 @@ export type PoolState = 'live' | 'disconnected' | 'disconnecting';
 const NO_PENDING_DEADLINE = 0;
 
 export class Pool {
-	readonly #opt: Required<IPoolCtorOptions>;
+	readonly #opt: Required<PoolOptions>;
 
 	readonly #clients: PoolClient[] = [];
 
@@ -28,7 +28,7 @@ export class Pool {
 	 */
 	#disconnectRequested = false;
 
-	constructor(options: IPoolCtorOptions = {}) {
+	constructor(options: PoolOptions = {}) {
 		this.#opt = {
 			...DEFAULT_POOL_OPTIONS,
 			...options,

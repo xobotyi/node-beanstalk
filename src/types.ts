@@ -1,4 +1,4 @@
-export type IClientCtorOptions = {
+export type ClientOptions = {
 	/**
 	 * Connection host.
 	 *
@@ -54,7 +54,7 @@ export type IClientCtorOptions = {
 	 * command rejects with a {@link ClientError} of code `ErrResponseRead` and the connection is dropped, because a
 	 * body that was read in part leaves the rest of itself where the next command reads its headers.
 	 *
-	 * The drop costs what {@link IClientCtorOptions.responseTimeoutMs} states in full: the server releases every job
+	 * The drop costs what {@link ClientOptions.responseTimeoutMs} states in full: the server releases every job
 	 * reserved on this connection, and the tube of `use` and the watch list are gone.
 	 *
 	 * @default 1000
@@ -96,13 +96,13 @@ export type IClientCtorOptions = {
 	responseTimeoutMs?: number;
 };
 
-export type IPoolCtorOptions = {
+export type PoolOptions = {
 	/**
 	 * Options that will be used to instantiate pool clients.
 	 *
 	 * @default undefined
 	 */
-	clientOptions?: IClientCtorOptions;
+	clientOptions?: ClientOptions;
 
 	/**
 	 * Maximum number of clients the pool can contain.

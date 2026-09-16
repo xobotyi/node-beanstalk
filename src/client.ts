@@ -6,7 +6,7 @@ import {
 	type IBeanstalkJobStats,
 	type IBeanstalkStats,
 	type IBeanstalkTubeStats,
-	type IClientCtorOptions,
+	type ClientOptions,
 	type IClientRawReservedJob,
 	type Serializer,
 	type CommandHandledResponse,
@@ -46,7 +46,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 > {
 	readonly #conn: Connection;
 
-	readonly #opt: Omit<Required<IClientCtorOptions>, 'serializer'> & {serializer: Serializer | undefined};
+	readonly #opt: Omit<Required<ClientOptions>, 'serializer'> & {serializer: Serializer | undefined};
 
 	readonly #queue = new LinkedList<{
 		resolve: () => void;
@@ -55,7 +55,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 	#disconnecting: Promise<void> | undefined;
 
-	constructor(options: IClientCtorOptions = {}, connection = new Connection()) {
+	constructor(options: ClientOptions = {}, connection = new Connection()) {
 		super();
 
 		this.#opt = {
@@ -240,8 +240,8 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * This command for any process that wants to insert a job into the queue.
 	 *
 	 * @param payload - Payload of the job. Non string or integer values will be serialized with
-	 * [[IClientCtorOptions.serializer]]. Byte size of payload should not exceed server's
-	 * max-job-size (default: 2**16) nor client's [[IClientCtorOptions.maxPayloadSize]].
+	 * [[ClientOptions.serializer]]. Byte size of payload should not exceed server's
+	 * max-job-size (default: 2**16) nor client's [[ClientOptions.maxPayloadSize]].
 	 *
 	 * @param ttr - Time to run -- is an integer number of seconds to allow a worker
 	 * to run this job. This time is counted from the moment a worker reserves
@@ -817,7 +817,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * Transforms payload to buffer. Also performs size and type checks.
 	 *
 	 * In case provided payload is not a [[string | number]] it
-	 * will be serialized via [[IClientCtorOptions.serializer]]
+	 * will be serialized via [[ClientOptions.serializer]]
 	 *
 	 * @throws {ClientError}
 	 * @category Client
@@ -870,7 +870,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * the server will never send does not hold the queue.
 	 *
 	 * A {deadlineMs} above zero bounds the wait for the whole response and drops the connection on expiry, since
-	 * the protocol cannot cancel a command that is already on the wire. {@link IClientCtorOptions.responseTimeoutMs}
+	 * the protocol cannot cancel a command that is already on the wire. {@link ClientOptions.responseTimeoutMs}
 	 * states what that costs.
 	 */
 	private async readCommandResponse(signal: AbortSignal, deadlineMs: number): Promise<CommandResponse> {
