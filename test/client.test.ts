@@ -1,4 +1,5 @@
 import {Buffer} from 'node:buffer';
+import {once} from 'node:events';
 import {setImmediate} from 'node:timers/promises';
 import {beforeEach, describe, expect, it, vi, type MockInstance} from 'vite-plus/test';
 import {BeanstalkError} from '../src/error/beanstalk-error.js';
@@ -689,6 +690,40 @@ describe('Client', () => {
 		});
 	});
 
+	describe('events', () => {
+		it('should emit `connect` once the connection is open', async () => {
+			const conn = new ConnectionMock();
+			conn.getState.mockReturnValue('closed');
+			const c = new Client(undefined, conn);
+			const connected = once(c, 'connect');
+
+			await c.connect();
+
+			await expect(connected).resolves.toStrictEqual([]);
+		});
+
+		it('should emit `close` when the connection closes', async () => {
+			const conn = new ConnectionMock();
+			const c = new Client(undefined, conn);
+			const closed = once(c, 'close');
+
+			conn.emit('close');
+
+			await expect(closed).resolves.toStrictEqual([]);
+		});
+
+		it('should emit the error of the connection', async () => {
+			const conn = new ConnectionMock();
+			const c = new Client(undefined, conn);
+			const errored = once(c, 'error');
+			const socketError = new Error('read ECONNRESET');
+
+			conn.emit('error', socketError);
+
+			await expect(errored).resolves.toStrictEqual([socketError]);
+		});
+	});
+
 	describe('connection loss', () => {
 		it('should reject the command in flight when the connection closes', async () => {
 			const conn = new ConnectionMock();
@@ -709,11 +744,14 @@ describe('Client', () => {
 			const conn = new ConnectionMock();
 			conn.getState.mockReturnValue('open');
 			const c = new Client(undefined, conn);
-			const reading = c.bury(1);
 			const socketError = Object.assign(new Error('read ECONNRESET'), {code: 'ECONNRESET'});
+			const errored = once(c, 'error');
+			const reading = c.bury(1);
 
 			await setImmediate();
 			conn.emit('error', socketError);
+
+			await expect(errored).resolves.toStrictEqual([socketError]);
 
 			await expect(reading).rejects.toHaveProperty('code', ClientErrorCode.ErrConnectionClosed);
 			await expect(reading).rejects.toHaveProperty('cause', socketError);
