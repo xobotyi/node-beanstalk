@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vite-plus/test';
 import {Buffer} from 'node:buffer';
-import {parseResponseHeaders} from '../../src/util/parse-response-headers.js';
+import {parseResponseHeaders, requireHeader} from '../../src/util/parse-response-headers.js';
 import {ResponseStatus, type CommandResponseHeaders} from '../../src/types.js';
 import {CRLF_BUFF} from '../../src/const.js';
 import {ResponseErrorCode} from '../../src/error/response-error.js';
@@ -100,5 +100,15 @@ describe('parseResponseHeaders', () => {
 		expect(() => parseResponseHeaders(Buffer.from('OK \r\n'))).toThrow(
 			expect.objectContaining({code: ResponseErrorCode.ErrInvalidBodyLength}),
 		);
+	});
+});
+
+describe('requireHeader', () => {
+	it('should return the header at given position', () => {
+		expect(requireHeader(['first', 'second'], 1)).toBe('second');
+	});
+
+	it('should throw in case response carries no header at given position', () => {
+		expect(() => requireHeader([], 0)).toThrow(expect.objectContaining({code: ResponseErrorCode.ErrMissingHeader}));
 	});
 });

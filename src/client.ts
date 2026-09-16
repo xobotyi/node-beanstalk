@@ -17,7 +17,7 @@ import {type Command} from './command.js';
 import {ClientError, ClientErrorCode} from './error/client-error.js';
 import {getCommandInstance} from './util/get-command-instance.js';
 import {DEFAULT_CLIENT_OPTIONS} from './const.js';
-import {parseNumericHeader, parseResponseHeaders} from './util/parse-response-headers.js';
+import {parseNumericHeader, parseResponseHeaders, requireHeader} from './util/parse-response-headers.js';
 import {BeanstalkError} from './error/beanstalk-error.js';
 import {
 	validateBound,
@@ -233,7 +233,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 		const result = await this.dispatchCommand(cmd, [tubeName]);
 
-		return result.headers[0];
+		return requireHeader(result.headers, 0);
 	}
 
 	/**
@@ -745,7 +745,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 
 		const result = await this.dispatchCommand(cmd);
 
-		return result.headers[0];
+		return requireHeader(result.headers, 0);
 	}
 
 	/**

@@ -3,6 +3,7 @@ import {ErrorWithCode} from './error-with-code.js';
 export const ResponseErrorCode = {
 	ErrInvalidBodyLength: 'ErrInvalidBodyLength',
 	ErrInvalidNumericHeader: 'ErrInvalidNumericHeader',
+	ErrMissingHeader: 'ErrMissingHeader',
 } as const satisfies Record<string, string>;
 export type ResponseErrorCode = (typeof ResponseErrorCode)[keyof typeof ResponseErrorCode];
 
