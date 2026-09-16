@@ -115,6 +115,79 @@ describe('Pool', () => {
 		});
 	});
 
+	describe('dead clients', () => {
+		it('should evict a reserved client that lost its connection and free its slot', async () => {
+			const p = new Pool({capacity: 1});
+			const c1 = asMock(await p.connect());
+
+			c1.emit('close');
+
+			expect(p.idleCount).toBe(0);
+			const c2 = asMock(await p.connect());
+			expect(c2).not.toBe(c1);
+		});
+
+		it('should evict an idle client that lost its connection', async () => {
+			const p = new Pool({capacity: 2});
+			const c1 = asMock(await p.connect());
+			c1.releaseClient();
+			expect(p.idleCount).toBe(1);
+
+			c1.emit('close');
+
+			expect(p.idleCount).toBe(0);
+		});
+
+		it('should hand the freed slot to the first waiter as a new client', async () => {
+			const p = new Pool({capacity: 1});
+			const c1 = asMock(await p.connect());
+			const waiting = p.connect();
+			expect(p.waitingCount).toBe(1);
+
+			c1.emit('close');
+
+			const c2 = asMock(await waiting);
+			expect(c2).not.toBe(c1);
+			expect(c2.connect).toHaveBeenCalledTimes(1);
+		});
+
+		it('should ignore the release of an evicted client', async () => {
+			const p = new Pool({capacity: 1});
+			const c1 = asMock(await p.connect());
+			c1.emit('close');
+
+			c1.releaseClient();
+
+			expect(p.idleCount).toBe(0);
+		});
+
+		it('should evict a client that emitted an error without crashing', async () => {
+			const p = new Pool({capacity: 1});
+			const c1 = asMock(await p.connect());
+
+			expect(() => {
+				c1.emit('error', new Error('read ECONNRESET'));
+			}).not.toThrow();
+
+			expect(p.idleCount).toBe(0);
+		});
+
+		it('should free the slot of a client that failed to connect', async () => {
+			const p = new Pool({capacity: 1});
+			PC.mockImplementationOnce(function () {
+				const failing = new PoolClientMock();
+				failing.connect.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+				// oxlint-disable-next-line typescript/strict-void-return -- vitest hands out the object a constructor mock returns
+				return failing;
+			});
+
+			await expect(p.connect()).rejects.toThrow('ECONNREFUSED');
+
+			await expect(p.connect()).resolves.toBeInstanceOf(PoolClientMock);
+		});
+	});
+
 	describe('.disconnect', () => {
 		it('should throw in case called on disconnected pool', async () => {
 			const p = new Pool({capacity: 2});
