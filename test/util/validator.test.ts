@@ -55,7 +55,7 @@ describe('validator', () => {
 			{
 				name: 'tube name with invalid characters',
 				in: 'invalid tube name',
-				out: new TypeError(`tube name should satisfy regexp: /^[A-Za-z0-9\\-+/;.$_()]{1,200}$/`),
+				out: new TypeError(`tube name should satisfy regexp: /^[A-Za-z0-9+/;.$_()][A-Za-z0-9\\-+/;.$_()]{0,199}$/`),
 			},
 			{
 				name: 'too long tube name',
@@ -63,12 +63,22 @@ describe('validator', () => {
 					'Lorem_ipsum_dolor_sit_amet_consectetur_adipiscing_elitsed_do_eiusmod_tempor' +
 					'_incididunt_ut_labore_et_dolore_magna_aliqua_Ut_enim_ad_minim_veniam_quis_' +
 					'nostrud_exercitation_ullamco_laboris_nisi_ut_aliquip',
-				out: new TypeError(`tube name should satisfy regexp: /^[A-Za-z0-9\\-+/;.$_()]{1,200}$/`),
+				out: new TypeError(`tube name should satisfy regexp: /^[A-Za-z0-9+/;.$_()][A-Za-z0-9\\-+/;.$_()]{0,199}$/`),
+			},
+			{
+				name: 'tube name starting with a hyphen',
+				in: '-tube',
+				out: new TypeError(`tube name should satisfy regexp: /^[A-Za-z0-9+/;.$_()][A-Za-z0-9\\-+/;.$_()]{0,199}$/`),
+			},
+			{
+				name: 'tube name with a hyphen inside',
+				in: 'tube-name',
+				out: undefined,
 			},
 			{
 				name: 'too short tube name',
 				in: '',
-				out: new TypeError(`tube name should satisfy regexp: /^[A-Za-z0-9\\-+/;.$_()]{1,200}$/`),
+				out: new TypeError(`tube name should satisfy regexp: /^[A-Za-z0-9+/;.$_()][A-Za-z0-9\\-+/;.$_()]{0,199}$/`),
 			},
 		];
 
