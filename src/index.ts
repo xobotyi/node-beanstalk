@@ -11,12 +11,4 @@ export {SerializerError} from './error/serializer-error.js';
 
 export {JobState, ResponseStatus} from './types.js';
 
-export type {
-	Serializer,
-	ClientOptions,
-	PoolOptions,
-	Job,
-	Stats,
-	JobStats,
-	TubeStats,
-} from './types.js';
+export type {Serializer, ClientOptions, PoolOptions, Job, Stats, JobStats, TubeStats} from './types.js';

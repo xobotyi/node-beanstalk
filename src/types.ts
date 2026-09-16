@@ -231,17 +231,16 @@ export type CommandResponse = {
 	data?: Buffer;
 };
 
-export type CommandHandledResponse<R extends ResponseStatus = ResponseStatus> =
-	R extends DataResponseStatus
-		? {
-				status: R;
-				headers: string[];
-				data: any;
-			}
-		: {
-				status: R;
-				headers: string[];
-			};
+export type CommandHandledResponse<R extends ResponseStatus = ResponseStatus> = R extends DataResponseStatus
+	? {
+			status: R;
+			headers: string[];
+			data: any;
+		}
+	: {
+			status: R;
+			headers: string[];
+		};
 
 export type Stats = {
 	/**

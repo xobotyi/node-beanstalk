@@ -17,19 +17,11 @@ const commandConfig = {
 	},
 
 	[CommandName.reserve]: {
-		expectedStatus: [
-			ResponseStatus.TIMED_OUT,
-			ResponseStatus.DEADLINE_SOON,
-			ResponseStatus.RESERVED,
-		],
+		expectedStatus: [ResponseStatus.TIMED_OUT, ResponseStatus.DEADLINE_SOON, ResponseStatus.RESERVED],
 		payloadBody: true,
 	},
 	[CommandName['reserve-with-timeout']]: {
-		expectedStatus: [
-			ResponseStatus.TIMED_OUT,
-			ResponseStatus.DEADLINE_SOON,
-			ResponseStatus.RESERVED,
-		],
+		expectedStatus: [ResponseStatus.TIMED_OUT, ResponseStatus.DEADLINE_SOON, ResponseStatus.RESERVED],
 		payloadBody: true,
 	},
 	[CommandName['reserve-job']]: {
@@ -40,11 +32,7 @@ const commandConfig = {
 		expectedStatus: [ResponseStatus.NOT_FOUND, ResponseStatus.DELETED],
 	},
 	[CommandName.release]: {
-		expectedStatus: [
-			ResponseStatus.RELEASED,
-			ResponseStatus.BURIED,
-			ResponseStatus.NOT_FOUND,
-		],
+		expectedStatus: [ResponseStatus.RELEASED, ResponseStatus.BURIED, ResponseStatus.NOT_FOUND],
 	},
 	[CommandName.bury]: {
 		expectedStatus: [ResponseStatus.BURIED, ResponseStatus.NOT_FOUND],
@@ -119,9 +107,8 @@ const commandConfig = {
 } as const;
 type CommandConfig = typeof commandConfig;
 
-const commandInstances: Partial<
-	Record<CommandName, Command<CommandConfig[CommandName]['expectedStatus'][number]>>
-> = {};
+const commandInstances: Partial<Record<CommandName, Command<CommandConfig[CommandName]['expectedStatus'][number]>>> =
+	{};
 
 export function getCommandInstance<Cmd extends CommandName>(
 	cmd: Cmd,
