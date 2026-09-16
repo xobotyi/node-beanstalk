@@ -907,6 +907,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 										`Failed to read response data after ${this.#opt.dataReadTimeoutMs} ms`,
 									),
 								);
+								void this.abandonConnection();
 							}, this.#opt.dataReadTimeoutMs);
 						}
 					}

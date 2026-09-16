@@ -50,9 +50,12 @@ export type IClientCtorOptions = {
 	maxPayloadSize?: number;
 
 	/**
-	 * Time in milliseconds which client will wait for data chunks.
-	 * If full data will not be read in given amount of time, client
-	 * will quit (disconnect and throw error).
+	 * Time in milliseconds the client waits for the body of a response whose headers already arrived. On expiry the
+	 * command rejects with a {@link ClientError} of code `ErrResponseRead` and the connection is dropped, because a
+	 * body that was read in part leaves the rest of itself where the next command reads its headers.
+	 *
+	 * The drop costs what {@link IClientCtorOptions.responseTimeoutMs} states in full: the server releases every job
+	 * reserved on this connection, and the tube of `use` and the watch list are gone.
 	 *
 	 * @default 1000
 	 */
