@@ -172,6 +172,24 @@ describe('Pool', () => {
 			expect(p.idleCount).toBe(0);
 		});
 
+		it('should reject the waiter when the client for the freed slot cannot connect', async () => {
+			const p = new Pool({capacity: 1});
+			const c1 = asMock(await p.connect());
+			const waiting = p.connect();
+			PC.mockImplementationOnce(function () {
+				const failing = new PoolClientMock();
+				failing.connect.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+				// oxlint-disable-next-line typescript/strict-void-return -- vitest hands out the object a constructor mock returns
+				return failing;
+			});
+
+			c1.emit('close');
+
+			await expect(waiting).rejects.toThrow('ECONNREFUSED');
+			expect(p.waitingCount).toBe(0);
+		});
+
 		it('should free the slot of a client that failed to connect', async () => {
 			const p = new Pool({capacity: 1});
 			PC.mockImplementationOnce(function () {
