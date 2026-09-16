@@ -110,6 +110,19 @@ export type IPoolCtorOptions = {
 	 * @default 10
 	 */
 	capacity?: number;
+
+	/**
+	 * Time in milliseconds `connect()` waits in the queue when every client of the pool is reserved. On expiry it
+	 * rejects with a {@link PoolError} and leaves the queue, so the next released client goes to the caller behind it.
+	 *
+	 * Keep it above `clientOptions.responseTimeoutMs`, so a caller is still queued when a command hits its deadline
+	 * and frees the slot it held.
+	 *
+	 * `0` keeps the caller queued for as long as the pool needs to serve it.
+	 *
+	 * @default 0
+	 */
+	pendingTimeoutMs?: number;
 };
 
 export type IClientRawReservedJob = {

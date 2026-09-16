@@ -6,6 +6,8 @@ import {PoolError} from './error/pool-error.js';
 
 export type PoolState = 'live' | 'disconnected' | 'disconnecting';
 
+const NO_PENDING_DEADLINE = 0;
+
 export class Pool {
 	readonly #opt: Required<IPoolCtorOptions>;
 
@@ -76,7 +78,7 @@ export class Pool {
 		if (this.#clients.length < this.#opt.capacity) {
 			client = await this.createClient();
 		} else {
-			client = this.#idleClients.unshift() ?? (await this.createPendingPromise());
+			client = this.#idleClients.unshift() ?? (await this.createPendingPromise(this.#opt.pendingTimeoutMs));
 		}
 
 		client.once('release', this.handleClientRelease);
@@ -97,7 +99,8 @@ export class Pool {
 		}
 
 		if (this.#pendingQueue.size > 0 && !force) {
-			await this.createPendingPromise();
+			// A disconnect that waits for its turn in the queue is not a caller the pool may give up on.
+			await this.createPendingPromise(NO_PENDING_DEADLINE);
 		}
 
 		this.#state = 'disconnecting';
@@ -126,9 +129,31 @@ export class Pool {
 		this.#state = 'live';
 	}
 
-	private async createPendingPromise(): Promise<PoolClient> {
+	/**
+	 * Queues a caller until a client of the pool becomes free. A {timeoutMs} above zero rejects the caller once it
+	 * passes, and `NO_PENDING_DEADLINE` leaves it queued for as long as the pool needs to serve it.
+	 */
+	private async createPendingPromise(timeoutMs: number): Promise<PoolClient> {
 		return new Promise((resolve, reject) => {
-			this.#pendingQueue.push({resolve, reject});
+			let deadline: NodeJS.Timeout | undefined;
+
+			const node = this.#pendingQueue.push({
+				resolve: (client) => {
+					clearTimeout(deadline);
+					resolve(client);
+				},
+				reject: (error) => {
+					clearTimeout(deadline);
+					reject(error);
+				},
+			});
+
+			if (timeoutMs > 0) {
+				deadline = setTimeout(() => {
+					this.#pendingQueue.removeNode(node);
+					reject(new PoolError(`No client of the pool became available within ${timeoutMs} ms`));
+				}, timeoutMs);
+			}
 		});
 	}
 
