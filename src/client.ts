@@ -826,10 +826,6 @@ export class Client<
 	}
 
 	/**
-	 *
-	 * @category Client
-	 */
-	/**
 	 * Force-disconnects after response framing is lost, so no later command reads a stale body as its own headers.
 	 */
 	private async abandonConnection(): Promise<void> {
@@ -840,12 +836,17 @@ export class Client<
 		}
 	}
 
-	private async readCommandResponse(): Promise<ICommandResponse> {
+	/**
+	 * Reads the response of the command that is currently on the wire. An abort of {signal} rejects the read with the
+	 * abort reason, so a command whose write failed stops waiting for a response the server will never send.
+	 */
+	private async readCommandResponse(signal: AbortSignal): Promise<ICommandResponse> {
 		const conn = this.#conn;
 		return new Promise((resolve, reject) => {
 			let response: Buffer = Buffer.alloc(0);
 			let headers: ICommandResponseHeaders | null = null;
 			let dataReadTimeout: NodeJS.Timeout;
+			let cleanup: () => void;
 
 			const dataListener = (data: Buffer) => {
 				response = Buffer.concat([response, data]);
@@ -855,7 +856,7 @@ export class Client<
 					try {
 						headers = parseResponseHeaders(response);
 					} catch (error) {
-						conn.off('data', dataListener);
+						cleanup();
 						reject(error instanceof Error ? error : new Error(String(error)));
 						void this.abandonConnection();
 						return;
@@ -867,7 +868,7 @@ export class Client<
 						if (headers.hasData && response.length < headers.dataLength) {
 							// if response data not read - start read timeout
 							dataReadTimeout = setTimeout(() => {
-								conn.off('data', dataListener);
+								cleanup();
 								reject(
 									new ClientError(
 										ClientErrorCode.ErrResponseRead,
@@ -883,8 +884,7 @@ export class Client<
 					if (headers.hasData) {
 						if (response.length >= headers.dataLength) {
 							// response data is read, we're done
-							clearTimeout(dataReadTimeout);
-							conn.off('data', dataListener);
+							cleanup();
 							resolve({
 								status: headers.status,
 								headers: headers.headers,
@@ -892,7 +892,7 @@ export class Client<
 							});
 						}
 					} else {
-						conn.off('data', dataListener);
+						cleanup();
 						resolve({
 							status: headers.status,
 							headers: headers.headers,
@@ -901,7 +901,21 @@ export class Client<
 				}
 			};
 
+			const abandonRead = () => {
+				const {reason} = signal;
+
+				cleanup();
+				reject(reason instanceof Error ? reason : new Error(String(reason)));
+			};
+
+			cleanup = () => {
+				clearTimeout(dataReadTimeout);
+				conn.off('data', dataListener);
+				signal.removeEventListener('abort', abandonRead);
+			};
+
 			conn.on('data', dataListener);
+			signal.addEventListener('abort', abandonRead, {once: true});
 		});
 	}
 
@@ -930,11 +944,19 @@ export class Client<
 				);
 			}
 
-			const readPromise = this.readCommandResponse();
+			const command = cmd.buildCommandBuffer(args, this.payloadToBuffer(payload));
+			const unsent = new AbortController();
 
-			await conn.write(cmd.buildCommandBuffer(args, this.payloadToBuffer(payload)));
+			const [received] = await Promise.all([
+				this.readCommandResponse(unsent.signal),
+				conn.write(command).catch((error: unknown) => {
+					unsent.abort(error);
 
-			response = await readPromise;
+					throw error;
+				}),
+			]);
+
+			response = received;
 		} finally {
 			// move queue forward
 			moveQueue();
