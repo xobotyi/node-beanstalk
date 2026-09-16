@@ -22,6 +22,12 @@ export class Pool {
 
 	#state: PoolState = 'live';
 
+	/**
+	 * A graceful `disconnect()` waits for the queue while the pool is still `live`, and no client is handed out in
+	 * that window: the pool would close it while the caller holds it.
+	 */
+	#disconnectRequested = false;
+
 	constructor(options: IPoolCtorOptions = {}) {
 		this.#opt = {
 			...DEFAULT_POOL_OPTIONS,
@@ -73,6 +79,10 @@ export class Pool {
 			throw new PoolError(`Unable to gain client, pool is not live: ${this.#state}`);
 		}
 
+		if (this.#disconnectRequested) {
+			throw new PoolError('Unable to gain client, pool is disconnecting.');
+		}
+
 		let client: PoolClient;
 
 		if (this.#clients.length < this.#opt.capacity) {
@@ -97,6 +107,12 @@ export class Pool {
 		if (this.#state !== 'live') {
 			throw new PoolError(`Unable to disconnect pool that is not live, current state: ${this.#state}`);
 		}
+
+		if (this.#disconnectRequested) {
+			throw new PoolError('Unable to disconnect pool that is already disconnecting');
+		}
+
+		this.#disconnectRequested = true;
 
 		if (this.#pendingQueue.size > 0 && !force) {
 			// A disconnect that waits for its turn in the queue is not a caller the pool may give up on.
@@ -126,6 +142,7 @@ export class Pool {
 			throw new PoolError(`Unable to restore pool that was not disconnected, current state: ${this.#state}`);
 		}
 
+		this.#disconnectRequested = false;
 		this.#state = 'live';
 	}
 

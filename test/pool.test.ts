@@ -279,6 +279,32 @@ describe('Pool', () => {
 			await expect(c4).rejects.toStrictEqual(new PoolError('Unable to gain client, pool is disconnecting.'));
 		});
 
+		it('should reject a connect while a graceful disconnect waits for the queue', async () => {
+			const p = new Pool({capacity: 1});
+			const c1 = asMock(await p.connect());
+			const queued = p.connect();
+			const disconnected = p.disconnect();
+
+			await expect(p.connect()).rejects.toBeInstanceOf(PoolError);
+
+			c1.releaseClient();
+			asMock(await queued).releaseClient();
+			await disconnected;
+		});
+
+		it('should reject a second disconnect while the first one waits for the queue', async () => {
+			const p = new Pool({capacity: 1});
+			const c1 = asMock(await p.connect());
+			const queued = p.connect();
+			const disconnected = p.disconnect();
+
+			await expect(p.disconnect()).rejects.toBeInstanceOf(PoolError);
+
+			c1.releaseClient();
+			asMock(await queued).releaseClient();
+			await disconnected;
+		});
+
 		it('should await queue resolve during non-forced disconnect', async () => {
 			const p = new Pool({capacity: 2});
 
