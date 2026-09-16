@@ -671,7 +671,6 @@ describe('Client', () => {
 				Promise.resolve({
 					status: ResponseStatus.BURIED,
 					headers: [],
-					data: undefined,
 				}),
 			);
 
@@ -706,7 +705,6 @@ describe('Client', () => {
 				{
 					status: ResponseStatus.BURIED,
 					headers: [],
-					data: undefined,
 				},
 				serializer,
 			);
