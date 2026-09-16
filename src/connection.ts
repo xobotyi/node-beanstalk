@@ -12,7 +12,7 @@ export type ConnectionEvents = {
 export type ConnectionState = 'open' | 'opening' | 'closed' | 'closing';
 
 export class Connection extends EventEmitter<ConnectionEvents> {
-	#socket?: Socket;
+	#socket: Socket | undefined;
 
 	#state: ConnectionState = 'closed';
 
