@@ -32,7 +32,9 @@ import {type ILinkedListNode, LinkedList} from './util/linked-list.js';
 
 const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 
-export class Client<Events extends Record<keyof Events, unknown[]> | [never] = [never]> extends EventEmitter<Events> {
+export class Client<
+	Events extends Record<keyof Events, unknown[]> = Record<never, never>,
+> extends EventEmitter<Events> {
 	readonly #conn: Connection;
 
 	readonly #opt: Omit<Required<IClientCtorOptions>, 'serializer'> & {serializer: Serializer | undefined};
