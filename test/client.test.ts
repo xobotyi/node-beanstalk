@@ -620,6 +620,34 @@ describe('Client', () => {
 			expect(res.data).toStrictEqual(dataBufferWithNl);
 		});
 
+		it('should read data that came in chunks', async () => {
+			const dataBuffer = Buffer.from('node-beanstalk is awesome');
+			const dataBufferWithNl = Buffer.concat([dataBuffer, Buffer.from('\r\n')]);
+
+			const response = readCommandResponse();
+
+			conn.emit('data', Buffer.from(`OK ${dataBuffer.length}\r\n`));
+			conn.emit('data', dataBufferWithNl.subarray(0, 10));
+			conn.emit('data', dataBufferWithNl.subarray(10));
+
+			const res = await response;
+			expect(res.status).toBe('OK');
+			expect(res.data).toStrictEqual(dataBufferWithNl);
+		});
+
+		it('should read data that came along with the headers', async () => {
+			const dataBuffer = Buffer.from('node-beanstalk is awesome');
+			const dataBufferWithNl = Buffer.concat([dataBuffer, Buffer.from('\r\n')]);
+
+			const response = readCommandResponse();
+
+			conn.emit('data', Buffer.concat([Buffer.from(`OK ${dataBuffer.length}\r\n`), dataBufferWithNl]));
+
+			const res = await response;
+			expect(res.status).toBe('OK');
+			expect(res.data).toStrictEqual(dataBufferWithNl);
+		});
+
 		it('should reject and force-disconnect when the response body does not arrive', async () => {
 			const openConn = new ConnectionMock();
 			openConn.getState.mockReturnValue('open');

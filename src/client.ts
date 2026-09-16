@@ -866,19 +866,23 @@ export class Client extends EventEmitter<ClientEvents> {
 	private async readCommandResponse(signal: AbortSignal, deadlineMs: number): Promise<CommandResponse> {
 		const conn = this.#conn;
 		return new Promise((resolve, reject) => {
-			let response: Buffer = Buffer.alloc(0);
+			let headersBuffer: Buffer = Buffer.alloc(0);
 			let headers: CommandResponseHeaders | null = null;
+			const bodyChunks: Buffer[] = [];
+			let bodyLength = 0;
 			let dataReadTimeout: NodeJS.Timeout;
 			let responseTimeout: NodeJS.Timeout | undefined;
 			let cleanup: () => void;
 
 			const dataListener = (data: Buffer) => {
-				response = Buffer.concat([response, data]);
+				let chunk = data;
 
 				if (!headers) {
-					// check if headers already received
+					headersBuffer = Buffer.concat([headersBuffer, chunk]);
+
+					let parsed: CommandResponseHeaders | null;
 					try {
-						headers = parseResponseHeaders(response);
+						parsed = parseResponseHeaders(headersBuffer);
 					} catch (error) {
 						cleanup();
 						reject(error instanceof Error ? error : new Error(String(error)));
@@ -886,44 +890,47 @@ export class Client extends EventEmitter<ClientEvents> {
 						return;
 					}
 
-					if (headers) {
-						response = response.subarray(headers.headersLineLen);
+					if (!parsed) return;
 
-						if (headers.hasData && response.length < headers.dataLength) {
-							// if response data not read - start read timeout
-							dataReadTimeout = setTimeout(() => {
-								cleanup();
-								reject(
-									new ClientError(
-										ClientErrorCode.ErrResponseRead,
-										`Failed to read response data after ${this.#opt.dataReadTimeoutMs} ms`,
-									),
-								);
-								void this.abandonConnection();
-							}, this.#opt.dataReadTimeoutMs);
-						}
-					}
-				}
+					headers = parsed;
+					chunk = headersBuffer.subarray(parsed.headersLineLen);
+					headersBuffer = Buffer.alloc(0);
 
-				if (headers) {
-					if (headers.hasData) {
-						if (response.length >= headers.dataLength) {
-							// response data is read, we're done
-							cleanup();
-							resolve({
-								status: headers.status,
-								headers: headers.headers,
-								data: response.subarray(0, headers.dataLength),
-							});
-						}
-					} else {
+					if (!parsed.hasData) {
 						cleanup();
 						resolve({
-							status: headers.status,
-							headers: headers.headers,
+							status: parsed.status,
+							headers: parsed.headers,
 						});
+
+						return;
+					}
+
+					if (chunk.length < parsed.dataLength) {
+						dataReadTimeout = setTimeout(() => {
+							cleanup();
+							reject(
+								new ClientError(
+									ClientErrorCode.ErrResponseRead,
+									`Failed to read response data after ${this.#opt.dataReadTimeoutMs} ms`,
+								),
+							);
+							void this.abandonConnection();
+						}, this.#opt.dataReadTimeoutMs);
 					}
 				}
+
+				bodyChunks.push(chunk);
+				bodyLength += chunk.length;
+
+				if (bodyLength < headers.dataLength) return;
+
+				cleanup();
+				resolve({
+					status: headers.status,
+					headers: headers.headers,
+					data: Buffer.concat(bodyChunks, headers.dataLength),
+				});
 			};
 
 			const abandonRead = () => {
