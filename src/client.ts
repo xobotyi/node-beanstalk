@@ -3,9 +3,9 @@ import {
 	CommandName,
 	JobState,
 	ResponseStatus,
-	type IBeanstalkJobStats,
-	type IBeanstalkStats,
-	type IBeanstalkTubeStats,
+	type JobStats,
+	type Stats,
+	type TubeStats,
 	type ClientOptions,
 	type IClientRawReservedJob,
 	type Serializer,
@@ -673,7 +673,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 *
 	 * @category Other Commands
 	 */
-	public async stats(): Promise<IBeanstalkStats> {
+	public async stats(): Promise<Stats> {
 		const cmd = getCommandInstance(CommandName.stats);
 
 		const result = await this.dispatchCommand(cmd);
@@ -688,7 +688,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 *
 	 * @category Other Commands
 	 */
-	public async statsTube(tubeName: string): Promise<IBeanstalkTubeStats | null> {
+	public async statsTube(tubeName: string): Promise<TubeStats | null> {
 		validateTubeName(tubeName);
 
 		const cmd = getCommandInstance(CommandName['stats-tube']);
@@ -709,7 +709,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 	 * @param jobId - integer id of the job.
 	 * @category Other Commands
 	 */
-	public async statsJob(jobId: number): Promise<IBeanstalkJobStats | null> {
+	public async statsJob(jobId: number): Promise<JobStats | null> {
 		validateJobId(jobId);
 
 		const cmd = getCommandInstance(CommandName['stats-job']);
