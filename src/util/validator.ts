@@ -12,7 +12,7 @@ import {
 	TTR_MIN,
 } from '../const.js';
 
-const tubeNameValidateRE = /^[A-Za-z0-9\-+/;.$_()]{1,200}$/;
+const tubeNameValidateRE = /^[A-Za-z0-9+/;.$_()][A-Za-z0-9\-+/;.$_()]{0,199}$/;
 
 export function validateTubeName(name: string): void {
 	if (typeof name !== 'string') {
