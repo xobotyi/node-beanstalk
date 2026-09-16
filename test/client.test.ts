@@ -620,6 +620,23 @@ describe('Client', () => {
 			expect(res.data).toStrictEqual(dataBufferWithNl);
 		});
 
+		it('should reject and force-disconnect when the response body does not arrive', async () => {
+			const openConn = new ConnectionMock();
+			openConn.getState.mockReturnValue('open');
+			const openClient = new Client({dataReadTimeoutMs: 20}, openConn);
+			const reading = openClient.peek(1);
+			const queued = openClient.peek(2);
+
+			await setImmediate();
+			openConn.emit('data', Buffer.from('FOUND 1 100\r\n'));
+
+			await expect(reading).rejects.toHaveProperty('code', ClientErrorCode.ErrResponseRead);
+			await expect(queued).rejects.toHaveProperty('code', ClientErrorCode.ErrDisconnecting);
+			expect(openConn.listenerCount('data')).toBe(0);
+			await setImmediate();
+			expect(openConn.close).toHaveBeenCalledTimes(1);
+		});
+
 		it('should throw in case response data not received during configured timeout', async () => {
 			const response = readCommandResponse();
 
