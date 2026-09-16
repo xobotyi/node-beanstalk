@@ -15,7 +15,7 @@ export class Pool {
 
 	readonly #pendingQueue = new LinkedList<{
 		resolve: (client: PoolClient) => void;
-		reject: (err: PoolError) => void;
+		reject: (err: Error) => void;
 	}>();
 
 	#state: PoolState = 'live';
@@ -74,10 +74,7 @@ export class Pool {
 		let client: PoolClient;
 
 		if (this.#clients.length < this.#opt.capacity) {
-			client = new PoolClient(this.#opt.clientOptions);
-			this.#clients.push(client);
-
-			await client.connect();
+			client = await this.createClient();
 		} else {
 			client = this.#idleClients.unshift() ?? (await this.createPendingPromise());
 		}
@@ -135,8 +132,79 @@ export class Pool {
 		});
 	}
 
+	/**
+	 * Takes a free slot of the pool with a connected client. A client that fails to connect gives its slot back, so a
+	 * server that is down does not shrink the pool.
+	 */
+	private async createClient(): Promise<PoolClient> {
+		const client = new PoolClient(this.#opt.clientOptions);
+		this.#clients.push(client);
+
+		// A pooled client answers its own `error` event, which an EventEmitter with no listener would throw instead.
+		client.on('close', () => {
+			this.evictClient(client);
+		});
+		client.on('error', () => {
+			this.evictClient(client);
+		});
+
+		try {
+			await client.connect();
+		} catch (error) {
+			this.evictClient(client);
+
+			throw error;
+		}
+
+		return client;
+	}
+
+	/**
+	 * Drops a client the pool can no longer hand out and passes its slot to the first waiter. The jobs that client
+	 * had reserved are already lost: the server released them when the connection went down.
+	 */
+	private evictClient(client: PoolClient): void {
+		const slot = this.#clients.indexOf(client);
+
+		if (slot === -1) return;
+
+		this.#clients.splice(slot, 1);
+		this.removeIdleClient(client);
+		void this.serveNextWaiter();
+	}
+
+	private removeIdleClient(client: PoolClient): void {
+		for (let node = this.#idleClients.head; node; node = node.next) {
+			if (node.value === client) {
+				this.#idleClients.removeNode(node);
+
+				return;
+			}
+		}
+	}
+
+	/**
+	 * Fills a slot that just became free with a new client for the first waiter in the queue.
+	 */
+	private async serveNextWaiter(): Promise<void> {
+		if (this.#state !== 'live' || this.#clients.length >= this.#opt.capacity) return;
+
+		const pending = this.#pendingQueue.unshift();
+
+		if (!pending) return;
+
+		try {
+			pending.resolve(await this.createClient());
+		} catch (error) {
+			pending.reject(error instanceof Error ? error : new PoolError(String(error)));
+		}
+	}
+
 	private readonly handleClientRelease = (client: PoolClient): void => {
 		if (this.#state !== 'live') return;
+
+		// An evicted client is not the pool's to hand out again, whoever still holds it.
+		if (!this.#clients.includes(client)) return;
 
 		const pending = this.#pendingQueue.unshift();
 
