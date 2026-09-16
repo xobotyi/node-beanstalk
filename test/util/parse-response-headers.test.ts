@@ -56,6 +56,16 @@ describe('parseResponseHeaders', () => {
 		expect(parseResponseHeaders(test.in)).toStrictEqual(test.out);
 	});
 
+	it('should count the trailing CRLF of an empty data body', () => {
+		expect(parseResponseHeaders(Buffer.from('OK 0\r\n'))).toStrictEqual({
+			status: BeanstalkResponseStatus.OK,
+			headers: [],
+			hasData: true,
+			dataLength: CRLF_BUFF.length,
+			headersLineLen: 6,
+		});
+	});
+
 	it('should throw in case data length is malformed', () => {
 		const throwing = () => parseResponseHeaders(Buffer.from('OK heY!\r\n'));
 
