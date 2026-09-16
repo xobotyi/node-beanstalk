@@ -8,7 +8,7 @@ import {ResponseError, ResponseErrorCode} from '../error/response-error.js';
  */
 export function parseNumericHeader(
 	header: string | undefined,
-	code = ResponseErrorCode.ErrInvalidNumericHeader,
+	code: ResponseErrorCode = ResponseErrorCode.ErrInvalidNumericHeader,
 	max = Number.MAX_SAFE_INTEGER,
 ): number {
 	const value = Number(header);

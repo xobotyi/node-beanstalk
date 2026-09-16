@@ -20,6 +20,9 @@ export default defineConfig({
 		rules: {
 			// tests reach private methods through `c['method']`; dot notation would be a compile error
 			'typescript/dot-notation': 'off',
+			// a const object and the type derived from it share one name, which the non-TypeScript rule reads as a
+			// redeclaration; `tsc` reports a real one
+			'no-redeclare': 'off',
 			'typescript/no-restricted-types': 'off',
 			'typescript/no-unsafe-argument': 'off',
 			'typescript/no-unsafe-assignment': 'off',
