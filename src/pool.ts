@@ -1,10 +1,22 @@
 import {type PoolOptions} from './types.js';
 import {DEFAULT_POOL_OPTIONS} from './const.js';
 import {PoolClient} from './pool-client.js';
-import {LinkedList} from './util/linked-list.js';
 import {PoolError} from './error/pool-error.js';
 
 export type PoolState = 'live' | 'disconnected' | 'disconnecting';
+
+type PendingRequest = {
+	resolve: (client: PoolClient) => void;
+	reject: (err: Error) => void;
+};
+
+function takeFirst<V>(set: Set<V>): V | undefined {
+	const {value} = set.values().next();
+
+	if (value !== undefined) set.delete(value);
+
+	return value;
+}
 
 const NO_PENDING_DEADLINE = 0;
 
@@ -13,12 +25,9 @@ export class Pool {
 
 	readonly #clients: PoolClient[] = [];
 
-	readonly #idleClients = new LinkedList<PoolClient>();
+	readonly #idleClients = new Set<PoolClient>();
 
-	readonly #pendingQueue = new LinkedList<{
-		resolve: (client: PoolClient) => void;
-		reject: (err: Error) => void;
-	}>();
+	readonly #pendingQueue = new Set<PendingRequest>();
 
 	#state: PoolState = 'live';
 
@@ -88,7 +97,7 @@ export class Pool {
 		if (this.#clients.length < this.#opt.capacity) {
 			client = await this.createClient();
 		} else {
-			client = this.#idleClients.unshift() ?? (await this.createPendingPromise(this.#opt.pendingTimeoutMs));
+			client = takeFirst(this.#idleClients) ?? (await this.createPendingPromise(this.#opt.pendingTimeoutMs));
 		}
 
 		client.once('release', this.handleClientRelease);
@@ -121,14 +130,15 @@ export class Pool {
 
 		this.#state = 'disconnecting';
 
-		// reject all pending queue
-		for (const {reject} of this.#pendingQueue.truncate()) {
+		const pending = [...this.#pendingQueue];
+		this.#pendingQueue.clear();
+
+		for (const {reject} of pending) {
 			reject(new PoolError('Unable to gain client, pool is disconnecting.'));
 		}
 
-		this.#idleClients.truncate();
+		this.#idleClients.clear();
 
-		// disconnect all existing clients
 		await Promise.allSettled(this.#clients.splice(0).map(async (client) => client.disconnect(force)));
 
 		this.#state = 'disconnected';
@@ -154,7 +164,7 @@ export class Pool {
 		return new Promise((resolve, reject) => {
 			let deadline: NodeJS.Timeout | undefined;
 
-			const node = this.#pendingQueue.push({
+			const pending: PendingRequest = {
 				resolve: (client) => {
 					clearTimeout(deadline);
 					resolve(client);
@@ -163,11 +173,12 @@ export class Pool {
 					clearTimeout(deadline);
 					reject(error);
 				},
-			});
+			};
+			this.#pendingQueue.add(pending);
 
 			if (timeoutMs > 0) {
 				deadline = setTimeout(() => {
-					this.#pendingQueue.removeNode(node);
+					this.#pendingQueue.delete(pending);
 					reject(new PoolError(`No client of the pool became available within ${timeoutMs} ms`));
 				}, timeoutMs);
 			}
@@ -211,18 +222,8 @@ export class Pool {
 		if (slot === -1) return;
 
 		this.#clients.splice(slot, 1);
-		this.removeIdleClient(client);
+		this.#idleClients.delete(client);
 		void this.serveNextWaiter();
-	}
-
-	private removeIdleClient(client: PoolClient): void {
-		for (let node = this.#idleClients.head; node; node = node.next) {
-			if (node.value === client) {
-				this.#idleClients.removeNode(node);
-
-				return;
-			}
-		}
 	}
 
 	/**
@@ -231,7 +232,7 @@ export class Pool {
 	private async serveNextWaiter(): Promise<void> {
 		if (this.#state !== 'live' || this.#clients.length >= this.#opt.capacity) return;
 
-		const pending = this.#pendingQueue.unshift();
+		const pending = takeFirst(this.#pendingQueue);
 
 		if (!pending) return;
 
@@ -248,12 +249,12 @@ export class Pool {
 		// An evicted client is not the pool's to hand out again, whoever still holds it.
 		if (!this.#clients.includes(client)) return;
 
-		const pending = this.#pendingQueue.unshift();
+		const pending = takeFirst(this.#pendingQueue);
 
 		if (pending) {
 			pending.resolve(client);
 		} else {
-			this.#idleClients.push(client);
+			this.#idleClients.add(client);
 		}
 	};
 }
