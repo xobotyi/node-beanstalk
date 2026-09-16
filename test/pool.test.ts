@@ -188,6 +188,45 @@ describe('Pool', () => {
 		});
 	});
 
+	describe('pending timeout', () => {
+		it('should reject a queued connect that waited longer than the pending timeout', async () => {
+			const p = new Pool({capacity: 1, pendingTimeoutMs: 20});
+			const c1 = asMock(await p.connect());
+
+			const waiting = p.connect();
+
+			await expect(waiting).rejects.toBeInstanceOf(PoolError);
+			expect(p.waitingCount).toBe(0);
+
+			c1.releaseClient();
+
+			expect(p.idleCount).toBe(1);
+		});
+
+		it('should serve a queued connect that is released before the pending timeout', async () => {
+			const p = new Pool({capacity: 1, pendingTimeoutMs: 200});
+			const c1 = asMock(await p.connect());
+			const waiting = p.connect();
+
+			c1.releaseClient();
+
+			await expect(waiting).resolves.toBe(c1);
+		});
+
+		it('should wait for the queue on a graceful disconnect past the pending timeout', async () => {
+			const p = new Pool({capacity: 1, pendingTimeoutMs: 30});
+			const c1 = asMock(await p.connect());
+			const queued = p.connect();
+			const disconnected = p.disconnect();
+
+			await expect(queued).rejects.toBeInstanceOf(PoolError);
+			await sleep(60);
+			c1.releaseClient();
+
+			await expect(disconnected).resolves.toBeUndefined();
+		});
+	});
+
 	describe('.disconnect', () => {
 		it('should throw in case called on disconnected pool', async () => {
 			const p = new Pool({capacity: 2});
