@@ -130,11 +130,14 @@ export type IClientRawReservedJob = {
 	payload: any;
 };
 
-export abstract class Serializer {
-	abstract serialize(data: any): Buffer;
+/**
+ * Contract a custom serializer satisfies to process job payloads.
+ */
+export type Serializer = {
+	serialize(data: any): Buffer;
 
-	abstract deserialize(buffer: Buffer): any;
-}
+	deserialize(buffer: Buffer): any;
+};
 
 /**
  * Every command of the protocol, keyed by the name it carries on the wire.
