@@ -1430,10 +1430,23 @@ describe('Client', () => {
 					Promise.resolve({
 						status: BeanstalkResponseStatus.OK,
 						headers: ['100500'],
-						data: 'this is some data',
+						data: {id: 'f3c5a91d0b2e47a6', 'current-tubes': 1},
 					}),
 				);
-				expect(await c.stats()).toBe('this is some data');
+				expect(await c.stats()).toStrictEqual({id: 'f3c5a91d0b2e47a6', 'current-tubes': 1});
+			});
+
+			it('should stringify an instance id that parsed as a number', async () => {
+				dispatchCommandMock.mockReturnValueOnce(
+					Promise.resolve({
+						status: BeanstalkResponseStatus.OK,
+						headers: ['100500'],
+						data: {id: 1_234_567_890_123_456},
+					}),
+				);
+				const stats = await c.stats();
+
+				expect(stats.id).toBe('1234567890123456');
 			});
 		});
 
