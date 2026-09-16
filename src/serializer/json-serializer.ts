@@ -8,7 +8,7 @@ function errorMessage(error: unknown): string {
 }
 
 export class JsonSerializer implements Serializer {
-	public serialize(data: any): Buffer {
+	public serialize(data: unknown): Buffer {
 		try {
 			return Buffer.from(JSON.stringify(data), 'utf8');
 		} catch (error: unknown) {
@@ -16,7 +16,7 @@ export class JsonSerializer implements Serializer {
 		}
 	}
 
-	public deserialize(buffer: Buffer): any {
+	public deserialize(buffer: Buffer): unknown {
 		try {
 			return JSON.parse(buffer.toString('utf8'));
 		} catch (error: unknown) {
