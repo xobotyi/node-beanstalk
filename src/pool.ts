@@ -100,7 +100,7 @@ export class Pool {
 			client = takeFirst(this.#idleClients) ?? (await this.createPendingPromise(this.#opt.pendingTimeoutMs));
 		}
 
-		client.once('release', this.handleClientRelease);
+		client.onRelease(this.handleClientRelease);
 
 		return client;
 	}
