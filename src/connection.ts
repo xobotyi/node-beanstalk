@@ -53,7 +53,8 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 				.on('error', (err) => {
 					reject(err);
 				})
-				.on('data', (data) => {
+				// constraint: no `setEncoding` call on this socket, so `data` always carries a Buffer
+				.on('data', (data: Buffer) => {
 					this.emit('data', data);
 				})
 				.connect(port, host, () => {
