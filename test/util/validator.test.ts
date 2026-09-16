@@ -113,6 +113,16 @@ describe('validator', () => {
 				out: new TypeError(`priority should be <= ${PRIORITY_MAX}`),
 			},
 			{
+				name: 'NaN priority',
+				in: Number.NaN,
+				out: new TypeError(`priority should be an integer, got NaN`),
+			},
+			{
+				name: 'fractional priority',
+				in: 1.5,
+				out: new TypeError(`priority should be an integer, got 1.5`),
+			},
+			{
 				name: 'non-number priority',
 				in: '123',
 				out: new TypeError(`priority should be a number, got string`),
@@ -150,6 +160,16 @@ describe('validator', () => {
 				out: new TypeError(`delay should be <= ${DELAY_MAX}`),
 			},
 			{
+				name: 'NaN delay',
+				in: Number.NaN,
+				out: new TypeError(`delay should be an integer, got NaN`),
+			},
+			{
+				name: 'fractional delay',
+				in: 1.5,
+				out: new TypeError(`delay should be an integer, got 1.5`),
+			},
+			{
 				name: 'non-number delay',
 				in: '123',
 				out: new TypeError(`delay should be a number, got string`),
@@ -185,6 +205,16 @@ describe('validator', () => {
 				name: 'TTR above maximal',
 				in: TTR_MAX + 1,
 				out: new TypeError(`ttr should be <= ${TTR_MAX}`),
+			},
+			{
+				name: 'NaN TTR',
+				in: Number.NaN,
+				out: new TypeError(`ttr should be an integer, got NaN`),
+			},
+			{
+				name: 'fractional TTR',
+				in: 1.5,
+				out: new TypeError(`ttr should be an integer, got 1.5`),
 			},
 			{
 				name: 'non-number TTR',
