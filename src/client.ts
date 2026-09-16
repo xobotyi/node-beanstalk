@@ -154,7 +154,7 @@ export class Client<Events extends Record<keyof Events, unknown[]> = Record<neve
 		try {
 			await waitPromise;
 
-			await this.#conn.open(this.#opt.port, this.#opt.host);
+			await this.#conn.open(this.#opt.port, this.#opt.host, this.#opt.connectTimeoutMs);
 
 			this.lifecycle.emit('connect');
 		} finally {

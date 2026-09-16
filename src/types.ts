@@ -57,6 +57,16 @@ export type IClientCtorOptions = {
 	 * @default 1000
 	 */
 	dataReadTimeoutMs?: number;
+
+	/**
+	 * Time in milliseconds `connect()` waits for the TCP connection. On expiry it rejects with a
+	 * {@link ConnectionError} of code `ErrConnectTimeout` and the client emits `close`.
+	 *
+	 * `0` leaves the wait to the operating system, which can hold a dial into a black hole for over a minute.
+	 *
+	 * @default 0
+	 */
+	connectTimeoutMs?: number;
 };
 
 export type IPoolCtorOptions = {

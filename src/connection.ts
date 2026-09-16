@@ -24,7 +24,11 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 		return this.#state === 'opening' || this.#state === 'closing';
 	}
 
-	async open(port: number, host = 'localhost'): Promise<void> {
+	/**
+	 * Dials {host}:{port}. A {timeoutMs} above zero bounds the dial: on expiry the socket is dropped and the promise
+	 * rejects with `ErrConnectTimeout`, where zero leaves the wait to the operating system.
+	 */
+	async open(port: number, host = 'localhost', timeoutMs = 0): Promise<void> {
 		if (this.isChangingState()) {
 			throw new ConnectionError(
 				ConnectionErrorCode.ErrChangingState,
@@ -47,6 +51,17 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 
 			let dialSettled = false;
 			let dialFailure: Error | undefined;
+			let dialTimeout: NodeJS.Timeout | undefined;
+
+			if (timeoutMs > 0) {
+				dialTimeout = setTimeout(() => {
+					dialFailure = new ConnectionError(
+						ConnectionErrorCode.ErrConnectTimeout,
+						`Connection to ${host}:${port} not established within ${timeoutMs} ms`,
+					);
+					socket.destroy();
+				}, timeoutMs);
+			}
 
 			socket
 				.setNoDelay(true)
@@ -56,6 +71,7 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 
 					if (!dialSettled) {
 						dialSettled = true;
+						clearTimeout(dialTimeout);
 						reject(
 							dialFailure ??
 								new ConnectionError(
@@ -87,6 +103,7 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 				})
 				.connect(port, host, () => {
 					dialSettled = true;
+					clearTimeout(dialTimeout);
 					this.#state = 'open';
 
 					this.emit('open', socket.remotePort!, socket.remoteAddress!);
