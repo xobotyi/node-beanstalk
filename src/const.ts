@@ -1,4 +1,4 @@
-import {type IClientCtorOptions, type IPoolCtorOptions} from './types.js';
+import {type ClientOptions, type PoolOptions} from './types.js';
 import {JsonSerializer} from './serializer/json-serializer.js';
 
 export const CRLF = '\r\n';
@@ -22,7 +22,7 @@ export const JOB_ID_MIN = 1;
 export const BOUND_MIN = 0;
 export const BOUND_MAX = 2 ** 32 - 1;
 
-export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
+export const DEFAULT_CLIENT_OPTIONS: Required<ClientOptions> = {
 	host: '127.0.0.1',
 	port: 11_300,
 	defaultPriority: 1024,
@@ -35,7 +35,7 @@ export const DEFAULT_CLIENT_OPTIONS: Required<IClientCtorOptions> = {
 	responseTimeoutMs: 0,
 };
 
-export const DEFAULT_POOL_OPTIONS: Required<IPoolCtorOptions> = {
+export const DEFAULT_POOL_OPTIONS: Required<PoolOptions> = {
 	clientOptions: {},
 	capacity: 10,
 	pendingTimeoutMs: 0,

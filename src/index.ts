@@ -13,8 +13,8 @@ export {BeanstalkJobState, BeanstalkResponseStatus} from './types.js';
 
 export type {
 	Serializer,
-	IClientCtorOptions,
-	IPoolCtorOptions,
+	ClientOptions,
+	PoolOptions,
 	IClientRawReservedJob,
 	IBeanstalkStats,
 	IBeanstalkJobStats,
