@@ -9,7 +9,7 @@ import {ClientError, ClientErrorCode} from '../src/error/client-error.js';
 import {ResponseError, ResponseErrorCode} from '../src/error/response-error.js';
 import {JsonSerializer} from '../src/serializer/json-serializer.js';
 import {Command} from '../src/command.js';
-import {BeanstalkCommand, BeanstalkResponseStatus, type ICommandResponse} from '../src/types.js';
+import {BeanstalkCommand, BeanstalkResponseStatus, type CommandResponse} from '../src/types.js';
 import {
 	validateBound,
 	validateDelay,
@@ -1783,9 +1783,9 @@ describe('Client', () => {
 		// @ts-expect-error we're mocking private method so obviously TS is unhappy.
 		const readCommandResponseMock = vi.spyOn(c, 'readCommandResponse') as MockInstance<Client['readCommandResponse']>;
 
-		const buried: ICommandResponse = {status: BeanstalkResponseStatus.BURIED, headers: ['100500']};
-		const queueResponses = (): Array<PromiseWithResolvers<ICommandResponse>> => {
-			const responses = Array.from({length: 5}, () => Promise.withResolvers<ICommandResponse>());
+		const buried: CommandResponse = {status: BeanstalkResponseStatus.BURIED, headers: ['100500']};
+		const queueResponses = (): Array<PromiseWithResolvers<CommandResponse>> => {
+			const responses = Array.from({length: 5}, () => Promise.withResolvers<CommandResponse>());
 
 			for (const {promise} of responses) {
 				readCommandResponseMock.mockImplementationOnce(async () => promise);

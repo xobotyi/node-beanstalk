@@ -6,12 +6,12 @@ import {
 	BeanstalkErrorResponseStatus,
 	BeanstalkResponseStatus,
 	type IBeanstalkErrorResponseStatus,
-	type ICommandHandledResponse,
-	type ICommandResponse,
+	type CommandHandledResponse,
+	type CommandResponse,
 	type Serializer,
 } from './types.js';
 
-export type ICommandCtorOptions<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> = {
+export type CommandOptions<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> = {
 	payloadBody?: boolean;
 	yamlBody?: boolean;
 	expectedStatus?: readonly R[];
@@ -20,9 +20,9 @@ export type ICommandCtorOptions<R extends BeanstalkResponseStatus = BeanstalkRes
 export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus> {
 	private readonly commandName: BeanstalkCommand;
 
-	private readonly opt: Required<ICommandCtorOptions<R>>;
+	private readonly opt: Required<CommandOptions<R>>;
 
-	constructor(commandName: BeanstalkCommand, opt: ICommandCtorOptions<R> = {}) {
+	constructor(commandName: BeanstalkCommand, opt: CommandOptions<R> = {}) {
 		if (!BeanstalkCommand[commandName]) {
 			throw new CommandError(CommandErrorCode.ErrCommandUnknown, `Unknown beanstalk command '${commandName}'`);
 		}
@@ -60,7 +60,7 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 		return Buffer.concat([Buffer.from(parts.join(' ')), CRLF_BUFF]);
 	}
 
-	public handleResponse(response: ICommandResponse, serializer?: Serializer): ICommandHandledResponse<R> {
+	public handleResponse(response: CommandResponse, serializer?: Serializer): CommandHandledResponse<R> {
 		if (BeanstalkErrorResponseStatus[response.status as IBeanstalkErrorResponseStatus]) {
 			throw new CommandError(
 				CommandErrorCode.ErrErrorResponseStatus,
@@ -93,6 +93,6 @@ export class Command<R extends BeanstalkResponseStatus = BeanstalkResponseStatus
 			}
 		}
 
-		return res as ICommandHandledResponse<R>;
+		return res as CommandHandledResponse<R>;
 	}
 }

@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vite-plus/test';
 import {Buffer} from 'node:buffer';
 import {parseResponseHeaders} from '../../src/util/parse-response-headers.js';
-import {BeanstalkResponseStatus, type ICommandResponseHeaders} from '../../src/types.js';
+import {BeanstalkResponseStatus, type CommandResponseHeaders} from '../../src/types.js';
 import {CRLF_BUFF} from '../../src/const.js';
 import {ResponseErrorCode} from '../../src/error/response-error.js';
 
@@ -11,7 +11,7 @@ describe('parseResponseHeaders', () => {
 		expect(parseResponseHeaders).toBeInstanceOf(Function);
 	});
 
-	const tableTests: Array<{name: string; in: Buffer; out: ICommandResponseHeaders | null}> = [
+	const tableTests: Array<{name: string; in: Buffer; out: CommandResponseHeaders | null}> = [
 		{
 			name: 'null in case no LF',
 			in: Buffer.from('OK 1234'),

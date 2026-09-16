@@ -1,5 +1,5 @@
 import {BeanstalkCommand, BeanstalkResponseStatus} from '../types.js';
-import {Command, type ICommandCtorOptions} from '../command.js';
+import {Command, type CommandOptions} from '../command.js';
 import {CommandError, CommandErrorCode} from '../error/command-error.js';
 
 const commandConfig = {
@@ -117,19 +117,19 @@ const commandConfig = {
 		expectedStatus: [],
 	},
 } as const;
-type ICommandConfig = typeof commandConfig;
+type CommandConfig = typeof commandConfig;
 
 const commandInstances: Partial<
-	Record<BeanstalkCommand, Command<ICommandConfig[BeanstalkCommand]['expectedStatus'][number]>>
+	Record<BeanstalkCommand, Command<CommandConfig[BeanstalkCommand]['expectedStatus'][number]>>
 > = {};
 
 export function getCommandInstance<Cmd extends BeanstalkCommand>(
 	cmd: Cmd,
-): Command<ICommandConfig[Cmd]['expectedStatus'][number]> {
-	let command = commandInstances[cmd] as Command<ICommandConfig[Cmd]['expectedStatus'][number]> | undefined;
+): Command<CommandConfig[Cmd]['expectedStatus'][number]> {
+	let command = commandInstances[cmd] as Command<CommandConfig[Cmd]['expectedStatus'][number]> | undefined;
 	if (command) return command;
 
-	const cfg = commandConfig[cmd] as ICommandCtorOptions<ICommandConfig[Cmd]['expectedStatus'][number]> | undefined;
+	const cfg = commandConfig[cmd] as CommandOptions<CommandConfig[Cmd]['expectedStatus'][number]> | undefined;
 	if (!cfg) {
 		throw new CommandError(CommandErrorCode.ErrCommandUnknown, `Unknown beanstalk command '${cmd}'`);
 	}

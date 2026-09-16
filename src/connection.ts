@@ -2,7 +2,7 @@ import {EventEmitter} from 'node:events';
 import {Socket} from 'node:net';
 import {ConnectionError, ConnectionErrorCode} from './error/connection-error.js';
 
-export type IConnectionEvents = {
+export type ConnectionEvents = {
 	close: [];
 	open: [port: number, host: string];
 	error: [err: Error];
@@ -11,7 +11,7 @@ export type IConnectionEvents = {
 
 export type ConnectionState = 'open' | 'opening' | 'closed' | 'closing';
 
-export class Connection extends EventEmitter<IConnectionEvents> {
+export class Connection extends EventEmitter<ConnectionEvents> {
 	#socket?: Socket;
 
 	#state: ConnectionState = 'closed';
