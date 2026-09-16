@@ -36,13 +36,13 @@ import {Client, JobState} from 'node-beanstalk';
 
 const c = new Client();
 
-// connect to beasntalkd server
+// connect to beanstalkd server
 await c.connect();
 // use our own tube
 await c.use('my-own-tube');
 
 // put our very important job
-const putJob = await c.put({foo: 'My awsome payload', bar: ['baz', 'qux']}, 40);
+const putJob = await c.put({foo: 'My awesome payload', bar: ['baz', 'qux']}, 40);
 if (putJob.state !== JobState.ready) {
 	// as a result of put command job can done in `buried` state,
 	// or `delayed` in case delay or client's default delay been specified
@@ -54,12 +54,17 @@ await c.watch('my-own-tube');
 
 // acquire new job (ideally the one we've just put)
 const job = await c.reserveWithTimeout(10);
-/*
-  ...do some important job
- */
+if (job) {
+	// the payload arrives as `unknown`, so it is yours to narrow
+	const payload = job.payload as {foo: string; bar: string[]};
+	/*
+	  ...do some important job with payload
+	 */
 
-c.delete(job.id);
-c.disconnect();
+	await c.delete(job.id);
+}
+
+await c.disconnect();
 ```
 
 As beanstalk is pretty fast but still synchronous on a single connection - all consecutive calls
@@ -178,10 +183,13 @@ the deadline.
 
 #### Payload serialization
 
-As in most cases our job payloads are complex objets - they somehow must be serialized to Buffer. In
+As in most cases our job payloads are complex objects - they somehow must be serialized to Buffer. In
 general, serialized payload can be any bytes sequence, but by default, payload is serialized via
 JSON and casted to buffer, but you can specify your own serializer by passing corresponding
 parameter to client constructor options. The required interface is the exported `Serializer` type.
+
+A payload comes back as `unknown`, because the client has no way to know what a job holds and two jobs of one tube
+need not hold the same thing. Narrow it where you consume it, with an assertion or a schema check of your own.
 
 ### Pooling
 
