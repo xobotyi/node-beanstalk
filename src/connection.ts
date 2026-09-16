@@ -44,29 +44,49 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 		return new Promise<void>((resolve, reject) => {
 			const socket = new Socket();
 			this.#socket = socket;
+
+			let dialSettled = false;
+			let dialFailure: Error | undefined;
+
 			socket
 				.setNoDelay(true)
 				.setKeepAlive(true)
 				.on('close', () => {
-					this.emit('close');
+					this.handleSocketClose(socket);
+
+					if (!dialSettled) {
+						dialSettled = true;
+						reject(
+							dialFailure ??
+								new ConnectionError(
+									ConnectionErrorCode.ErrNotOpened,
+									'Socket closed before the connection was established',
+								),
+						);
+					}
 				})
-				.on('error', (err) => {
-					reject(err);
+				.on('error', (err: NodeJS.ErrnoException) => {
+					if (!dialSettled) {
+						// constraint: a destroyed socket always emits `close`, so the dial settles there with the state final
+						dialFailure = err;
+						socket.destroy();
+
+						return;
+					}
+
+					// ignore disconnect errors during disconnect procedure
+					if (this.#state === 'closing' && (err.code === 'ECONNRESET' || err.code === 'EPIPE')) {
+						return;
+					}
+
+					this.emit('error', err);
 				})
 				// constraint: no `setEncoding` call on this socket, so `data` always carries a Buffer
 				.on('data', (data: Buffer) => {
 					this.emit('data', data);
 				})
 				.connect(port, host, () => {
-					socket.off('error', reject).on('error', (err: NodeJS.ErrnoException) => {
-						// ignore disconnect errors during disconnect procedure
-						if (this.#state === 'closing' && (err.code === 'ECONNRESET' || err.code === 'EPIPE')) {
-							return;
-						}
-
-						this.emit('error', err);
-					});
-
+					dialSettled = true;
 					this.#state = 'open';
 
 					this.emit('open', socket.remotePort!, socket.remoteAddress!);
@@ -74,6 +94,19 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 					resolve();
 				});
 		});
+	}
+
+	/**
+	 * Settles the state a dying socket leaves behind. A socket that a later `open()` replaced is not this
+	 * connection's socket any more and its `close` changes nothing.
+	 */
+	private handleSocketClose(socket: Socket): void {
+		if (this.#socket !== socket) return;
+
+		this.#state = 'closed';
+		this.#socket = undefined;
+
+		this.emit('close');
 	}
 
 	async close(): Promise<void> {
@@ -94,15 +127,22 @@ export class Connection extends EventEmitter<IConnectionEvents> {
 		this.#state = 'closing';
 
 		const sock = this.#socket;
-		if (sock) {
-			await new Promise<void>((resolve) => {
-				sock.end(resolve);
-			});
-			sock.destroy();
+		if (!sock) {
+			this.#state = 'closed';
+
+			return;
 		}
 
-		this.#socket = undefined;
-		this.#state = 'closed';
+		const closed = new Promise<void>((resolve) => {
+			sock.once('close', resolve);
+		});
+
+		await new Promise<void>((resolve) => {
+			sock.end(resolve);
+		});
+		sock.destroy();
+
+		await closed;
 	}
 
 	/**
