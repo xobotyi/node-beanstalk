@@ -4,7 +4,7 @@
 
 [![NPM Version](https://flat.badgen.net/npm/v/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
 [![NPM Downloads](https://flat.badgen.net/npm/dm/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
-[![NPM Dependents](https://flat.badgen.net/npm/dependents/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
+[![NPM Dependents](https://img.shields.io/librariesio/dependents/npm/node-beanstalk?style=flat-square)](https://www.npmjs.com/package/node-beanstalk)
 [![Build](https://img.shields.io/github/actions/workflow/status/xobotyi/node-beanstalk/ci.yml?branch=master&style=flat-square)](https://github.com/xobotyi/node-beanstalk/actions/workflows/ci.yml)
 [![Coverage](https://flat.badgen.net/codecov/c/github/xobotyi/node-beanstalk)](https://app.codecov.io/gh/xobotyi/node-beanstalk)
 [![Types](https://flat.badgen.net/npm/types/node-beanstalk)](https://www.npmjs.com/package/node-beanstalk)
