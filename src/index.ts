@@ -16,7 +16,7 @@ export type {
 	ClientOptions,
 	PoolOptions,
 	IClientRawReservedJob,
-	IBeanstalkStats,
-	IBeanstalkJobStats,
-	IBeanstalkTubeStats,
+	Stats,
+	JobStats,
+	TubeStats,
 } from './types.js';

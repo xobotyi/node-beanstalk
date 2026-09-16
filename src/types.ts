@@ -243,7 +243,7 @@ export type CommandHandledResponse<R extends ResponseStatus = ResponseStatus> =
 				headers: string[];
 			};
 
-export type IBeanstalkStats = {
+export type Stats = {
 	/**
 	 * The number of ready jobs with priority < 1024.
 	 */
@@ -504,7 +504,7 @@ export type IBeanstalkStats = {
 	platform: string;
 };
 
-export type IBeanstalkTubeStats = {
+export type TubeStats = {
 	/**
 	 * The tube's name.
 	 */
@@ -588,7 +588,7 @@ export const JobState = {
 } as const satisfies Record<string, string>;
 export type JobState = (typeof JobState)[keyof typeof JobState];
 
-export type IBeanstalkJobStats = {
+export type JobStats = {
 	/**
 	 * The job id
 	 */
