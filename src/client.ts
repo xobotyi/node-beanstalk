@@ -33,9 +33,15 @@ import {type ILinkedListNode, LinkedList} from './util/linked-list.js';
 
 const DISPLACED_BY_FORCED_DISCONNECT: string = ClientErrorCode.ErrDisconnecting;
 
-export class Client<
-	Events extends Record<keyof Events, unknown[]> = Record<never, never>,
-> extends EventEmitter<Events> {
+export type IClientEvents = {
+	connect: [];
+	close: [];
+	error: [err: Error];
+};
+
+export class Client<Events extends Record<keyof Events, unknown[]> = Record<never, never>> extends EventEmitter<
+	Events & IClientEvents
+> {
 	readonly #conn: Connection;
 
 	readonly #opt: Omit<Required<IClientCtorOptions>, 'serializer'> & {serializer: Serializer | undefined};
@@ -56,6 +62,21 @@ export class Client<
 		};
 
 		this.#conn = connection;
+
+		connection.on('close', () => {
+			this.lifecycle.emit('close');
+		});
+		connection.on('error', (error) => {
+			this.lifecycle.emit('error', error);
+		});
+	}
+
+	/**
+	 * The emitter viewed as the carrier of {IClientEvents} alone. `Events & IClientEvents` cannot be indexed while
+	 * `Events` is still generic, so every emit of a connection event goes through this view.
+	 */
+	private get lifecycle(): EventEmitter<IClientEvents> {
+		return this;
 	}
 
 	/**
@@ -134,6 +155,8 @@ export class Client<
 			await waitPromise;
 
 			await this.#conn.open(this.#opt.port, this.#opt.host);
+
+			this.lifecycle.emit('connect');
 		} finally {
 			moveQueue();
 		}
