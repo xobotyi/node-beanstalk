@@ -46,7 +46,7 @@
 	},
 	"devDependencies": {
 		"@semantic-release/github": "^12.0.10",
-		"@semantic-release/npm": "^13.1.5",
+		"@semantic-release/npm": "^13.2.0",
 		"@types/node": "^26.6.2",
 		"@ver0/oxlint-config": "^2.0.2",
 		"@vitest/coverage-v8": "4.1.11",
