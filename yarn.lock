@@ -1561,15 +1561,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ver0/oxlint-config@npm:^2.0.3":
-  version: 2.0.3
-  resolution: "@ver0/oxlint-config@npm:2.0.3"
+"@ver0/oxlint-config@npm:^2.0.4":
+  version: 2.0.4
+  resolution: "@ver0/oxlint-config@npm:2.0.4"
   peerDependencies:
     oxlint: ^1.87.0
   peerDependenciesMeta:
     oxlint:
       optional: true
-  checksum: 10c0/dc6ec87c26f6252de347f4b8e4c87fafafd3720ea93e5b2a1391224a74f6847591c1e503e045096fce0d9f4916345f4e305c24e59cde82340cc283d814c8f6fa
+  checksum: 10c0/0a76b514f1cb5ee00b56b9dc131bdd0b79b68ffed2670c1b6c62c25966461fdd4373bf04ba5bc12e9f90d6dc5a3fa3c4fdcd16b990bf0eaedea0356812046f7d
   languageName: node
   linkType: hard
 
@@ -4426,7 +4426,7 @@ __metadata:
     "@semantic-release/github": "npm:^12.0.10"
     "@semantic-release/npm": "npm:^13.2.0"
     "@types/node": "npm:^26.6.5"
-    "@ver0/oxlint-config": "npm:^2.0.3"
+    "@ver0/oxlint-config": "npm:^2.0.4"
     "@vitest/coverage-v8": "npm:4.1.11"
     conventional-changelog-conventionalcommits: "npm:^10.4.1"
     js-yaml: "npm:^5.5.0"
